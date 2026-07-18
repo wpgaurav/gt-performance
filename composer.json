@@ -1,0 +1,54 @@
+{
+  "name": "gauravtiwari/gt-performance",
+  "description": "WordPress page caching, server-side optimization, Cloudflare orchestration, and commerce-aware performance controls.",
+  "version": "0.1.0-alpha.1",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1",
+    "ext-dom": "*",
+    "ext-json": "*",
+    "matthiasmullie/minify": "^1.3",
+    "sabberworm/php-css-parser": "^8.9",
+    "symfony/css-selector": "^6.4 || ^7.0"
+  },
+  "require-dev": {
+    "php-stubs/wp-cli-stubs": "^2.11",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^10.5",
+    "squizlabs/php_codesniffer": "^3.13",
+    "szepeviktor/phpstan-wordpress": "^2.0",
+    "wp-coding-standards/wpcs": "^3.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "GTPerformance\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "GTPerformance\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "lint": "phpcs",
+    "lint:fix": "phpcbf",
+    "stan": "phpstan analyse --memory-limit=1G",
+    "test": "phpunit",
+    "check": [
+      "@lint",
+      "@stan",
+      "@test"
+    ]
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "optimize-autoloader": true,
+    "platform": {
+      "php": "8.1.0"
+    },
+    "sort-packages": true
+  }
+}

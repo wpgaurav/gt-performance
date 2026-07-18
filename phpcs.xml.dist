@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<ruleset name="GT Performance">
+	<description>WordPress coding standards for GT Performance.</description>
+	<file>gt-performance.php</file>
+	<file>uninstall.php</file>
+	<file>src</file>
+	<exclude-pattern>vendor/*</exclude-pattern>
+	<arg name="basepath" value="."/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+	<arg name="warning-severity" value="0"/>
+	<rule ref="WordPress">
+		<!-- PSR-4 class names and typed camelCase internals are deliberate. -->
+		<exclude name="WordPress.Files.FileName"/>
+		<exclude name="WordPress.NamingConventions.ValidFunctionName"/>
+		<exclude name="WordPress.NamingConventions.ValidVariableName"/>
+		<!-- File-level documentation is required; internal symbol docs are enforced by PHPStan types. -->
+		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
+		<exclude name="Squiz.Commenting.ClassComment"/>
+		<exclude name="Squiz.Commenting.FunctionComment"/>
+		<exclude name="Squiz.Commenting.FunctionCommentThrowTag"/>
+		<exclude name="Squiz.Commenting.VariableComment"/>
+		<!-- WordPress plugin headers use a plain block comment by convention. -->
+		<exclude name="Squiz.Commenting.FileComment.WrongStyle"/>
+	</rule>
+	<rule ref="WordPress-Extra"/>
+	<config name="minimum_supported_wp_version" value="6.6"/>
+	<config name="testVersion" value="8.1-"/>
+</ruleset>

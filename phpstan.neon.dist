@@ -1,0 +1,20 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 6
+	parallel:
+		maximumNumberOfProcesses: 1
+	paths:
+		- src
+		- gt-performance.php
+		- uninstall.php
+	excludePaths:
+		analyse:
+			- vendor
+	bootstrapFiles:
+		- tests/phpstan-bootstrap.php
+	scanFiles:
+		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+		- vendor/php-stubs/wp-cli-stubs/wp-cli-tools-stubs.php
+	treatPhpDocTypesAsCertain: false
