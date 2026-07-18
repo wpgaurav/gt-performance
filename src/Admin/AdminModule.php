@@ -12,7 +12,7 @@ namespace GTPerformance\Admin;
 use GTPerformance\Cache\DropinInstaller;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\WpCacheConstant;
-use GTPerformance\Cloudflare\ApiClient;
+use GTPerformance\Cloudflare\ClientFactory;
 use GTPerformance\Cloudflare\RuleManager;
 use GTPerformance\Cloudflare\TokenCipher;
 use GTPerformance\Contracts\Module;
@@ -60,14 +60,20 @@ final class AdminModule implements Module {
 	 * @return array<string, mixed>
 	 */
 	public function sanitize( mixed $input ): array {
-		$input   = is_array( $input ) ? $input : array();
-		$current = Settings::all();
-		$token   = trim( (string) ( $input['cloudflare']['api_token'] ?? '' ) );
+		$input               = is_array( $input ) ? $input : array();
+		$current             = Settings::all();
+		$input['cloudflare'] = isset( $input['cloudflare'] ) && is_array( $input['cloudflare'] )
+			? $input['cloudflare']
+			: array();
+		$cipher              = new TokenCipher();
 
-		if ( '' === $token ) {
-			$input['cloudflare']['api_token'] = (string) $current['cloudflare']['api_token'];
-		} elseif ( ! str_starts_with( $token, 'sodium:' ) && ! str_starts_with( $token, 'openssl:' ) ) {
-			$input['cloudflare']['api_token'] = ( new TokenCipher() )->encrypt( $token );
+		foreach ( array( 'api_token', 'global_api_key' ) as $secretKey ) {
+			$secret = trim( (string) ( $input['cloudflare'][ $secretKey ] ?? '' ) );
+			if ( '' === $secret ) {
+				$input['cloudflare'][ $secretKey ] = (string) $current['cloudflare'][ $secretKey ];
+			} elseif ( ! str_starts_with( $secret, 'sodium:' ) && ! str_starts_with( $secret, 'openssl:' ) ) {
+				$input['cloudflare'][ $secretKey ] = $cipher->encrypt( $secret );
+			}
 		}
 
 		$clean = Settings::sanitize( $input );
@@ -156,15 +162,50 @@ final class AdminModule implements Module {
 				</table>
 
 				<h2><?php esc_html_e( 'Cloudflare Free', 'gt-performance' ); ?></h2>
+				<p><?php esc_html_e( 'Scoped API tokens are recommended. Global API Key authentication is supported for legacy accounts and requires the Cloudflare account email.', 'gt-performance' ); ?></p>
 				<table class="form-table" role="presentation">
 					<?php $this->checkbox( 'cloudflare', 'enabled', __( 'Enable Cloudflare integration', 'gt-performance' ), $settings ); ?>
+					<?php
+					$this->select(
+						'cloudflare',
+						'auth_mode',
+						__( 'Authentication', 'gt-performance' ),
+						$settings,
+						array(
+							'token'  => __( 'Scoped API token (recommended)', 'gt-performance' ),
+							'global' => __( 'Global API Key (legacy)', 'gt-performance' ),
+						)
+					);
+					?>
 					<tr>
-						<th><label for="gtp-cf-token"><?php esc_html_e( 'API token', 'gt-performance' ); ?></label></th>
-						<td><input id="gtp-cf-token" class="regular-text" type="password" autocomplete="new-password" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][api_token]" value="" placeholder="<?php echo esc_attr( $settings['cloudflare']['api_token'] ? 'Saved; leave blank to keep' : '' ); ?>"></td>
+						<th><label for="gtp-cf-token"><?php esc_html_e( 'Scoped API token', 'gt-performance' ); ?></label></th>
+						<td>
+							<input id="gtp-cf-token" class="regular-text" type="password" autocomplete="new-password" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][api_token]" value="" placeholder="<?php echo esc_attr( $settings['cloudflare']['api_token'] ? __( 'Saved; leave blank to keep', 'gt-performance' ) : '' ); ?>">
+						</td>
+					</tr>
+					<tr>
+						<th><label for="gtp-cf-global-key"><?php esc_html_e( 'Global API Key', 'gt-performance' ); ?></label></th>
+						<td>
+							<input id="gtp-cf-global-key" class="regular-text" type="password" autocomplete="new-password" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][global_api_key]" value="" placeholder="<?php echo esc_attr( $settings['cloudflare']['global_api_key'] ? __( 'Saved; leave blank to keep', 'gt-performance' ) : '' ); ?>">
+						</td>
+					</tr>
+					<tr>
+						<th><label for="gtp-cf-email"><?php esc_html_e( 'Cloudflare account email', 'gt-performance' ); ?></label></th>
+						<td><input id="gtp-cf-email" class="regular-text" type="email" autocomplete="email" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][email]" value="<?php echo esc_attr( (string) $settings['cloudflare']['email'] ); ?>"></td>
+					</tr>
+					<tr>
+						<th><label for="gtp-cf-domain"><?php esc_html_e( 'Domain', 'gt-performance' ); ?></label></th>
+						<td>
+							<input id="gtp-cf-domain" class="regular-text" type="text" inputmode="url" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][domain]" value="<?php echo esc_attr( (string) $settings['cloudflare']['domain'] ); ?>" placeholder="example.com">
+							<p class="description"><?php esc_html_e( 'Used to discover the Cloudflare zone when Zone ID is blank.', 'gt-performance' ); ?></p>
+						</td>
 					</tr>
 					<tr>
 						<th><label for="gtp-cf-zone"><?php esc_html_e( 'Zone ID', 'gt-performance' ); ?></label></th>
-						<td><input id="gtp-cf-zone" class="regular-text" type="text" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][zone_id]" value="<?php echo esc_attr( (string) $settings['cloudflare']['zone_id'] ); ?>"></td>
+						<td>
+							<input id="gtp-cf-zone" class="regular-text" type="text" name="<?php echo esc_attr( Settings::OPTION ); ?>[cloudflare][zone_id]" value="<?php echo esc_attr( (string) $settings['cloudflare']['zone_id'] ); ?>">
+							<p class="description"><?php esc_html_e( 'Optional. Leave blank for automatic discovery by domain.', 'gt-performance' ); ?></p>
+						</td>
 					</tr>
 				</table>
 
@@ -204,15 +245,15 @@ final class AdminModule implements Module {
 	public function cloudflareSync(): void {
 		$this->guard( 'gtp_cloudflare_sync' );
 		$settings = Settings::all();
-		$token    = ( new TokenCipher() )->decrypt( (string) $settings['cloudflare']['api_token'] );
-		if ( '' === $token ) {
-			$this->redirect( 'cloudflare-token-missing' );
+		$factory  = new ClientFactory();
+		$client   = $factory->create( $settings );
+		if ( is_wp_error( $client ) ) {
+			$this->redirect( $client->get_error_code() );
 		}
 
-		$client = new ApiClient( $token );
 		$zoneId = (string) $settings['cloudflare']['zone_id'];
 		if ( '' === $zoneId ) {
-			$zone = $client->zoneByName( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+			$zone = $client->zoneByName( $factory->domain( $settings ) );
 			if ( is_wp_error( $zone ) ) {
 				$this->redirect( $zone->get_error_code() );
 			}

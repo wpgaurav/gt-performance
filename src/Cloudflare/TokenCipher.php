@@ -1,6 +1,6 @@
 <?php
 /**
- * Cloudflare API token encryption.
+ * Cloudflare API secret encryption.
  *
  * @package GTPerformance
  */
@@ -28,15 +28,18 @@ final class TokenCipher {
 		$tag       = '';
 		$encrypted = openssl_encrypt( $plain, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag );
 		if ( false === $encrypted ) {
-			throw new \RuntimeException( 'Unable to encrypt the Cloudflare token.' );
+			throw new \RuntimeException( 'Unable to encrypt the Cloudflare API secret.' );
 		}
 
 		return 'openssl:' . base64_encode( $nonce . $tag . $encrypted );
 	}
 
-	public function decrypt( string $stored ): string {
-		if ( defined( 'GTP_CLOUDFLARE_API_TOKEN' ) && is_string( GTP_CLOUDFLARE_API_TOKEN ) ) {
-			return GTP_CLOUDFLARE_API_TOKEN;
+	public function decrypt( string $stored, string $constantName = 'GTP_CLOUDFLARE_API_TOKEN' ): string {
+		if ( defined( $constantName ) ) {
+			$constant = constant( $constantName );
+			if ( is_string( $constant ) ) {
+				return $constant;
+			}
 		}
 
 		if ( '' === $stored ) {

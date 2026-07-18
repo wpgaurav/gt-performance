@@ -36,18 +36,24 @@ final class WpCacheConstant {
 			return new \WP_Error( 'gtp_wp_config_read', __( 'GT Performance could not read wp-config.php.', 'gt-performance' ) );
 		}
 
-		$pattern = '~define\s*\(\s*([\'"])WP_CACHE\1\s*,\s*(?:false|0)\s*\)\s*;[^\r\n]*~i';
-		if ( preg_match( $pattern, $content ) ) {
-			$updated   = preg_replace( $pattern, self::LINE, $content, 1 );
-			$ownership = 'changed';
-		} elseif ( str_contains( $content, 'WP_CACHE' ) ) {
+		$declarationPattern = '~^[\t ]*(?:define\s*\(\s*([\'"])WP_CACHE\1\s*,[^\r\n]*\)\s*;|const\s+WP_CACHE\s*=[^\r\n]*;)[^\r\n]*$~im';
+		if ( preg_match( $declarationPattern, $content, $matches ) ) {
+			$updated   = preg_replace( $declarationPattern, self::LINE, $content, 1 );
+			$ownership = array(
+				'mode'     => 'changed',
+				'original' => (string) $matches[0],
+			);
+		} elseif ( preg_match( '~(?:define\s*\(\s*([\'"])WP_CACHE\1\s*,|const\s+WP_CACHE\s*=)~i', $this->withoutComments( $content ) ) ) {
 			return new \WP_Error(
 				'gtp_wp_cache_custom',
 				__( 'wp-config.php contains a custom WP_CACHE declaration. Enable it manually before installing the drop-in.', 'gt-performance' )
 			);
 		} else {
 			$updated   = preg_replace( '/^<\?php\s*/', "<?php\n" . self::LINE . "\n", $content, 1 );
-			$ownership = 'inserted';
+			$ownership = array(
+				'mode'     => 'inserted',
+				'original' => '',
+			);
 		}
 
 		if ( ! is_string( $updated ) || $updated === $content ) {
@@ -65,8 +71,16 @@ final class WpCacheConstant {
 	}
 
 	public function restore(): bool|\WP_Error {
-		$ownership = (string) get_option( self::OPTION, '' );
-		if ( ! in_array( $ownership, array( 'inserted', 'changed' ), true ) ) {
+		$stored = get_option( self::OPTION, '' );
+		if ( is_array( $stored ) ) {
+			$mode     = (string) ( $stored['mode'] ?? '' );
+			$original = (string) ( $stored['original'] ?? '' );
+		} else {
+			$mode     = (string) $stored;
+			$original = 'changed' === $mode ? "define( 'WP_CACHE', false );" : '';
+		}
+
+		if ( ! in_array( $mode, array( 'inserted', 'changed' ), true ) ) {
 			return true;
 		}
 
@@ -83,7 +97,7 @@ final class WpCacheConstant {
 			);
 		}
 
-		$replacement = 'inserted' === $ownership ? '' : "define( 'WP_CACHE', false );";
+		$replacement = 'inserted' === $mode ? '' : $original;
 		$updated     = str_replace( self::LINE, $replacement, $content );
 		$result      = $this->publish( $path, $updated );
 		if ( is_wp_error( $result ) ) {
@@ -93,6 +107,18 @@ final class WpCacheConstant {
 		delete_option( self::OPTION );
 
 		return true;
+	}
+
+	private function withoutComments( string $content ): string {
+		$code = '';
+		foreach ( token_get_all( $content ) as $token ) {
+			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+				continue;
+			}
+			$code .= is_array( $token ) ? $token[1] : $token;
+		}
+
+		return $code;
 	}
 
 	/**

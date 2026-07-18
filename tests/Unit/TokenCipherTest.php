@@ -20,4 +20,14 @@ final class TokenCipherTest extends TestCase {
 		self::assertNotSame( 'test-cloudflare-token', $encrypted );
 		self::assertSame( 'test-cloudflare-token', $cipher->decrypt( $encrypted ) );
 	}
+
+	public function test_global_key_round_trip_uses_its_own_constant_name(): void {
+		$cipher    = new TokenCipher();
+		$encrypted = $cipher->encrypt( 'test-cloudflare-global-key' );
+
+		self::assertSame(
+			'test-cloudflare-global-key',
+			$cipher->decrypt( $encrypted, 'GTP_TEST_CLOUDFLARE_GLOBAL_API_KEY' )
+		);
+	}
 }

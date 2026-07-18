@@ -12,9 +12,8 @@ namespace GTPerformance\CLI;
 use GTPerformance\Cache\DropinInstaller;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\WpCacheConstant;
-use GTPerformance\Cloudflare\ApiClient;
+use GTPerformance\Cloudflare\ClientFactory;
 use GTPerformance\Cloudflare\RuleManager;
-use GTPerformance\Cloudflare\TokenCipher;
 use GTPerformance\Core\Paths;
 use GTPerformance\Core\Settings;
 use GTPerformance\Database\Cleaner;
@@ -129,19 +128,23 @@ final class Command {
 		$action   = (string) ( $args[0] ?? 'status' );
 		$settings = Settings::all();
 		if ( 'status' === $action ) {
+			$domain = ( new ClientFactory() )->domain( $settings );
 			\WP_CLI::log( 'enabled=' . ( $settings['cloudflare']['enabled'] ? 'yes' : 'no' ) );
+			\WP_CLI::log( 'auth=' . (string) $settings['cloudflare']['auth_mode'] );
+			\WP_CLI::log( 'domain=' . ( '' !== $domain ? $domain : 'missing' ) );
 			\WP_CLI::log( 'zone=' . ( $settings['cloudflare']['zone_id'] ? 'configured' : 'missing' ) );
 			return;
 		}
 
-		$token = ( new TokenCipher() )->decrypt( (string) $settings['cloudflare']['api_token'] );
-		if ( '' === $token ) {
-			\WP_CLI::error( 'Cloudflare token is unavailable.' );
+		$factory = new ClientFactory();
+		$client  = $factory->create( $settings );
+		if ( is_wp_error( $client ) ) {
+			\WP_CLI::error( $client->get_error_message() );
 		}
-		$client = new ApiClient( $token );
+
 		$zoneId = (string) $settings['cloudflare']['zone_id'];
 		if ( '' === $zoneId ) {
-			$zone = $client->zoneByName( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+			$zone = $client->zoneByName( $factory->domain( $settings ) );
 			if ( is_wp_error( $zone ) ) {
 				\WP_CLI::error( $zone->get_error_message() );
 			}
@@ -149,7 +152,15 @@ final class Command {
 		}
 		$cache  = apply_filters( 'gt_performance_cache_policy', (array) $settings['cache'] );
 		$result = ( new RuleManager( $client ) )->sync( $zoneId, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ), $cache );
-		is_wp_error( $result ) ? \WP_CLI::error( $result->get_error_message() ) : \WP_CLI::success( 'Cloudflare rule synchronized.' );
+		if ( is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+		}
+
+		$settings['cloudflare']['enabled']    = true;
+		$settings['cloudflare']['zone_id']    = $zoneId;
+		$settings['cloudflare']['drift_hash'] = hash( 'sha256', (string) wp_json_encode( $cache ) );
+		Settings::save( $settings );
+		\WP_CLI::success( 'Cloudflare rule synchronized.' );
 	}
 
 	/**

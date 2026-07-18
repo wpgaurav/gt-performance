@@ -47,7 +47,7 @@ Findings:
 - Cache tags support dependency-based invalidation but must be treated as a capability, with URL purging as the portable fallback.
 - GT Performance must detect the Cloudflare plan and available APIs rather than assume every feature is available.
 - Cloudflare configuration changes must be idempotent, backed up, narrowly scoped, and reversible. The plugin must never replace unrelated customer rules.
-- API tokens should use minimum zone permissions. Global API keys should not be requested.
+- API tokens should use minimum zone permissions and remain the recommended default. Legacy Global API Keys require the account email and must be explicitly selected.
 
 ## Commerce Requirements
 

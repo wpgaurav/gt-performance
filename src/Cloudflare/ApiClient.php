@@ -13,7 +13,7 @@ final class ApiClient {
 	private const BASE = 'https://api.cloudflare.com/client/v4';
 
 	public function __construct(
-		private readonly string $token,
+		private readonly ApiCredentials $credentials,
 	) {
 	}
 
@@ -22,18 +22,16 @@ final class ApiClient {
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	public function request( string $method, string $path, ?array $body = null ): array|\WP_Error {
-		if ( '' === $this->token ) {
-			return new \WP_Error( 'gtp_cloudflare_token', __( 'Cloudflare API token is missing.', 'gt-performance' ) );
-		}
-
 		$args = array(
 			'method'      => strtoupper( $method ),
 			'timeout'     => 20,
 			'redirection' => 0,
-			'headers'     => array(
-				'Authorization' => 'Bearer ' . $this->token,
-				'Content-Type'  => 'application/json',
-				'User-Agent'    => 'GT-Performance/' . GTP_VERSION,
+			'headers'     => array_merge(
+				$this->credentials->headers(),
+				array(
+					'Content-Type' => 'application/json',
+					'User-Agent'   => 'GT-Performance/' . GTP_VERSION,
+				)
 			),
 		);
 

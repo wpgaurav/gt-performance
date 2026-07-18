@@ -62,8 +62,12 @@ final class Settings {
 			),
 			'cloudflare' => array(
 				'enabled'            => false,
+				'auth_mode'          => 'token',
 				'zone_id'            => '',
+				'domain'             => '',
 				'api_token'          => '',
+				'global_api_key'     => '',
+				'email'              => '',
 				'edge_ttl'           => 86400,
 				'managed_rule_id'    => '',
 				'managed_ruleset_id' => '',
@@ -177,6 +181,13 @@ final class Settings {
 		$merged['cache']['enabled']         = (bool) ( $merged['cache']['enabled'] ?? false );
 		$merged['cache']['separate_mobile'] = (bool) ( $merged['cache']['separate_mobile'] ?? false );
 		$merged['cache']['cache_logged_in'] = (bool) ( $merged['cache']['cache_logged_in'] ?? false );
+
+		$authMode                         = (string) ( $merged['cloudflare']['auth_mode'] ?? 'token' );
+		$merged['cloudflare']['auth_mode'] = in_array( $authMode, array( 'token', 'global' ), true ) ? $authMode : 'token';
+		$merged['cloudflare']['email']     = sanitize_email( (string) ( $merged['cloudflare']['email'] ?? '' ) );
+		$merged['cloudflare']['domain']    = self::sanitizeDomain( (string) ( $merged['cloudflare']['domain'] ?? '' ) );
+		$merged['cloudflare']['zone_id']   = sanitize_text_field( (string) ( $merged['cloudflare']['zone_id'] ?? '' ) );
+		$merged['cloudflare']['edge_ttl']  = max( 0, min( 31536000, (int) ( $merged['cloudflare']['edge_ttl'] ?? 86400 ) ) );
 
 		foreach ( array( 'ignored_query_params', 'bypass_query_params', 'bypass_paths', 'bypass_cookies' ) as $key ) {
 			$merged['cache'][ $key ] = self::sanitizeList( $merged['cache'][ $key ] ?? array() );
@@ -314,5 +325,17 @@ final class Settings {
 		}
 
 		return array_values( array_unique( $clean ) );
+	}
+
+	private static function sanitizeDomain( string $value ): string {
+		$value = trim( strtolower( sanitize_text_field( $value ) ) );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		$url  = str_contains( $value, '://' ) ? $value : 'https://' . $value;
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+
+		return trim( strtolower( is_string( $host ) ? $host : '' ), ". \t\n\r\0\x0B" );
 	}
 }

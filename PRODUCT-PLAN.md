@@ -194,7 +194,7 @@ Events are coalesced into a short purge window. Full purge is reserved for theme
 
 The normal Cloudflare setup must work on the free plan with no Worker:
 
-- Connect with a least-privilege API token.
+- Connect with a least-privilege API token by default, with legacy Global API Key plus account email available when explicitly selected.
 - Detect the correct zone automatically.
 - Confirm the DNS record is proxied.
 - Detect APO or conflicting HTML-cache rules before changing anything.
@@ -470,7 +470,7 @@ Commands support `--url`, multisite, machine-readable JSON, dry run, and non-zer
 - CLI operations verify permissions and site targeting.
 - Signed loopback and edge-control requests use short expiry, HMAC, and replay protection.
 - Remote asset fetching permits only HTTP(S), blocks local/private/reserved networks, limits redirects/bytes/time, and validates content types.
-- Cloudflare tokens are never included in diagnostics or database exports.
+- Cloudflare API secrets are encrypted at rest and never included in diagnostics.
 - RUM collects performance fields, not page content or personal/payment identifiers.
 - IP addresses are not stored by default.
 - Database cleanup and original-image deletion are separately gated, backed up, and never enabled by default.

@@ -4,9 +4,9 @@
 
 Validated on 2026-07-18:
 
-- WordPress Coding Standards: 54 production PHP files passed.
+- WordPress Coding Standards: 58 production PHP files passed.
 - PHPStan: level 6 passed with WordPress and WP-CLI stubs.
-- PHPUnit: 16 tests and 30 assertions passed.
+- PHPUnit: 21 tests and 39 assertions passed.
 - Composer security audit: no known vulnerable packages.
 - Release package: production dependencies installed, ZIP integrity passed, and no development dependencies included.
 
@@ -22,6 +22,8 @@ Runtime:
 Verified:
 
 - Plugin detected, activated, and rendered its settings screen without PHP warnings or fatals.
+- The Cloudflare settings screen rendered both scoped-token and legacy Global API Key modes, including account email, domain, and optional Zone ID fields.
+- Selective response-cookie tests verify that Core Forms voter cookies can be removed without dropping unrelated commerce/session cookies.
 - Activation created the schema, schedules, compiled config, and writable cache directories.
 - Page-cache drop-in installation added an owned `advanced-cache.php` and enabled `WP_CACHE`.
 - An anonymous first request returned `X-GT-Cache: MISS`.
@@ -36,7 +38,17 @@ Verified:
 
 ## External gates still requiring credentials or installed integrations
 
-- A live Cloudflare rule synchronization and purge must be run with a scoped token on a staging zone.
 - FluentCart, Easy Digital Downloads, and WooCommerce checkout E2E tests require those plugins and test payment configurations.
 - Redis installation requires PhpRedis and a disposable Redis namespace.
 - Multisite and host-specific caching combinations remain pre-stable compatibility work.
+
+## Gatilab live validation
+
+Validated on the authenticated Gatilab WordPress installation:
+
+- Installed and activated GT Performance `0.1.0-alpha.3`; WordPress reports the same version.
+- Page-cache drop-in is owned, `WP_CACHE` is enabled, Redis is owned, and the settings and Plugins screens have no browser console errors.
+- Cloudflare Global API Key mode was configured through encrypted settings using the account email and domain; zone discovery and the managed Free-plan Cache Rule synchronized successfully.
+- The Gatilab homepage contains a Core Forms poll and correctly remains uncached with its voter cookie.
+- A normal article changed from origin `MISS` to `HIT`. Five origin-cache HIT samples had a median TTFB of 0.233 seconds versus 0.569 seconds for cache-bypassed requests.
+- After Cloudflare synchronization, five consecutive edge HIT samples had a median TTFB of 0.100 seconds and all reported `CF-Cache-Status: HIT`.

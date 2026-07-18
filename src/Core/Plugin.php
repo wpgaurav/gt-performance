@@ -35,6 +35,7 @@ final class Plugin {
 			new \GTPerformance\Cache\PageCacheModule( $logger ),
 			new \GTPerformance\Queue\QueueModule( $logger ),
 			new \GTPerformance\Commerce\CommerceModule(),
+			new \GTPerformance\Compatibility\CoreFormsModule(),
 			new \GTPerformance\Cloudflare\CloudflareModule( $logger ),
 			new \GTPerformance\Optimization\OptimizationModule( $logger ),
 			new \GTPerformance\Database\DatabaseModule(),

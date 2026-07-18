@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, core web vitals
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.1
+Stable tag: 0.1.0-alpha.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ This is an alpha. Aggressive modules are disabled by default and should be teste
 2. Open Settings > GT Performance.
 3. Install the page-cache drop-in.
 4. Enable only the modules you have tested for your theme and plugins.
-5. Optionally connect a scoped Cloudflare API token and synchronize the managed cache rule.
+5. Optionally connect a scoped Cloudflare API token or a legacy Global API Key with account email, then synchronize the managed cache rule.
 
 == Frequently Asked Questions ==
 
@@ -43,6 +43,18 @@ No. Stylesheet collection, selector analysis, pruning, and artifact creation run
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
 
 == Changelog ==
+
+= 0.1.0-alpha.3 =
+
+* Added Core Forms poll-cookie compatibility so non-poll pages can be cached safely.
+* Real poll pages retain voter cookies and remain uncached.
+
+= 0.1.0-alpha.2 =
+
+* Added legacy Cloudflare Global API Key, account email, domain, and automatic zone discovery support.
+* Kept scoped API tokens as the recommended authentication mode.
+* Fixed WP_CACHE detection so comments no longer trigger a false custom-declaration error.
+* Restores the exact single-line WP_CACHE declaration changed during installation.
 
 = 0.1.0-alpha.1 =
 

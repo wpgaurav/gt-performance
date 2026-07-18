@@ -75,12 +75,6 @@ final class CloudflareModule implements Module {
 	 * @return ApiClient|\WP_Error
 	 */
 	public function client(): ApiClient|\WP_Error {
-		$stored = (string) Settings::get( 'cloudflare.api_token', '' );
-		$token  = ( new TokenCipher() )->decrypt( $stored );
-		if ( '' === $token ) {
-			return new \WP_Error( 'gtp_cloudflare_token', __( 'Cloudflare API token is unavailable.', 'gt-performance' ) );
-		}
-
-		return new ApiClient( $token );
+		return ( new ClientFactory() )->create();
 	}
 }
