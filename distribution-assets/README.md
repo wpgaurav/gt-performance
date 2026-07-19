@@ -33,8 +33,8 @@ The screenshot captions live in `readme.txt` under `== Screenshots ==`.
 - Interface neutral: `#f6f7f7`
 - Success: `#3a8f28`
 
-The Magnific-generated master mark and brand field are in `magnific/`. The final banner, product cover, and social card are deterministic HTML/CSS compositions in `source/marketing-assets.html` and `source/marketing-assets.css`. Those compositions embed the real WordPress Studio screenshots, so interface labels and product state are not AI-generated.
+The Magnific-generated master mark and brand field are in `magnific/`. The final banner, product cover, and social card are deterministic HTML/CSS compositions in `source/marketing-assets.html` and `source/marketing-assets.css`.
 
 The GT monogram is original artwork and does not use the WordPress or Cloudflare logo. The PNG directory icons are the source of truth; an unrelated vector fallback is intentionally not shipped.
 
-Run `build-product-page.php` with the public dashboard image, CSS-report image, and verified FluentCart direct-checkout URLs to create the WordPress-ready `marketers-delight/inline-page-block` stored in `fluentcart/product-page.wordpress.html`. The builder prepends the canonical GTDS token layer from the `gt-design` skill; use `--tokens-path` when that skill lives elsewhere.
+Run `build-product-page.php` with the verified FluentCart direct-checkout URL to create the WordPress-ready `marketers-delight/inline-page-block` stored in `fluentcart/product-page.wordpress.html`. The builder prepends the canonical GTDS token layer from the `gt-design` skill and includes the accessible, no-network interactive product demo from `fluentcart/product-page.js`; use `--tokens-path` when that skill lives elsewhere.

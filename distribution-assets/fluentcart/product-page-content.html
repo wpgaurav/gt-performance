@@ -1,29 +1,623 @@
 <div class="gt-performance-page">
 	<section class="gtd gtd-section gtd-section--dark gt-performance-hero" aria-labelledby="gt-performance-hero-title">
-		<div class="gtd-wide gt-performance-hero__layout">
-			<div class="gt-performance-hero__copy">
-				<p class="gtd-eyebrow">WordPress performance, without cache roulette</p>
-				<h1 class="gtd-display" id="gt-performance-hero-title">Fast pages. <span class="gtd-gradient-text">Safe commerce.</span></h1>
-				<p class="gtd-intro gtd-muted">GT Performance unifies origin caching, Cloudflare Free, server-side unused CSS, Redis, and WordPress cleanup without treating checkout state as public HTML.</p>
-				<div class="gt-performance-price" role="group" aria-label="Price and license">
-					<p><span class="gtd-visuallyhidden">Price: </span><strong>$199</strong> <span>one-time</span></p>
-					<p class="gtd-caption">One WordPress site · lifetime license</p>
-				</div>
-				<div class="gtd-actions gtd-actions--start gt-performance-actions">
-					<a class="gtd-button gtd-button--large" href="{{CHECKOUT_URL}}">Buy GT Performance for $199</a>
-					<a class="gtd-cta-link" href="#gt-performance-controls">Explore the controls</a>
-				</div>
-				<ul class="gt-performance-tags" role="list">
-					<li>Cloudflare Free</li>
-					<li>Server-side CSS</li>
-					<li>Redis object cache</li>
-					<li>Commerce-aware</li>
-				</ul>
+		<div class="gtd-text gt-performance-hero__copy">
+			<p class="gtd-eyebrow">WordPress performance, without cache roulette</p>
+			<h1 class="gtd-display" id="gt-performance-hero-title">Fast pages. <span class="gtd-gradient-text">Safe commerce.</span></h1>
+			<p class="gtd-intro gtd-muted">GT Performance unifies origin caching, Cloudflare Free, server-side unused CSS, Redis, and WordPress cleanup without treating checkout state as public HTML.</p>
+			<div class="gt-performance-price" role="group" aria-label="Price and license">
+				<p><span class="gtd-visuallyhidden">Price: </span><strong>$199</strong> <span>one-time</span></p>
+				<p class="gtd-caption">25 WordPress websites · lifetime license</p>
 			</div>
-			<figure class="gt-performance-shot">
-				<img class="gtd-shot gtd-shot--float" src="{{DASHBOARD_URL}}" alt="GT Performance dashboard showing page cache, Cloudflare, unused CSS, Redis, and recommended next steps" width="1280" height="720" decoding="async" fetchpriority="high">
-				<figcaption class="gtd-caption">One control center for every performance layer that reaches a visitor.</figcaption>
-			</figure>
+			<div class="gtd-actions gt-performance-actions">
+				<a class="gtd-button gtd-button--large" href="{{CHECKOUT_URL}}">Buy GT Performance for $199</a>
+				<a class="gtd-cta-link" href="#gt-performance-demo">Try the live demo</a>
+			</div>
+			<ul class="gt-performance-tags" role="list">
+				<li>Cloudflare Free</li>
+				<li>Server-side CSS</li>
+				<li>Redis object cache</li>
+				<li>Commerce-aware</li>
+			</ul>
+		</div>
+
+		<div class="gtd-wide gtp-product-demo" id="gt-performance-demo" data-gtp-product-demo>
+			<div class="gtp-demo-toolbar">
+				<div>
+					<span class="gtp-demo-toolbar__dot" aria-hidden="true"></span>
+					<strong>Interactive demo</strong>
+					<span>Try the controls. Nothing is saved.</span>
+				</div>
+				<button class="gtp-demo-reset" type="button" data-demo-reset>Reset demo</button>
+			</div>
+
+			<div class="gtp-demo-admin">
+				<header class="gtp-demo-header">
+					<div>
+						<p class="gtp-demo-eyebrow">GT Performance</p>
+						<p class="gtp-demo-title">Performance control center</p>
+						<p class="gtp-demo-lede">Origin caching, server-side optimization, Cloudflare Free, and commerce-safe delivery in one place.</p>
+					</div>
+					<span class="gtp-demo-version">0.1 alpha</span>
+				</header>
+
+				<div class="gtp-demo-tabs" role="tablist" aria-label="GT Performance settings">
+					<button class="gtp-demo-tab is-active" id="gtp-demo-tab-dashboard" type="button" role="tab" aria-selected="true" aria-controls="gtp-demo-panel-dashboard" tabindex="0" data-demo-tab="dashboard">Dashboard</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-cache" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-cache" tabindex="-1" data-demo-tab="cache">Cache</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-optimization" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-optimization" tabindex="-1" data-demo-tab="optimization">Optimization</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-exceptions" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-exceptions" tabindex="-1" data-demo-tab="exceptions">Exceptions</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-cloudflare" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-cloudflare" tabindex="-1" data-demo-tab="cloudflare">Cloudflare</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-integrations" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-integrations" tabindex="-1" data-demo-tab="integrations">Integrations</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-css-reports" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-css-reports" tabindex="-1" data-demo-tab="css-reports">CSS Reports</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-license" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-license" tabindex="-1" data-demo-tab="license">License</button>
+					<button class="gtp-demo-tab" id="gtp-demo-tab-tools" type="button" role="tab" aria-selected="false" aria-controls="gtp-demo-panel-tools" tabindex="-1" data-demo-tab="tools">Tools</button>
+				</div>
+
+				<div class="gtp-demo-main">
+					<section class="gtp-demo-panel" id="gtp-demo-panel-dashboard" role="tabpanel" aria-labelledby="gtp-demo-tab-dashboard" data-demo-panel="dashboard">
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Dashboard</h2>
+								<p>See what is active, what is protected, and what deserves attention next.</p>
+							</div>
+							<span class="gtp-demo-badge gtp-demo-badge--success">System healthy</span>
+						</div>
+						<div class="gtp-demo-stats">
+							<article>
+								<span>Page cache</span>
+								<strong data-demo-stat="cache">Active</strong>
+								<small>Origin HTML cache</small>
+							</article>
+							<article>
+								<span>Cloudflare</span>
+								<strong data-demo-stat="cloudflare">Connected</strong>
+								<small>Free plan ready</small>
+							</article>
+							<article>
+								<span>Unused CSS</span>
+								<strong data-demo-stat="css">Enabled</strong>
+								<small>Critical plus file</small>
+							</article>
+							<article>
+								<span>CSS files ready</span>
+								<strong data-demo-stat="css-ready">18</strong>
+								<small>1 processing</small>
+							</article>
+						</div>
+						<div class="gtp-demo-grid">
+							<article class="gtp-demo-card">
+								<div class="gtp-demo-card__header">
+									<div>
+										<h3>Current configuration</h3>
+										<p>One policy across every delivery layer.</p>
+									</div>
+								</div>
+								<ul class="gtp-demo-status-list" role="list">
+									<li><span>Fresh cache lifetime</span><strong>1 hour</strong></li>
+									<li><span>Stale retention</span><strong>24 hours</strong></li>
+									<li><span>CSS delivery</span><strong>Critical inline + file</strong></li>
+									<li><span>Redis drop-in</span><strong class="gtp-demo-state gtp-demo-state--success">Owned</strong></li>
+									<li><span>Cache directory</span><strong class="gtp-demo-state gtp-demo-state--success">Writable</strong></li>
+								</ul>
+							</article>
+							<article class="gtp-demo-card gtp-demo-card--tonal">
+								<div class="gtp-demo-card__header">
+									<div>
+										<h3>Recommended next step</h3>
+										<p>Generate the remaining CSS file after your next design change.</p>
+									</div>
+								</div>
+								<button class="gtp-demo-button" type="button" data-demo-open-tab="css-reports">Open CSS Reports</button>
+							</article>
+						</div>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-cache" role="tabpanel" aria-labelledby="gtp-demo-tab-cache" data-demo-panel="cache" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Cache</h2>
+								<p>Control freshness at the origin while visitor browsers remain conservative.</p>
+							</div>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>One-click presets</h3>
+									<p>Choose a starting point, then adjust any value.</p>
+								</div>
+							</div>
+							<div class="gtp-demo-presets" role="group" aria-label="Cache presets">
+								<button type="button" aria-pressed="true" data-demo-preset="maximum"><strong>Maximum impact</strong><span>1h fresh · 24h retained</span></button>
+								<button type="button" aria-pressed="false" data-demo-preset="balanced"><strong>Balanced</strong><span>30m fresh · 12h retained</span></button>
+								<button type="button" aria-pressed="false" data-demo-preset="dynamic"><strong>Frequently updated</strong><span>5m fresh · 1h retained</span></button>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>Origin cache</h3>
+									<p>Keep safe public HTML ready on disk so WordPress does less work.</p>
+								</div>
+							</div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field">
+									<div><strong>Enable origin page cache</strong><span>Cache eligible public GET requests after WordPress renders them once.</span></div>
+									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch="cache"><span aria-hidden="true"></span><b>On</b></button>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Separate mobile cache</strong><span>Create a mobile variant only when the HTML differs by device.</span></div>
+									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Cache logged-in users</strong><span>Advanced and normally unsafe for personalized pages.</span></div>
+									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button>
+								</div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>Cache lifetime</h3>
+									<p>Server retention can be aggressive without locking stale HTML into browsers.</p>
+								</div>
+							</div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field">
+									<div><strong>Fresh TTL</strong><span>Before a cached page needs regeneration.</span></div>
+									<output data-demo-value="fresh">1 hour</output>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>User and bot retention</strong><span>Safe stale delivery and cache resilience.</span></div>
+									<output data-demo-value="retention">24 hours</output>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Stale if error</strong><span>How long stale HTML may be used when regeneration fails.</span></div>
+									<output data-demo-value="error">24 hours</output>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Browser max-age</strong><span>Conservative client-side HTML lifetime.</span></div>
+									<output data-demo-value="browser">5 minutes</output>
+								</div>
+							</div>
+						</article>
+						<div class="gtp-demo-savebar"><button class="gtp-demo-button" type="button" data-demo-action="Cache settings saved in the demo">Save changes</button></div>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-optimization" role="tabpanel" aria-labelledby="gtp-demo-tab-optimization" data-demo-panel="optimization" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Optimization</h2>
+								<p>Server-side CSS plus conservative JavaScript, media, font, database, and WordPress controls.</p>
+							</div>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>Unused CSS</h3>
+									<p>Analyze rendered HTML on this server and deliver only matching selectors.</p>
+								</div>
+							</div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field">
+									<div><strong>Remove unused CSS</strong><span>Analyze rendered selectors on your server.</span></div>
+									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch="css"><span aria-hidden="true"></span><b>On</b></button>
+								</div>
+								<div class="gtp-demo-field gtp-demo-field--stacked">
+									<div><strong>CSS delivery</strong><span>Choose how reduced, page-specific CSS is added to the response.</span></div>
+									<div class="gtp-demo-radio-options" role="radiogroup" aria-label="CSS delivery">
+										<label><input type="radio" name="gtp-demo-css-mode" value="file"><span><strong>Generated file</strong><small>Small HTML and a cacheable stylesheet.</small></span></label>
+										<label><input type="radio" name="gtp-demo-css-mode" value="inline"><span><strong>Inline all used CSS</strong><small>No stylesheet request; complete used CSS repeats in HTML.</small></span></label>
+										<label><input type="radio" name="gtp-demo-css-mode" value="hybrid" checked><span><strong>Critical inline + remaining file</strong><small>Important early rules inline; the rest stays cacheable.</small></span></label>
+									</div>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Hybrid inline budget</strong><span>Maximum early-page CSS to inline in Hybrid mode.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Hybrid inline budget in bytes</span><input type="number" value="14336" min="2048" max="51200"><em>bytes</em></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Preserve dynamic states</strong><span>Keep hover, focus, open, checked, and interactive selectors.</span></div>
+									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button>
+								</div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>JavaScript</h3><p>Apply transformations only to scripts that are not excluded or transactional.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Minify local JavaScript</strong><span>Create immutable minified copies of eligible local scripts.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Defer safe JavaScript</strong><span>Add defer to eligible external scripts.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Delay third-party JavaScript</strong><span>Wait for interaction or five seconds before loading matches.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Images and embeds</h3><p>Reduce offscreen work and generate modern image variants on this server.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Lazy-load non-critical images</strong><span>Keep early images eager and lazy-load later images.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Add missing image dimensions</strong><span>Reduce layout shifts when attachment dimensions are known.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Critical image count</strong><span>Early images excluded from lazy loading.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Critical image count</span><input type="number" value="2" min="0" max="10"><em>images</em></label></div>
+								<div class="gtp-demo-field"><div><strong>Generate optimized variants</strong><span>Create the selected modern format for attachments.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Serve generated variants</strong><span>Rewrite eligible image URLs to generated variants.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Generated format</strong><span>AVIF requires server image-editor support.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Generated image format</span><select><option>WebP</option><option>AVIF</option></select></label></div>
+								<div class="gtp-demo-field"><div><strong>Image quality</strong><span>Higher values retain more detail and create larger files.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Image quality percentage</span><input type="number" value="82" min="30" max="100"><em>%</em></label></div>
+								<div class="gtp-demo-field"><div><strong>Lightweight YouTube previews</strong><span>Replace eligible embeds with a click-to-load preview.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Self-host Gravatar images</strong><span>Reserve local delivery for supported Gravatar responses.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Fonts</h3><p>Keep font requests predictable and reduce render blocking.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Self-host Google Fonts</strong><span>Download eligible stylesheets and font files to this site.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Preload local fonts</strong><span>Preload detected local font resources when supported.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Font display</strong><span>Swap is the safest default for readable text during loading.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Font display</span><select><option>swap</option><option>fallback</option><option>optional</option><option>block</option></select></label></div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div><h3>WordPress quick toggles</h3><p>Remove front-end requests and metadata WordPress loads globally.</p></div>
+								<button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-wordpress-preset>Apply site baseline</button>
+							</div>
+							<div class="gtp-demo-toggle-grid">
+								<div><strong>Disable WordPress emoji assets</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Disable Dashicons for visitors</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Disable WordPress embeds</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Disable XML-RPC</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Remove RSD link</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Remove jQuery Migrate</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Remove WordPress version</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Remove shortlink</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Disable RSS feeds</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Remove RSS feed links</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Disable self pingbacks</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Remove REST API links</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div><strong>Disable Google Maps</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Disable password strength meter</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Remove comment author URLs</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Add a blank fallback favicon</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Remove global styles</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div><strong>Load separate core block styles</strong><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Editor, comments, and APIs</h3><p>Control revision growth, autosaves, Heartbeat, comments, and REST API access.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Heartbeat behavior</strong><span>Reduced frequency preserves post locks with fewer requests.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Heartbeat behavior</span><select><option>Reduce frequency (recommended)</option><option>WordPress default</option><option>Disable outside the editor</option><option>Disable everywhere</option></select></label></div>
+								<div class="gtp-demo-field"><div><strong>Heartbeat interval</strong><span>Slow the admin Heartbeat API without disabling locks.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Heartbeat interval in seconds</span><input type="number" value="60" min="15" max="120"><em>seconds</em></label></div>
+								<div class="gtp-demo-field"><div><strong>WordPress revision limit</strong><span>Revisions WordPress retains for each post.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">WordPress revision limit</span><input type="number" value="5" min="0" max="100"><em>revisions</em></label></div>
+								<div class="gtp-demo-field"><div><strong>Autosave interval</strong><span>Increase the editor interval to reduce background requests.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Autosave interval in seconds</span><input type="number" value="60" min="15" max="3600"><em>seconds</em></label></div>
+								<div class="gtp-demo-field"><div><strong>REST API access</strong><span>The default keeps the block editor and integrations available.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">REST API access</span><select><option>Keep enabled</option><option>Administrators only</option><option>Disable all requests</option></select></label></div>
+								<div class="gtp-demo-field"><div><strong>Disable comments</strong><span>Close comments and pingbacks across public post types.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Scheduled database optimization</h3><p>Run a bounded cleanup batch daily, weekly, or monthly.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Schedule database cleanup</strong><span>Run the selected database tasks automatically.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Cleanup schedule</strong><span>The schedule starts one hour after settings are saved.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Cleanup schedule</span><select><option>Weekly</option><option>Daily</option><option>Monthly</option></select></label></div>
+								<div class="gtp-demo-field"><div><strong>Scheduled revisions to retain</strong><span>Recent revisions kept per post.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Scheduled revisions to retain</span><input type="number" value="5" min="0" max="100"><em>revisions</em></label></div>
+								<div class="gtp-demo-field gtp-demo-field--stacked"><div><strong>Scheduled tasks</strong><span>Automatic maintenance never clears active transients.</span></div><div class="gtp-demo-checklist" role="group" aria-label="Scheduled database tasks"><label><input type="checkbox" checked>Post revisions</label><label><input type="checkbox" checked>Auto-drafts</label><label><input type="checkbox" checked>Spam comments</label><label><input type="checkbox" checked>Trashed posts</label><label><input type="checkbox" checked>Trashed comments</label><label><input type="checkbox" checked>Expired transients</label><label><input type="checkbox" checked>Database tables</label></div></div>
+							</div>
+						</article>
+
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Diagnostics</h3><p>Keep troubleshooting data local, bounded, and off unless needed.</p></div></div>
+							<div class="gtp-demo-fields"><div class="gtp-demo-field"><div><strong>Diagnostic logging</strong><span>Write redacted plugin errors to the GT Performance log directory.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div></div>
+						</article>
+						<div class="gtp-demo-savebar"><button class="gtp-demo-button" type="button" data-demo-action="Optimization settings saved in the demo">Save changes</button></div>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-exceptions" role="tabpanel" aria-labelledby="gtp-demo-tab-exceptions" data-demo-panel="exceptions" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Exceptions</h2>
+								<p>Protect dynamic routes and safelist selectors that must survive CSS pruning.</p>
+							</div>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Cache exceptions</h3><p>One path, cookie fragment, or query parameter per line.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Never cache paths</strong><span>Core WordPress and commerce paths are protected by default.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Never cache paths</span><textarea rows="4">/checkout/
+/account/
+/receipt/</textarea></label></div>
+								<div class="gtp-demo-field"><div><strong>Never cache cookies</strong><span>Bypass when a cookie name contains a listed fragment.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Never cache cookies</span><textarea rows="3">wordpress_logged_in_
+fluent_cart_session</textarea></label></div>
+								<div class="gtp-demo-field"><div><strong>Never cache query parameters</strong><span>Bypass whenever an exact parameter is present.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Never cache query parameters</span><textarea rows="3">preview
+add-to-cart
+fluent-cart</textarea></label></div>
+								<div class="gtp-demo-field"><div><strong>Ignore marketing parameters</strong><span>Remove campaign parameters from the public cache key.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Ignored marketing parameters</span><textarea rows="3">utm_source
+utm_campaign
+gclid</textarea></label></div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Unused CSS exceptions</h3><p>Use partial selectors, validated regular expressions, or stylesheet URLs.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Selector safelist</strong><span>Plain text is partial; delimited expressions are treated as regex.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Unused CSS selector safelist</span><textarea rows="4">cart-drawer
+/^is-(open|active)$/
+.fluent-cart-checkout</textarea></label></div>
+								<div class="gtp-demo-field"><div><strong>Excluded stylesheets</strong><span>Leave matching stylesheets untouched and loaded normally.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Excluded stylesheets</span><textarea rows="3">/checkout.css
+/payment-widget/</textarea></label></div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>JavaScript exceptions</h3><p>Transactional cart, checkout, and payment scripts are protected automatically.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Never optimize scripts</strong><span>Skip minify, defer, and delay for matching URLs.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Never optimize scripts</span><textarea rows="3">interactive-widget.js
+payment-provider.com</textarea></label></div>
+								<div class="gtp-demo-field"><div><strong>Scripts to delay</strong><span>Delay only these third-party matches when delay is enabled.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Scripts to delay</span><textarea rows="3">googletagmanager.com
+clarity.ms</textarea></label></div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Media exceptions</h3><p>Interactive embeds can keep their normal rendering behavior.</p></div></div>
+							<div class="gtp-demo-fields"><div class="gtp-demo-field"><div><strong>Lazy-render selectors</strong><span>Selectors for supported embeds rendered after interaction.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Lazy-render selectors</span><textarea rows="3">.video-embed
+.interactive-map</textarea></label></div></div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>WordPress exceptions</h3><p>Keep Google Maps on URLs that need it while disabling the script elsewhere.</p></div></div>
+							<div class="gtp-demo-fields"><div class="gtp-demo-field"><div><strong>Google Maps path exceptions</strong><span>One path fragment per line.</span></div><label class="gtp-demo-textarea"><span class="gtd-visuallyhidden">Google Maps path exceptions</span><textarea rows="3">/contact/
+/store-locator/</textarea></label></div></div>
+						</article>
+						<div class="gtp-demo-savebar"><button class="gtp-demo-button" type="button" data-demo-action="Exception settings saved in the demo">Save changes</button></div>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-cloudflare" role="tabpanel" aria-labelledby="gtp-demo-tab-cloudflare" data-demo-panel="cloudflare" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Cloudflare</h2>
+								<p>Connect the Free plan, synchronize one managed cache rule, and purge exact paths.</p>
+							</div>
+							<span class="gtp-demo-badge gtp-demo-badge--success" data-demo-cloudflare-badge>Connected</span>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>Connection</h3>
+									<p>Use a scoped API token or a Global API Key with account email.</p>
+								</div>
+							</div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field">
+									<div><strong>Enable Cloudflare integration</strong><span>Allow GT Performance to purge and maintain its managed Cache Rule.</span></div>
+									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Authentication</strong><span>Use a token limited to Zone Read, Cache Rules Edit, and Cache Purge.</span></div>
+									<label class="gtp-demo-select"><span class="gtd-visuallyhidden">Authentication method</span><select data-demo-auth><option>Scoped API token (recommended)</option><option>Global API Key (legacy)</option></select></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Scoped API token</strong><span>Saved credentials are encrypted and never displayed again.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Scoped API token</span><input type="password" value="" placeholder="Saved token"></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Global API Key</strong><span>Legacy authentication also requires the account email.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Global API Key</span><input type="password" value="" placeholder="Saved key"></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Cloudflare account email</strong><span>Required only with Global API Key authentication.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Cloudflare account email</span><input type="email" value="owner@example.com"></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Domain</strong><span>The zone protected by GT Performance.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Cloudflare domain</span><input type="text" value="example.com"></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Zone ID</strong><span>Optional. A direct ID avoids the discovery request.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Cloudflare Zone ID</span><input type="text" value="" placeholder="Discover automatically"></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Edge TTL</strong><span>How long eligible public HTML may remain fresh at Cloudflare.</span></div>
+									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Cloudflare edge TTL in seconds</span><input type="number" value="86400" min="0" max="31536000"><em>seconds</em></label>
+								</div>
+								<div class="gtp-demo-field">
+									<div><strong>Managed Cache Rule</strong><span>Commerce bypasses and public caching are synchronized.</span></div>
+									<strong class="gtp-demo-state gtp-demo-state--success">Active</strong>
+								</div>
+							</div>
+							<div class="gtp-demo-card__actions">
+								<button class="gtp-demo-button" type="button" data-demo-cloudflare>Test connection</button>
+								<button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Cloudflare settings saved">Save changes</button>
+								<button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Cloudflare rule synchronized">Connect/sync Cloudflare</button>
+							</div>
+						</article>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-integrations" role="tabpanel" aria-labelledby="gtp-demo-tab-integrations" data-demo-panel="integrations" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Integrations</h2>
+								<p>Coordinate optimization ownership, commerce state, services, and a persistent Redis object cache.</p>
+							</div>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Optimization ownership</h3><p>Known overlap is coordinated instead of rewriting the same response twice.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Automatic conflict protection</strong><span>Detect performance plugins and preserve known dynamic state.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Perfmatters ownership</strong><span>Choose the owner for overlapping front-end optimization.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Perfmatters ownership</span><select><option>Automatic per feature (recommended)</option><option>GT Performance owns optimization</option><option>Perfmatters owns optimization</option></select></label></div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Service safeguards</h3><p>Protections activate only when the matching plugin is active.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Akismet compatibility</strong><span>Keep privacy and anti-spam assets during CSS or JavaScript optimization.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Jetpack compatibility</strong><span>Protect forms, comments, subscriptions, search, VideoPress, and visitor state.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Commerce safeguards</h3><p>Active integrations contribute bypass routes, cookies, parameters, and invalidation rules.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>FluentCart</strong><span>Protect cart, checkout, account, orders, receipts, licenses, and customer sessions.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Easy Digital Downloads</strong><span>Protect checkout, purchase history, receipts, and sessions.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>WooCommerce</strong><span>Protect cart, checkout, My Account, orders, fragments, and sessions.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Redis object cache</h3><p>PhpRedis credentials with standard Redis Object Cache and GT Performance constant overrides.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Enable Redis object cache</strong><span>Use the owned object-cache.php drop-in when no other plugin owns it.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Redis host or socket</strong><span>Hostname, IP address, or Unix socket path.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis host or socket</span><input type="text" value="127.0.0.1"></label></div>
+								<div class="gtp-demo-field"><div><strong>Redis port</strong><span>Use 6379 normally, or 0 with a Unix socket.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis port</span><input type="number" value="6379" min="0" max="65535"></label></div>
+								<div class="gtp-demo-field"><div><strong>Redis database</strong><span>Logical Redis database reserved for this site.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis database</span><input type="number" value="0" min="0" max="255"></label></div>
+								<div class="gtp-demo-field"><div><strong>Redis username</strong><span>Optional ACL username.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis username</span><input type="text" value="" placeholder="Optional"></label></div>
+								<div class="gtp-demo-field"><div><strong>Redis password</strong><span>Encrypted in WordPress and masked after save.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis password</span><input type="password" value="" placeholder="Saved password"></label></div>
+								<div class="gtp-demo-field"><div><strong>Use TLS</strong><span>Connect with tls:// when encrypted transport is required.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Persistent connection</strong><span>Reuse the PhpRedis connection between requests.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Cache key prefix</strong><span>Leave blank for an automatic site-specific prefix.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis cache key prefix</span><input type="text" value="gtp:site:"></label></div>
+								<div class="gtp-demo-field"><div><strong>Connection timeout</strong><span>Fail back quickly when Redis is unavailable.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis connection timeout</span><input type="number" value="0.5" min="0.1" max="10" step="0.1"><em>seconds</em></label></div>
+								<div class="gtp-demo-field"><div><strong>Read timeout</strong><span>Maximum time to wait for a Redis response.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Redis read timeout</span><input type="number" value="0.5" min="0.1" max="10" step="0.1"><em>seconds</em></label></div>
+							</div>
+							<div class="gtp-demo-card__actions">
+								<button class="gtp-demo-button" type="button" data-demo-action="Redis settings saved">Save changes</button>
+								<button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Redis connection is healthy">Test Redis connection</button>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Compatible wp-config.php overrides</h3><p>GT Performance reads WP_REDIS_* and GTP_REDIS_* constants, with GTP values taking precedence.</p></div></div>
+							<pre class="gtp-demo-config"><code>define( 'WP_REDIS_HOST', '127.0.0.1' );
+define( 'WP_REDIS_PORT', 6379 );
+define( 'WP_REDIS_DATABASE', 0 );
+define( 'WP_REDIS_PREFIX', 'gtp:site:' );
+define( 'WP_REDIS_TIMEOUT', 0.5 );</code></pre>
+						</article>
+						<div class="gtp-demo-subheading"><h3>Detected plugin compatibility</h3><p>Foreign cache drop-ins are never overwritten; active owners that need review are flagged.</p></div>
+						<div class="gtp-demo-integrations">
+							<article><span class="gtp-demo-initials">PM</span><div><h3>Perfmatters</h3><p>Coordinates unused CSS, JavaScript, and front-end ownership.</p></div><strong class="gtp-demo-state gtp-demo-state--warning">Coordinated</strong></article>
+							<article><span class="gtp-demo-initials">FP</span><div><h3>FlyingPress</h3><p>Detected as another full-page cache and optimization owner.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">WPR</span><div><h3>WP Rocket</h3><p>Detected as another full-page cache and optimization owner.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">LS</span><div><h3>LiteSpeed Cache</h3><p>Detected as another full-page cache and optimization owner.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">WPSC</span><div><h3>WP Super Cache</h3><p>Detected as another full-page cache owner.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">W3</span><div><h3>W3 Total Cache</h3><p>Detected as another page and object cache owner.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">AO</span><div><h3>Autoptimize</h3><p>Detected as another CSS and JavaScript owner.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">JB</span><div><h3>Jetpack Boost</h3><p>Page cache and critical CSS ownership may overlap.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">AK</span><div><h3>Akismet Anti-spam</h3><p>Preserves comment-form privacy and anti-spam assets.</p></div><strong class="gtp-demo-state gtp-demo-state--success">Protected</strong></article>
+							<article><span class="gtp-demo-initials">JP</span><div><h3>Jetpack</h3><p>Protects forms, comments, subscriptions, search, media, and visitor state.</p></div><strong class="gtp-demo-state">Not active</strong></article>
+							<article><span class="gtp-demo-initials">CF</span><div><h3>Core Forms</h3><p>Keeps poll voter identity only on pages containing polls.</p></div><strong class="gtp-demo-state gtp-demo-state--success">Protected</strong></article>
+						</div>
+						<div class="gtp-demo-savebar"><button class="gtp-demo-button" type="button" data-demo-action="Integration settings saved in the demo">Save changes</button></div>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-css-reports" role="tabpanel" aria-labelledby="gtp-demo-tab-css-reports" data-demo-panel="css-reports" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Unused CSS reports</h2>
+								<p>Watch files move through the server-side generation queue.</p>
+							</div>
+							<button class="gtp-demo-button" type="button" data-demo-generate-css>Simulate generation</button>
+						</div>
+						<div class="gtp-demo-report-stats">
+							<div><span>Processing</span><strong data-demo-report="processing">1</strong></div>
+							<div><span>Ready</span><strong data-demo-report="ready">18</strong></div>
+							<div><span>Stale</span><strong>2</strong></div>
+							<div><span>Failed</span><strong>0</strong></div>
+						</div>
+						<article class="gtp-demo-card gtp-demo-report-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>Generated pages</h3>
+									<p>Delivery mode, output size, savings, and current state.</p>
+								</div>
+								<span class="gtp-demo-live"><i aria-hidden="true"></i>Live</span>
+							</div>
+							<div class="gtp-demo-table-wrap" role="region" aria-label="Generated CSS report table" tabindex="0">
+								<table>
+									<thead><tr><th scope="col">Page</th><th scope="col">Status</th><th scope="col">Delivery</th><th scope="col">Output</th><th scope="col">Updated</th></tr></thead>
+									<tbody>
+										<tr data-demo-css-row><th scope="row">Product page</th><td><span class="gtp-demo-state gtp-demo-state--processing" data-demo-css-status>Processing</span></td><td>Critical + file</td><td data-demo-css-output>Analyzing…</td><td>Now</td></tr>
+										<tr><th scope="row">Home page</th><td><span class="gtp-demo-state gtp-demo-state--success">Ready</span></td><td>Generated file</td><td>31 KB · 78% saved</td><td>4 min ago</td></tr>
+										<tr><th scope="row">Checkout</th><td><span class="gtp-demo-state">Bypassed</span></td><td>Original CSS</td><td>Commerce route</td><td>Always</td></tr>
+									</tbody>
+								</table>
+							</div>
+						</article>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-license" role="tabpanel" aria-labelledby="gtp-demo-tab-license" data-demo-panel="license" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>License</h2>
+								<p>Protected updates are delivered through the normal WordPress update screen.</p>
+							</div>
+							<span class="gtp-demo-badge gtp-demo-badge--success">Active</span>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header">
+								<div>
+									<h3>GT Performance license</h3>
+									<p>The key and activation hash are encrypted before WordPress saves them.</p>
+								</div>
+								<span class="gtp-demo-state gtp-demo-state--success">Active</span>
+							</div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>License</strong><span>Stored securely and masked after activation.</span></div><code>gtp_••••••••••••7D4A</code></div>
+								<div class="gtp-demo-field"><div><strong>License source</strong><span>GTP_LICENSE_KEY is also supported in wp-config.php.</span></div><strong>Encrypted database option</strong></div>
+								<div class="gtp-demo-field"><div><strong>Plan</strong><span>Use one license key across your production portfolio.</span></div><strong>GT Performance · 25 websites</strong></div>
+								<div class="gtp-demo-field"><div><strong>Expiration</strong><span>No recurring renewal payment.</span></div><strong>Lifetime</strong></div>
+								<div class="gtp-demo-field"><div><strong>Last verified</strong><span>License checks also run weekly.</span></div><strong>Just now</strong></div>
+							</div>
+							<div class="gtp-demo-card__actions">
+								<button class="gtp-demo-button" type="button" data-demo-action="License and update check completed">Check license and updates</button>
+								<button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Deactivation is disabled in the product demo">Deactivate on this site</button>
+							</div>
+						</article>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Protected updates</h3><p>WordPress receives a temporary package URL only while this site activation is valid.</p></div></div>
+							<div class="gtp-demo-fields">
+								<div class="gtp-demo-field"><div><strong>Product</strong><span>Licensed FluentCart product.</span></div><strong>GT Performance</strong></div>
+								<div class="gtp-demo-field"><div><strong>FluentCart product ID</strong><span>Used for protected release metadata.</span></div><code>1170147</code></div>
+								<div class="gtp-demo-field"><div><strong>Installed version</strong><span>Current plugin package.</span></div><code>0.1.0-alpha.10</code></div>
+								<div class="gtp-demo-field"><div><strong>Automatic checks</strong><span>Normal WordPress update workflow.</span></div><strong>Every 3 hours</strong></div>
+								<div class="gtp-demo-field"><div><strong>License verification</strong><span>Also available on demand.</span></div><strong>Weekly</strong></div>
+							</div>
+							<div class="gtp-demo-card__actions"><button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Release history is available from the licensed product account">View release history</button></div>
+						</article>
+					</section>
+
+					<section class="gtp-demo-panel" id="gtp-demo-panel-tools" role="tabpanel" aria-labelledby="gtp-demo-tab-tools" data-demo-panel="tools" hidden>
+						<div class="gtp-demo-page-heading">
+							<div>
+								<h2>Tools</h2>
+								<p>Verify runtime ownership, purge cache layers, test Redis, and clean the database manually.</p>
+							</div>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Runtime status</h3><p>GT Performance never overwrites a drop-in owned by another plugin.</p></div></div>
+							<ul class="gtp-demo-status-list" role="list">
+								<li><span>Page-cache drop-in</span><strong class="gtp-demo-state gtp-demo-state--success">Owned</strong></li>
+								<li><span>WP_CACHE</span><strong class="gtp-demo-state gtp-demo-state--success">Enabled</strong></li>
+								<li><span>Redis drop-in</span><strong class="gtp-demo-state gtp-demo-state--success">Owned</strong></li>
+								<li><span>Cache directory</span><strong class="gtp-demo-state gtp-demo-state--success">Writable</strong></li>
+							</ul>
+						</article>
+						<div class="gtp-demo-tools">
+							<article class="gtp-demo-card"><div><h3>Page cache drop-in</h3><p>Install or refresh advanced-cache.php and safely manage WP_CACHE.</p></div><button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Page-cache drop-in is installed and owned">Install page-cache drop-in</button></article>
+							<article class="gtp-demo-card"><div><h3>Redis object cache</h3><p>Test credentials and install object-cache.php only when no conflict exists.</p></div><button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Redis connection is healthy and the drop-in is owned">Test and install Redis</button></article>
+							<article class="gtp-demo-card"><div><h3>Purge GT cache</h3><p>Remove origin HTML and generated assets managed by GT Performance.</p></div><button class="gtp-demo-button" type="button" data-demo-action="Origin and generated asset caches purged">Purge GT cache</button></article>
+							<article class="gtp-demo-card"><div><h3>Cloudflare rule</h3><p>Discover the zone and reconcile the managed Cloudflare Free Cache Rule.</p></div><button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Cloudflare managed Cache Rule synchronized">Connect/sync Cloudflare</button></article>
+						</div>
+						<article class="gtp-demo-card">
+							<div class="gtp-demo-card__header"><div><h3>Manual database optimization</h3><p>Select only the permanent cleanup tasks you want to simulate.</p></div><span class="gtp-demo-state">Manual control</span></div>
+							<div class="gtp-demo-database-list" role="group" aria-label="Manual database optimization tasks">
+								<label><input type="checkbox" checked><span><strong>Post revisions</strong><small>Delete saved revisions.</small></span><b>12</b></label>
+								<label><input type="checkbox" checked><span><strong>Auto-drafts</strong><small>Delete abandoned automatic drafts.</small></span><b>3</b></label>
+								<label><input type="checkbox" checked><span><strong>Spam comments</strong><small>Delete comments marked as spam.</small></span><b>4</b></label>
+								<label><input type="checkbox" checked><span><strong>Trashed posts</strong><small>Delete posts and pages in Trash.</small></span><b>2</b></label>
+								<label><input type="checkbox" checked><span><strong>Trashed comments</strong><small>Delete comments in Trash.</small></span><b>0</b></label>
+								<label><input type="checkbox" checked><span><strong>Expired transients</strong><small>Remove expired temporary cache entries.</small></span><b>6</b></label>
+								<label><input type="checkbox"><span><strong>All transients</strong><small>Clear active and expired temporary caches.</small></span><b>31</b></label>
+								<label><input type="checkbox" checked><span><strong>Database tables</strong><small>Optimize tables with reclaimable space.</small></span><b>0</b></label>
+							</div>
+							<div class="gtp-demo-database-actions">
+								<p>These changes are permanent in the plugin. This product demo never touches a database.</p>
+								<button class="gtp-demo-button gtp-demo-button--secondary" type="button" data-demo-action="Database simulation completed for the selected tasks">Run selected optimization</button>
+							</div>
+						</article>
+					</section>
+				</div>
+				<p class="gtp-demo-announcer gtd-visuallyhidden" role="status" aria-live="polite" data-demo-live></p>
+			</div>
 		</div>
 	</section>
 
@@ -57,17 +651,11 @@
 	</section>
 
 	<section class="gtd gtd-section" id="gt-performance-controls" aria-labelledby="gt-performance-controls-title">
-		<div class="gtd-wide gt-performance-feature-split">
-			<div>
-				<p class="gtd-eyebrow">One plugin, clear ownership</p>
-				<h2 class="gtd-headline" id="gt-performance-controls-title">Own the performance stack.</h2>
-				<p class="gtd-intro gtd-muted">Enable each layer separately and see when another plugin already owns the same optimization.</p>
-			</div>
-			<figure class="gt-performance-shot">
-				<img class="gtd-shot gtd-shot--frame" src="{{DASHBOARD_URL}}" alt="GT Performance dashboard summarizing cache setup, Cloudflare connection, unused CSS status, and current configuration" width="1280" height="720" loading="lazy" decoding="async">
-				<figcaption class="gtd-caption">Status and the recommended next step remain visible before you change another layer.</figcaption>
-			</figure>
-		</div>
+		<header class="gtd-text gt-performance-section-header">
+			<p class="gtd-eyebrow">One plugin, clear ownership</p>
+			<h2 class="gtd-headline" id="gt-performance-controls-title">Own the performance stack.</h2>
+			<p class="gtd-intro gtd-muted">Enable each layer separately and see when another plugin already owns the same optimization.</p>
+		</header>
 		<ul class="gtd-content gt-performance-feature-list" role="list">
 			<li>
 				<h3 class="gtd-callout">Origin page cache</h3>
@@ -97,23 +685,17 @@
 	</section>
 
 	<section class="gtd gtd-section" aria-labelledby="gt-performance-css-title">
-		<div class="gtd-wide gt-performance-feature-split gt-performance-feature-split--reverse">
-			<div>
-				<p class="gtd-eyebrow">Unused CSS, processed locally</p>
-				<h2 class="gtd-headline" id="gt-performance-css-title">Used CSS, delivered your way.</h2>
-				<p class="gtd-intro gtd-muted">The final anonymous page is analyzed on your server and falls back to original styles whenever generation cannot finish safely.</p>
-				<ul class="gt-performance-checks" role="list">
-					<li><strong>Generated file</strong><span>Cacheable CSS with no large inline payload.</span></li>
-					<li><strong>Inline used CSS</strong><span>One self-contained response when that fits the page.</span></li>
-					<li><strong>Critical plus file</strong><span>Important rules inline, remaining rules in a generated file.</span></li>
-					<li><strong>Flexible safelist</strong><span>Partial matches and validated regular expressions.</span></li>
-				</ul>
-			</div>
-			<figure class="gt-performance-shot">
-				<img class="gtd-shot gtd-shot--float" src="{{REPORTS_URL}}" alt="GT Performance unused CSS report showing processing, ready, stale, and failed generation states with output sizes" width="1280" height="720" loading="lazy" decoding="async">
-				<figcaption class="gtd-caption">Every generated page reports status, delivery mode, size, savings, and failures.</figcaption>
-			</figure>
-		</div>
+		<header class="gtd-text gt-performance-section-header">
+			<p class="gtd-eyebrow">Unused CSS, processed locally</p>
+			<h2 class="gtd-headline" id="gt-performance-css-title">Used CSS, delivered your way.</h2>
+			<p class="gtd-intro gtd-muted">The final anonymous page is analyzed on your server and falls back to original styles whenever generation cannot finish safely.</p>
+		</header>
+		<ul class="gtd-content gt-performance-checks" role="list">
+			<li><strong>Generated file</strong><span>Cacheable CSS with no large inline payload.</span></li>
+			<li><strong>Inline used CSS</strong><span>One self-contained response when that fits the page.</span></li>
+			<li><strong>Critical plus file</strong><span>Important rules inline, remaining rules in a generated file.</span></li>
+			<li><strong>Flexible safelist</strong><span>Partial matches and validated regular expressions.</span></li>
+		</ul>
 	</section>
 
 	<section class="gtd gtd-section gtd-section--alt" aria-labelledby="gt-performance-commerce-title">
@@ -224,7 +806,7 @@
 			</details>
 			<details>
 				<summary class="gtd-callout">What does the $199 license include?</summary>
-				<p class="gtd-body gtd-muted">The one-time purchase covers every GT Performance module, one WordPress site, a lifetime license, and protected updates inside WordPress.</p>
+				<p class="gtd-body gtd-muted">The one-time purchase covers every GT Performance module, 25 WordPress websites, a lifetime license, and protected updates inside WordPress.</p>
 			</details>
 		</div>
 	</section>
@@ -232,11 +814,11 @@
 	<section class="gtd gtd-section gtd-section--dark gt-performance-closing" aria-labelledby="gt-performance-closing-title">
 		<div class="gtd-text">
 			<p class="gtd-eyebrow">One clear price</p>
-			<h2 class="gtd-headline" id="gt-performance-closing-title">One site. Every module.</h2>
+			<h2 class="gtd-headline" id="gt-performance-closing-title">25 websites. Every module.</h2>
 			<p class="gtd-intro gtd-muted">Get page caching, Cloudflare Free, unused CSS, Redis, WordPress tools, and commerce safeguards under one lifetime license.</p>
 			<div class="gt-performance-closing__price" role="group" aria-label="One-time price of 199 dollars">
 				<strong>$199</strong>
-				<span>one-time · one site · lifetime license</span>
+				<span>one-time · 25 websites · lifetime license</span>
 			</div>
 			<div class="gtd-actions gt-performance-actions">
 				<a class="gtd-button gtd-button--large" href="{{CHECKOUT_URL}}">Continue to secure checkout</a>
