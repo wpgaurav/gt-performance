@@ -1,203 +1,248 @@
-<div class="gtp-shop">
-	<section class="gtp-shop-hero" aria-labelledby="gtp-shop-title">
-		<div class="inner block-double-tb block-half-lr">
-			<div class="gtp-shop-hero__grid">
-				<div class="gtp-shop-hero__copy">
-					<p class="gtp-shop-kicker">WordPress performance, with cache safety built in</p>
-					<h1 id="gtp-shop-title">Fast public pages. Private carts and accounts.</h1>
-					<p class="gtp-shop-lede">GT Performance combines origin page caching, Cloudflare Free, server-side unused CSS, Redis object caching, and WordPress cleanup in one focused plugin.</p>
-					<p class="gtp-shop-price-line"><strong>$199</strong><span>One-time payment · one site · lifetime license</span></p>
-					<div class="gtp-shop-actions">
-						<a class="gtp-shop-button gtp-shop-button--primary" href="{{CHECKOUT_URL}}">Buy GT Performance — $199</a>
-						<a class="gtp-shop-button gtp-shop-button--secondary" href="#gtp-shop-features">See the controls</a>
-					</div>
-					<p class="gtp-shop-safety-note">Checkout, account, receipt, license, and session state stay outside public cache by design.</p>
-					<ul class="gtp-shop-tags" aria-label="Core capabilities">
-						<li>Cloudflare Free</li>
-						<li>Server-side CSS</li>
-						<li>Redis object cache</li>
-						<li>Commerce-aware</li>
-					</ul>
+<div class="gt-performance-page">
+	<section class="gtd gtd-section gtd-section--dark gt-performance-hero" aria-labelledby="gt-performance-hero-title">
+		<div class="gtd-wide gt-performance-hero__layout">
+			<div class="gt-performance-hero__copy">
+				<p class="gtd-eyebrow">WordPress performance, without cache roulette</p>
+				<h1 class="gtd-display" id="gt-performance-hero-title">Fast pages. <span class="gtd-gradient-text">Safe commerce.</span></h1>
+				<p class="gtd-intro gtd-muted">GT Performance unifies origin caching, Cloudflare Free, server-side unused CSS, Redis, and WordPress cleanup without treating checkout state as public HTML.</p>
+				<div class="gt-performance-price" role="group" aria-label="Price and license">
+					<p><span class="gtd-visuallyhidden">Price: </span><strong>$199</strong> <span>one-time</span></p>
+					<p class="gtd-caption">One WordPress site · lifetime license</p>
 				</div>
-				<figure class="gtp-shop-hero__visual">
-					<img src="{{DASHBOARD_URL}}" alt="GT Performance dashboard showing cache, Cloudflare, unused CSS, and Redis status" width="1280" height="720">
-					<figcaption>One control center for the layers that affect real visitors.</figcaption>
-				</figure>
+				<div class="gtd-actions gtd-actions--start gt-performance-actions">
+					<a class="gtd-button gtd-button--large" href="{{CHECKOUT_URL}}">Buy GT Performance for $199</a>
+					<a class="gtd-cta-link" href="#gt-performance-controls">Explore the controls</a>
+				</div>
+				<ul class="gt-performance-tags" role="list">
+					<li>Cloudflare Free</li>
+					<li>Server-side CSS</li>
+					<li>Redis object cache</li>
+					<li>Commerce-aware</li>
+				</ul>
 			</div>
+			<figure class="gt-performance-shot">
+				<img class="gtd-shot gtd-shot--float" src="{{DASHBOARD_URL}}" alt="GT Performance dashboard showing page cache, Cloudflare, unused CSS, Redis, and recommended next steps" width="1280" height="720" decoding="async" fetchpriority="high">
+				<figcaption class="gtd-caption">One control center for every performance layer that reaches a visitor.</figcaption>
+			</figure>
 		</div>
 	</section>
 
-	<section class="gtp-shop-section gtp-shop-section--light" aria-labelledby="gtp-shop-safety-title">
-		<div class="inner block-double-tb block-half-lr">
-			<header class="gtp-shop-heading">
-				<p class="gtp-shop-kicker">Cache correctness first</p>
-				<h2 id="gtp-shop-safety-title">The wrong cache hit is worse than a slow miss.</h2>
-				<p>A fast checkout that shows stale cart data is not a performance win. GT Performance compiles commerce routes, visitor cookies, query state, and plugin exceptions into the same origin and Cloudflare policy.</p>
-			</header>
-			<div class="gtp-shop-grid gtp-shop-grid--three">
-				<article class="gtp-shop-card">
-					<span class="gtp-shop-card__number">01</span>
-					<h3>Cache public HTML</h3>
-					<p>Atomic page files, one-hour freshness, 24-hour retained delivery, safe stale responses, preload, and exact purges.</p>
-				</article>
-				<article class="gtp-shop-card">
-					<span class="gtp-shop-card__number">02</span>
-					<h3>Bypass private state</h3>
-					<p>Cart, checkout, account, receipt, order, license, session-cookie, and transactional query state stay outside public cache.</p>
-				</article>
-				<article class="gtp-shop-card">
-					<span class="gtp-shop-card__number">03</span>
-					<h3>Invalidate the right pages</h3>
-					<p>Content and product changes purge related origin entries and synchronize the matching Cloudflare cache path.</p>
-				</article>
-			</div>
+	<section class="gtd gtd-section gtd-section--alt" aria-labelledby="gt-performance-safety-title">
+		<header class="gtd-text gt-performance-section-header">
+			<p class="gtd-eyebrow">Cache correctness first</p>
+			<h2 class="gtd-headline" id="gt-performance-safety-title">Cache speed without cache risk.</h2>
+			<p class="gtd-intro gtd-muted">One shared policy controls what WordPress and Cloudflare may cache, retain, bypass, and purge.</p>
+		</header>
+		<div class="gtd-wide gtd-grid gtd-grid--3 gt-performance-bento">
+			<article class="gtd-card gtd-span-2">
+				<p class="gtd-eyebrow">Public pages</p>
+				<h3 class="gtd-callout">Cache the HTML visitors share.</h3>
+				<p class="gtd-body gtd-muted">Atomic files, one-hour freshness, retained stale delivery, ETags, preload, and exact purges.</p>
+			</article>
+			<article class="gtd-card gt-performance-stat">
+				<p class="gtd-display">24h</p>
+				<p class="gtd-caption"><strong>retained delivery</strong> for users and bots</p>
+			</article>
+			<article class="gtd-card">
+				<p class="gtd-eyebrow">Private state</p>
+				<h3 class="gtd-callout">Keep sessions out.</h3>
+				<p class="gtd-body gtd-muted">Cart, checkout, account, receipt, order, license, and session state always bypass public cache.</p>
+			</article>
+			<article class="gtd-card gtd-span-2">
+				<p class="gtd-eyebrow">Precise invalidation</p>
+				<h3 class="gtd-callout">Purge what changed.</h3>
+				<p class="gtd-body gtd-muted">Content and product updates invalidate related origin entries and the matching Cloudflare paths.</p>
+			</article>
 		</div>
 	</section>
 
-	<section class="gtp-shop-section" id="gtp-shop-features" aria-labelledby="gtp-shop-features-title">
-		<div class="inner block-double-tb block-half-lr">
-			<header class="gtp-shop-heading">
-				<p class="gtp-shop-kicker">One plugin, clear ownership</p>
-				<h2 id="gtp-shop-features-title">Control the full WordPress performance stack.</h2>
-				<p>Each module can be enabled, tested, and rolled back separately. GT Performance also detects competing optimization owners before two plugins start rewriting the same response.</p>
-			</header>
-			<div class="gtp-shop-grid gtp-shop-grid--three">
-				<article class="gtp-shop-feature">
-					<h3>Origin page cache</h3>
-					<p>Owned drop-in, deterministic cache keys, stale retention, ETags, conditional responses, purge queue, and cache warming.</p>
-				</article>
-				<article class="gtp-shop-feature">
-					<h3>Cloudflare Free</h3>
-					<p>Scoped API token or Global API Key, zone discovery, managed Cache Rule, edge TTLs, exact purge, and portable fallbacks.</p>
-				</article>
-				<article class="gtp-shop-feature">
-					<h3>Unused CSS</h3>
-					<p>Server-side selector analysis with generated-file, fully inline, or critical-inline-plus-file delivery.</p>
-				</article>
-				<article class="gtp-shop-feature">
-					<h3>Redis object cache</h3>
-					<p>PhpRedis credentials, ACL, TLS, database selection, prefixes, timeouts, connection tests, and guarded drop-in ownership.</p>
-				</article>
-				<article class="gtp-shop-feature">
-					<h3>WordPress cleanup</h3>
-					<p>Manual and scheduled database cleanup, request removal, metadata controls, Heartbeat limits, revision policy, and autosave settings.</p>
-				</article>
-				<article class="gtp-shop-feature">
-					<h3>Conflict-aware integrations</h3>
-					<p>Ownership coordination for Perfmatters plus safeguards for Jetpack, Akismet, existing cache plugins, and foreign drop-ins.</p>
-				</article>
+	<section class="gtd gtd-section" id="gt-performance-controls" aria-labelledby="gt-performance-controls-title">
+		<div class="gtd-wide gt-performance-feature-split">
+			<div>
+				<p class="gtd-eyebrow">One plugin, clear ownership</p>
+				<h2 class="gtd-headline" id="gt-performance-controls-title">Own the performance stack.</h2>
+				<p class="gtd-intro gtd-muted">Enable each layer separately and see when another plugin already owns the same optimization.</p>
 			</div>
+			<figure class="gt-performance-shot">
+				<img class="gtd-shot gtd-shot--frame" src="{{DASHBOARD_URL}}" alt="GT Performance dashboard summarizing cache setup, Cloudflare connection, unused CSS status, and current configuration" width="1280" height="720" loading="lazy" decoding="async">
+				<figcaption class="gtd-caption">Status and the recommended next step remain visible before you change another layer.</figcaption>
+			</figure>
+		</div>
+		<ul class="gtd-content gt-performance-feature-list" role="list">
+			<li>
+				<h3 class="gtd-callout">Origin page cache</h3>
+				<p class="gtd-body gtd-muted">Owned drop-in, deterministic keys, stale retention, conditional responses, warming, and purges.</p>
+			</li>
+			<li>
+				<h3 class="gtd-callout">Cloudflare Free</h3>
+				<p class="gtd-body gtd-muted">Scoped token or Global API Key, zone discovery, managed Cache Rule, edge TTLs, and exact purge.</p>
+			</li>
+			<li>
+				<h3 class="gtd-callout">Unused CSS</h3>
+				<p class="gtd-body gtd-muted">Server-side selector analysis with file, inline, or critical-inline-plus-file delivery.</p>
+			</li>
+			<li>
+				<h3 class="gtd-callout">Redis object cache</h3>
+				<p class="gtd-body gtd-muted">ACL, TLS, database, prefixes, timeouts, connection tests, and guarded drop-in ownership.</p>
+			</li>
+			<li>
+				<h3 class="gtd-callout">WordPress tools</h3>
+				<p class="gtd-body gtd-muted">Manual and scheduled database cleanup, Heartbeat controls, revisions, autosave, and request removal.</p>
+			</li>
+			<li>
+				<h3 class="gtd-callout">Conflict detection</h3>
+				<p class="gtd-body gtd-muted">Perfmatters, Jetpack, Akismet, cache plugins, and foreign drop-ins report overlapping ownership.</p>
+			</li>
+		</ul>
+	</section>
+
+	<section class="gtd gtd-section" aria-labelledby="gt-performance-css-title">
+		<div class="gtd-wide gt-performance-feature-split gt-performance-feature-split--reverse">
+			<div>
+				<p class="gtd-eyebrow">Unused CSS, processed locally</p>
+				<h2 class="gtd-headline" id="gt-performance-css-title">Used CSS, delivered your way.</h2>
+				<p class="gtd-intro gtd-muted">The final anonymous page is analyzed on your server and falls back to original styles whenever generation cannot finish safely.</p>
+				<ul class="gt-performance-checks" role="list">
+					<li><strong>Generated file</strong><span>Cacheable CSS with no large inline payload.</span></li>
+					<li><strong>Inline used CSS</strong><span>One self-contained response when that fits the page.</span></li>
+					<li><strong>Critical plus file</strong><span>Important rules inline, remaining rules in a generated file.</span></li>
+					<li><strong>Flexible safelist</strong><span>Partial matches and validated regular expressions.</span></li>
+				</ul>
+			</div>
+			<figure class="gt-performance-shot">
+				<img class="gtd-shot gtd-shot--float" src="{{REPORTS_URL}}" alt="GT Performance unused CSS report showing processing, ready, stale, and failed generation states with output sizes" width="1280" height="720" loading="lazy" decoding="async">
+				<figcaption class="gtd-caption">Every generated page reports status, delivery mode, size, savings, and failures.</figcaption>
+			</figure>
 		</div>
 	</section>
 
-	<section class="gtp-shop-section gtp-shop-section--blue" aria-labelledby="gtp-shop-css-title">
-		<div class="inner block-double-tb block-half-lr">
-			<div class="gtp-shop-split">
+	<section class="gtd gtd-section gtd-section--alt" aria-labelledby="gt-performance-commerce-title">
+		<header class="gtd-text gt-performance-section-header">
+			<p class="gtd-eyebrow">Commerce is first-class state</p>
+			<h2 class="gtd-headline" id="gt-performance-commerce-title">Commerce stays private.</h2>
+			<p class="gtd-intro gtd-muted">Each integration contributes routes, cookies, query parameters, and invalidation rules to both cache layers.</p>
+		</header>
+		<div class="gtd-wide gtd-grid gtd-grid--3">
+			<article class="gtd-card">
+				<h3 class="gtd-callout">FluentCart</h3>
+				<p class="gtd-body gtd-muted">Cart, checkout, account, orders, receipts, licenses, and customer state remain dynamic.</p>
+			</article>
+			<article class="gtd-card">
+				<h3 class="gtd-callout">Easy Digital Downloads</h3>
+				<p class="gtd-body gtd-muted">Checkout, receipts, purchase history, sessions, and transactional requests bypass public cache.</p>
+			</article>
+			<article class="gtd-card">
+				<h3 class="gtd-callout">WooCommerce</h3>
+				<p class="gtd-body gtd-muted">Cart, checkout, My Account, orders, fragments, and session cookies stay private.</p>
+			</article>
+			<article class="gtd-card gtd-span-2">
+				<p class="gtd-eyebrow">Shared ownership</p>
+				<h3 class="gtd-callout">Plugins stop fighting.</h3>
+				<p class="gtd-body gtd-muted">Perfmatters ownership controls and safeguards for Jetpack, Akismet, and existing cache plugins prevent duplicate response rewriting.</p>
+			</article>
+			<article class="gtd-card gt-performance-stat">
+				<p class="gtd-display">2</p>
+				<p class="gtd-caption"><strong>cache layers</strong> governed by one commerce policy</p>
+			</article>
+		</div>
+	</section>
+
+	<section class="gtd gtd-section" aria-labelledby="gt-performance-setup-title">
+		<header class="gtd-text gt-performance-section-header">
+			<p class="gtd-eyebrow">A setup you can audit</p>
+			<h2 class="gtd-headline" id="gt-performance-setup-title">Start safe. Then go faster.</h2>
+			<p class="gtd-intro gtd-muted">Verify one performance layer before enabling the next transformation.</p>
+		</header>
+		<ol class="gtd-content gt-performance-steps" role="list">
+			<li class="gtd-card gtd-card--tonal">
+				<span aria-hidden="true">01</span>
 				<div>
-					<p class="gtp-shop-kicker">Unused CSS, processed on your server</p>
-					<h2 id="gtp-shop-css-title">Choose file, inline, or hybrid delivery.</h2>
-					<p>GT Performance reads the final anonymous HTML, collects same-origin stylesheets, parses selectors, and keeps the rules the page actually uses. It returns the original stylesheets if collection, parsing, writing, or serialization fails.</p>
-					<ul class="gtp-shop-checks">
-						<li>Partial selector safelist matches</li>
-						<li>Validated regular expressions</li>
-						<li>Hover, focus, open, and checked states</li>
-						<li>Live processing, ready, stale, and failure reports</li>
-					</ul>
+					<h3 class="gtd-callout">Install the owned page cache</h3>
+					<p class="gtd-body gtd-muted">GT Performance checks ownership and leaves another plugin's drop-in untouched.</p>
 				</div>
-				<figure class="gtp-shop-report">
-					<img src="{{REPORTS_URL}}" alt="GT Performance unused CSS report with processing, ready, stale, and failed status counts" width="1280" height="720">
-					<figcaption>Generated output size, savings, delivery mode, and failures stay visible.</figcaption>
-				</figure>
-			</div>
-		</div>
-	</section>
-
-	<section class="gtp-shop-section gtp-shop-section--light" aria-labelledby="gtp-shop-commerce-title">
-		<div class="inner block-double-tb block-half-lr">
-			<header class="gtp-shop-heading">
-				<p class="gtp-shop-kicker">Commerce is first-class state</p>
-				<h2 id="gtp-shop-commerce-title">FluentCart, EDD, and WooCommerce are protected at both cache layers.</h2>
-				<p>The integration is not a late list of URL exclusions. Each adapter contributes routes, cookies, query parameters, and invalidation rules to the compiled policy used by the origin cache and Cloudflare.</p>
-			</header>
-			<div class="gtp-shop-compat">
-				<div><strong>FluentCart</strong><span>Cart, checkout, account, orders, licenses</span></div>
-				<div><strong>Easy Digital Downloads</strong><span>Checkout, receipts, purchase history, sessions</span></div>
-				<div><strong>WooCommerce</strong><span>Cart, checkout, My Account, orders, sessions</span></div>
-				<div><strong>Perfmatters</strong><span>One owner for overlapping optimization work</span></div>
-				<div><strong>Jetpack and Akismet</strong><span>Dynamic scripts, forms, comments, and visitor state</span></div>
-				<div><strong>Existing cache plugins</strong><span>Foreign drop-ins are detected and never overwritten</span></div>
-			</div>
-		</div>
-	</section>
-
-	<section class="gtp-shop-section" aria-labelledby="gtp-shop-setup-title">
-		<div class="inner block-double-tb block-half-lr">
-			<header class="gtp-shop-heading">
-				<p class="gtp-shop-kicker">A setup you can audit</p>
-				<h2 id="gtp-shop-setup-title">Start with caching. Add transformation only after the site is stable.</h2>
-			</header>
-			<ol class="gtp-shop-steps">
-				<li><span>1</span><div><h3>Install the owned page-cache drop-in</h3><p>GT Performance checks ownership and leaves another plugin's drop-in untouched.</p></div></li>
-				<li><span>2</span><div><h3>Verify a public MISS, then HIT</h3><p>Test an anonymous page and confirm private or personalized routes continue to bypass.</p></div></li>
-				<li><span>3</span><div><h3>Connect Cloudflare Free</h3><p>Use a scoped token when possible, synchronize one managed cache rule, then verify edge hits.</p></div></li>
-				<li><span>4</span><div><h3>Add CSS, JavaScript, media, or Redis one layer at a time</h3><p>Each module has its own settings, reports, exceptions, and ownership checks.</p></div></li>
-			</ol>
-		</div>
-	</section>
-
-	<section class="gtp-shop-section gtp-shop-section--alpha" id="gtp-shop-alpha" aria-labelledby="gtp-shop-alpha-title">
-		<div class="inner block-double-tb block-half-lr">
-			<div class="gtp-shop-alpha">
+			</li>
+			<li class="gtd-card gtd-card--tonal">
+				<span aria-hidden="true">02</span>
 				<div>
-					<p class="gtp-shop-kicker">Controlled alpha</p>
-					<h2 id="gtp-shop-alpha-title">Use staging first. Cache plugins do not deserve blind trust.</h2>
-					<p>GT Performance has package, Studio, origin-cache, Cloudflare, Redis, and unused-CSS validation behind it. The compatibility matrix is still growing across hosting stacks, checkout setups, and multisite.</p>
-					<p>Alpha users should keep backups, test checkout and account flows, and enable aggressive frontend transformations only after the core cache path is stable.</p>
+					<h3 class="gtd-callout">Verify MISS, HIT, and bypass</h3>
+					<p class="gtd-body gtd-muted">Confirm an anonymous hit while checkout, account, and personalized requests stay dynamic.</p>
 				</div>
-				<div class="gtp-shop-alpha__actions">
-					<a class="gtp-shop-button gtp-shop-button--primary" href="{{CHECKOUT_URL}}">Buy GT Performance — $199</a>
-					<a class="gtp-shop-button gtp-shop-button--secondary" href="https://github.com/wpgaurav/gt-performance/releases">View current release</a>
-					<a class="gtp-shop-button gtp-shop-button--secondary" href="https://github.com/wpgaurav/gt-performance">Inspect the source</a>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<section class="gtp-shop-section gtp-shop-section--purchase" aria-labelledby="gtp-shop-purchase-title">
-		<div class="inner block-double-tb block-half-lr">
-			<div class="gtp-shop-purchase">
+			</li>
+			<li class="gtd-card gtd-card--tonal">
+				<span aria-hidden="true">03</span>
 				<div>
-					<p class="gtp-shop-kicker">One site, one clear price</p>
-					<h2 id="gtp-shop-purchase-title">Get every GT Performance module for $199.</h2>
-					<p>Use the page cache, Cloudflare Free integration, server-side unused CSS, Redis object cache, database tools, and commerce safeguards under one license.</p>
+					<h3 class="gtd-callout">Connect Cloudflare Free</h3>
+					<p class="gtd-body gtd-muted">Synchronize one managed rule, then verify edge hits and exact purges.</p>
 				</div>
-				<div class="gtp-shop-offer">
-					<p class="gtp-shop-offer__price"><strong>$199</strong><span>one-time</span></p>
-					<ul>
-						<li>One WordPress site</li>
-						<li>Lifetime license</li>
-						<li>Protected updates in WordPress</li>
-					</ul>
-					<a class="gtp-shop-button gtp-shop-button--primary" href="{{CHECKOUT_URL}}">Continue to secure checkout</a>
-					<small>You are buying an alpha release. Test it on staging before production.</small>
+			</li>
+			<li class="gtd-card gtd-card--tonal">
+				<span aria-hidden="true">04</span>
+				<div>
+					<h3 class="gtd-callout">Add transformations gradually</h3>
+					<p class="gtd-body gtd-muted">Test CSS, JavaScript, media, Redis, and database controls one layer at a time.</p>
 				</div>
-			</div>
+			</li>
+		</ol>
+	</section>
+
+	<section class="gtd gtd-section gtd-section--tight" aria-labelledby="gt-performance-alpha-title">
+		<div class="gtd-text gt-performance-alpha">
+			<p class="gtd-eyebrow">Controlled alpha</p>
+			<h2 class="gtd-headline" id="gt-performance-alpha-title">Test before production.</h2>
+			<blockquote>
+				<p class="gtd-intro gtd-intro--serif">“Cache plugins do not deserve blind trust.”</p>
+			</blockquote>
+			<p class="gtd-body gtd-muted">Keep a backup, begin on staging, test checkout and account flows, and enable aggressive frontend transformations only after the core cache path is stable.</p>
 		</div>
 	</section>
 
-	<section class="gtp-shop-section gtp-shop-section--light" aria-labelledby="gtp-shop-faq-title">
-		<div class="inner block-double-tb block-half-lr">
-			<header class="gtp-shop-heading">
-				<p class="gtp-shop-kicker">Questions worth answering</p>
-				<h2 id="gtp-shop-faq-title">GT Performance FAQ</h2>
-			</header>
-			<div class="gtp-shop-faq">
-				<details><summary>Does Cloudflare require a paid plan?</summary><p>No. The baseline uses Cache Rules and targeted purges available on Cloudflare Free. APO, Workers, Cache Reserve, Argo, and Enterprise are not required.</p></details>
-				<details><summary>Does unused CSS leave my server?</summary><p>No. Stylesheet collection, selector analysis, pruning, artifact creation, and reporting run on the WordPress server.</p></details>
-				<details><summary>Can GT Performance work with Perfmatters?</summary><p>Yes. Choose which plugin owns overlapping frontend work. GT Performance reports active optimization owners instead of letting both plugins rewrite the same response.</p></details>
-				<details><summary>What happens if another cache plugin owns a drop-in?</summary><p>GT Performance reports the conflict and refuses to overwrite the foreign advanced-cache.php or object-cache.php file.</p></details>
-				<details><summary>How are updates delivered?</summary><p>A FluentCart license activates the site. WordPress receives version metadata normally, but the protected ZIP is returned only for a valid site activation.</p></details>
+	<section class="gtd gtd-section gtd-section--alt" id="gt-performance-faq" aria-labelledby="gt-performance-faq-title">
+		<header class="gtd-text gt-performance-section-header">
+			<p class="gtd-eyebrow">The important details</p>
+			<h2 class="gtd-headline" id="gt-performance-faq-title">Questions, answered.</h2>
+		</header>
+		<div class="gtd-text gt-performance-faq">
+			<details>
+				<summary class="gtd-callout">Does Cloudflare require a paid plan?</summary>
+				<p class="gtd-body gtd-muted">No. The baseline uses Cache Rules and targeted purges available on Cloudflare Free; APO, Workers, Cache Reserve, Argo, and Enterprise are not required.</p>
+			</details>
+			<details>
+				<summary class="gtd-callout">Does unused CSS leave my server?</summary>
+				<p class="gtd-body gtd-muted">No. Stylesheet collection, selector analysis, pruning, artifact creation, and reporting run on the WordPress server.</p>
+			</details>
+			<details>
+				<summary class="gtd-callout">Can GT Performance work with Perfmatters?</summary>
+				<p class="gtd-body gtd-muted">Yes. Choose which plugin owns overlapping frontend work; GT Performance reports active owners instead of letting both plugins rewrite the same response.</p>
+			</details>
+			<details>
+				<summary class="gtd-callout">What happens when another cache plugin owns a drop-in?</summary>
+				<p class="gtd-body gtd-muted">GT Performance reports the conflict and refuses to overwrite a foreign <code>advanced-cache.php</code> or <code>object-cache.php</code> file.</p>
+			</details>
+			<details>
+				<summary class="gtd-callout">How are updates delivered?</summary>
+				<p class="gtd-body gtd-muted">Activate the FluentCart license for your site; WordPress receives version details normally and the protected package only while that site activation is valid.</p>
+			</details>
+			<details>
+				<summary class="gtd-callout">What does the $199 license include?</summary>
+				<p class="gtd-body gtd-muted">The one-time purchase covers every GT Performance module, one WordPress site, a lifetime license, and protected updates inside WordPress.</p>
+			</details>
+		</div>
+	</section>
+
+	<section class="gtd gtd-section gtd-section--dark gt-performance-closing" aria-labelledby="gt-performance-closing-title">
+		<div class="gtd-text">
+			<p class="gtd-eyebrow">One clear price</p>
+			<h2 class="gtd-headline" id="gt-performance-closing-title">One site. Every module.</h2>
+			<p class="gtd-intro gtd-muted">Get page caching, Cloudflare Free, unused CSS, Redis, WordPress tools, and commerce safeguards under one lifetime license.</p>
+			<div class="gt-performance-closing__price" role="group" aria-label="One-time price of 199 dollars">
+				<strong>$199</strong>
+				<span>one-time · one site · lifetime license</span>
 			</div>
+			<div class="gtd-actions gt-performance-actions">
+				<a class="gtd-button gtd-button--large" href="{{CHECKOUT_URL}}">Continue to secure checkout</a>
+				<a class="gtd-cta-link" href="#gt-performance-faq">Review common questions</a>
+			</div>
+			<p class="gtd-footnote">GT Performance is currently an alpha release. Test it on staging before using it on a production store.</p>
 		</div>
 	</section>
 </div>

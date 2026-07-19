@@ -37,4 +37,4 @@ The Magnific-generated master mark and brand field are in `magnific/`. The final
 
 The GT monogram is original artwork and does not use the WordPress or Cloudflare logo. The PNG directory icons are the source of truth; an unrelated vector fallback is intentionally not shipped.
 
-Run `build-product-page.php` with the public dashboard image, CSS-report image, and verified FluentCart direct-checkout URLs to create the WordPress-ready `marketers-delight/inline-page-block` stored in `fluentcart/product-page.wordpress.html`.
+Run `build-product-page.php` with the public dashboard image, CSS-report image, and verified FluentCart direct-checkout URLs to create the WordPress-ready `marketers-delight/inline-page-block` stored in `fluentcart/product-page.wordpress.html`. The builder prepends the canonical GTDS token layer from the `gt-design` skill; use `--tokens-path` when that skill lives elsewhere.
