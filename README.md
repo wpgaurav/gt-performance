@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.4`. Aggressive transformations are opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `0.1.0-alpha.5`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -17,9 +17,9 @@ The current release is `0.1.0-alpha.4`. Aggressive transformations are opt-in. C
   - critical CSS inline with the remaining CSS in an immutable file.
 - Conservative JavaScript minification, defer, and interaction-delay controls.
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
-- Database dry-run/cleanup, common WordPress bloat controls, optional Redis object-cache drop-in, and sampled Core Web Vitals collection.
+- Manual and scheduled database optimization for revisions, drafts, spam, trash, transients, and table space, plus Perfmatters-style WordPress request and bloat controls.
 - Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections.
-- Comprehensive cache, CSS, JavaScript, media, font, database, bloat, RUM, Cloudflare, commerce, and exception controls.
+- Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
 - Redacted logs, WP-CLI doctor/cache/queue/Cloudflare/database commands, durable jobs, retries, and dead-letter state.
 
@@ -36,7 +36,9 @@ The full product architecture and 1.0 roadmap are in [PRODUCT-PLAN.md](PRODUCT-P
 
 ## Safe defaults
 
-The page cache, Cloudflare changes, unused CSS, JavaScript transformations, database automation, Redis, image rewriting, font hosting, and RUM are disabled until enabled by an administrator. Image dimensions and non-critical lazy loading are the only low-risk frontend defaults.
+The origin cache setting defaults on with one hour of freshness, 24 hours of shared retention and stale-if-error protection, and five minutes of browser caching. It remains inactive until the owned page-cache drop-in and `WP_CACHE` are installed. Logged-in caching stays off, and commerce adapters continue to bypass personalized state.
+
+Cloudflare changes, unused CSS, JavaScript transformations, database automation, Redis, image rewriting, and font hosting remain disabled until enabled by an administrator. Image dimensions and non-critical lazy loading are the only low-risk frontend transformation defaults.
 
 When unused CSS parsing, stylesheet fetching, artifact writing, or HTML serialization fails, the original HTML and stylesheets are returned.
 

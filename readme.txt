@@ -1,10 +1,10 @@
 === GT Performance ===
 Contributors: gauravtiwari
-Tags: cache, performance, cloudflare, woocommerce, core web vitals
+Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.4
+Stable tag: 0.1.0-alpha.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,7 +18,7 @@ FluentCart, Easy Digital Downloads, and WooCommerce adapters protect cart, check
 
 Unused CSS can be delivered as an immutable file, fully inline, or as critical CSS inline with the remaining CSS in a file.
 
-This is an alpha. Aggressive modules are disabled by default and should be tested on staging before production use.
+This is an alpha. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
 == Installation ==
 
@@ -44,10 +44,19 @@ GT Performance compiles dynamic paths, session cookies, and query parameters fro
 
 == Changelog ==
 
+= 0.1.0-alpha.5 =
+
+* Added one-click cache lifetime presets and a default one-hour fresh, 24-hour retained, five-minute browser profile.
+* Added a one-click WordPress optimization baseline derived from the active gauravtiwari.org configuration.
+* Added the complete manual database cleanup set: revisions, drafts, spam, trash, transients, and table optimization.
+* Added saved daily, weekly, and monthly database schedules with selectable tasks.
+* Added Perfmatters-style WordPress request, metadata, editor, comments, REST, Heartbeat, revision, and autosave controls.
+* Removed Core Web Vitals collection, its frontend measurement script, REST endpoint, settings, and storage table.
+
 = 0.1.0-alpha.4 =
 
 * Added a standalone top-level settings app with focused Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools tabs.
-* Exposed the full cache, optimization, Cloudflare, commerce, RUM, cleanup, and exception configuration.
+* Exposed the full cache, optimization, Cloudflare, commerce, cleanup, and exception configuration.
 * Added live server-side unused CSS generation reports with processing, ready, stale, skipped, and failed states.
 * Added generated output size, savings, delivery mode, error, and refresh indicators for unused CSS.
 * Added friendly action notices so internal error codes are never shown to administrators.
@@ -72,4 +81,4 @@ GT Performance compiles dynamic paths, session cookies, and query parameters fro
 * Added Cloudflare Free rule management and cache purge.
 * Added server-side unused CSS file, inline, and hybrid modes.
 * Added FluentCart, EDD, and WooCommerce cache-safety adapters.
-* Added JavaScript, media, font, database, bloat, Redis, RUM, admin, CLI, and diagnostics modules.
+* Added JavaScript, media, font, database, bloat, Redis, admin, CLI, and diagnostics modules.

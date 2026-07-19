@@ -108,9 +108,9 @@ final class PageCacheModule implements Module {
 			return;
 		}
 
-		$fresh   = max( 0, (int) Settings::get( 'cache.fresh_ttl', 300 ) );
+		$fresh   = max( 0, (int) Settings::get( 'cache.fresh_ttl', 3600 ) );
 		$stale   = max( 0, (int) Settings::get( 'cache.stale_ttl', 86400 ) );
-		$browser = max( 0, (int) Settings::get( 'cache.browser_ttl', 0 ) );
+		$browser = max( 0, (int) Settings::get( 'cache.browser_ttl', 300 ) );
 		header( "Cache-Control: public, max-age={$browser}, s-maxage={$fresh}, stale-while-revalidate={$stale}" );
 		header( 'Vary: Accept-Encoding' );
 	}

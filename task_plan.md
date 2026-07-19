@@ -21,7 +21,7 @@ Build a testable GT Performance WordPress plugin that implements the planned pag
 - [x] Phase 6: Scaffold plugin architecture, lifecycle, configuration, tooling, and CI
 - [x] Phase 7: Implement origin page cache, drop-in, invalidation, queue, CLI, and diagnostics
 - [x] Phase 8: Implement Cloudflare Free integration and commerce policy adapters
-- [x] Phase 9: Implement CSS, JavaScript, media, font, database, bloat, Redis, and RUM modules
+- [x] Phase 9: Implement CSS, JavaScript, media, font, database, bloat, and Redis modules
 - [x] Phase 10: Add admin experience, automated tests, Playground validation, packaging, and handoff
 
 ## Key Questions

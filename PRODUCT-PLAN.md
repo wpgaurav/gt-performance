@@ -21,7 +21,7 @@ Feature parity means independently implementing documented behavior. It does not
 - **Server-side optimization.** Core CSS analysis and generation run on infrastructure controlled by the site owner. No external optimizer is required.
 - **No invisible breakage.** Failed parsing, validation, storage, or background work falls back to the original page and assets.
 - **Targeted invalidation.** Purge what changed and its real dependencies; avoid “purge everything” as the normal path.
-- **Measure before claiming.** The dashboard reports origin cache time, edge status, TTFB, Core Web Vitals, queue health, and optimization savings.
+- **Measure before claiming.** The dashboard reports origin cache time, edge status, queue health, and optimization savings from plugin-owned operations.
 - **Low dynamic overhead.** Disabled modules do not register frontend work. Administrative and queue code do not load during normal public requests.
 - **Interoperable by design.** Detect host caches, existing drop-ins, CDNs, multilingual plugins, currency plugins, membership plugins, and commerce state before enabling aggressive settings.
 
@@ -59,7 +59,6 @@ The PHP and WordPress minimums must be finalized before implementation begins.
 | Database | Cleanup and scheduled maintenance | Dry run, backup manifest, size forecast, per-table audit trail |
 | WordPress bloat | Heartbeat/revision and common frontend controls | Risk labels, role/context rules, conflict detection |
 | Object cache | Redis integration | Drop-in ownership, health metrics, prefix isolation, safe flush semantics |
-| RUM | TTFB, LCP, INP, CLS tracking | Segment by template, cache state, device, release, and Cloudflare colo |
 | Cloudflare | Full-page cache and synchronized purge/bypasses | Free-plan-first one-rule setup, drift detection, reversible rules, capability tiers |
 | WooCommerce | Core dynamic-page exclusions and product purges | Full Store API/session coverage, dependency purge, checkout E2E suite |
 | EDD | Manual compatibility in competitor product | First-class pages, cookies, discounts, recovery, purchase-flow adapter |
@@ -85,7 +84,7 @@ flowchart LR
     C --> I["Dependency index and invalidation"]
     I --> F
     I --> CF
-    WP --> R["RUM and diagnostics"]
+    WP --> R["Diagnostics and decision traces"]
 ```
 
 ### 5.1 WordPress bootstrap
@@ -115,8 +114,7 @@ flowchart LR
 - Custom tables:
   - queue/jobs;
   - cache/dependency index;
-  - optimization fingerprints and artifacts;
-  - optional aggregated RUM samples.
+  - optimization fingerprints and artifacts.
 - All tables include a schema version and bounded cleanup policy.
 
 ### 5.4 Background queue
@@ -430,8 +428,8 @@ No cache feature can ship without all three adapters passing:
 ### 11.1 Admin experience
 
 - Setup wizard: environment check, cache ownership, Cloudflare connection, commerce discovery, safe defaults, and verification.
-- Dashboard: cache health, Cloudflare state, queue, disk, RUM, last purges, and detected conflicts.
-- Modules: Caching, CSS, JavaScript, Media, Fonts, Database, WordPress, Cloudflare, Commerce, RUM, and Diagnostics.
+- Dashboard: cache health, Cloudflare state, queue, disk, last purges, and detected conflicts.
+- Modules: Caching, CSS, JavaScript, Media, Fonts, Database, WordPress, Cloudflare, Commerce, and Diagnostics.
 - Every setting explains expected benefit, compatibility risk, and rollback.
 - Dangerous operations require a preview/dry run and explicit confirmation.
 
@@ -471,7 +469,6 @@ Commands support `--url`, multisite, machine-readable JSON, dry run, and non-zer
 - Signed loopback and edge-control requests use short expiry, HMAC, and replay protection.
 - Remote asset fetching permits only HTTP(S), blocks local/private/reserved networks, limits redirects/bytes/time, and validates content types.
 - Cloudflare API secrets are encrypted at rest and never included in diagnostics.
-- RUM collects performance fields, not page content or personal/payment identifiers.
 - IP addresses are not stored by default.
 - Database cleanup and original-image deletion are separately gated, backed up, and never enabled by default.
 - Uninstall defaults to preserving settings/data; destructive removal requires an explicit prior opt-in.
@@ -507,7 +504,7 @@ Automatically pause or roll back a module after:
 - optimization queue retry storm;
 - disk exhaustion;
 - Cloudflare drift that would expose dynamic pages;
-- RUM or synthetic regression above configured thresholds.
+- Synthetic regression above configured thresholds.
 
 ### 13.3 Recovery
 
@@ -626,15 +623,15 @@ Exit gate:
 
 - No default transformation breaks commerce, consent, builder preview, logged-in UI, or accessibility fixtures.
 
-### Milestone 6: Database, bloat, Redis, and RUM
+### Milestone 6: Database, bloat, Redis, and diagnostics
 
 Deliver:
 
-- Dry-run database maintenance, safe bloat controls, optional Redis object cache, privacy-preserving RUM, budgets, and regression alerts.
+- Dry-run database maintenance, safe bloat controls, optional Redis object cache, diagnostics, budgets, and synthetic regression alerts.
 
 Exit gate:
 
-- Cleanup/restore and drop-in ownership tests pass; RUM adds negligible overhead and stores no disallowed identifiers.
+- Cleanup/restore and drop-in ownership tests pass; diagnostics stay disabled by default and redact sensitive values.
 
 ### Milestone 7: Multisite, compatibility, packaging, and 1.0
 

@@ -24,6 +24,8 @@ final class Plugin {
 			return;
 		}
 
+		Database::maybeUpgrade();
+
 		self::$instance = new self();
 		self::$instance->register();
 	}
@@ -40,7 +42,6 @@ final class Plugin {
 			new \GTPerformance\Optimization\OptimizationModule( $logger ),
 			new \GTPerformance\Database\DatabaseModule(),
 			new \GTPerformance\Redis\RedisModule(),
-			new \GTPerformance\RUM\RumModule(),
 			new \GTPerformance\Admin\AdminModule(),
 			new \GTPerformance\CLI\CliModule(),
 		);
@@ -64,6 +65,14 @@ final class Plugin {
 		$schedules['gtp_every_minute'] = array(
 			'interval' => MINUTE_IN_SECONDS,
 			'display'  => __( 'Every minute (GT Performance)', 'gt-performance' ),
+		);
+		$schedules['gtp_weekly']       = array(
+			'interval' => WEEK_IN_SECONDS,
+			'display'  => __( 'Weekly (GT Performance)', 'gt-performance' ),
+		);
+		$schedules['gtp_monthly']      = array(
+			'interval' => 30 * DAY_IN_SECONDS,
+			'display'  => __( 'Monthly (GT Performance)', 'gt-performance' ),
 		);
 
 		return $schedules;

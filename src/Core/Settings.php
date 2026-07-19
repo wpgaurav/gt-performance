@@ -19,10 +19,10 @@ final class Settings {
 		return array(
 			'generation' => 1,
 			'cache'      => array(
-				'enabled'              => false,
-				'fresh_ttl'            => 300,
+				'enabled'              => true,
+				'fresh_ttl'            => 3600,
 				'stale_ttl'            => 86400,
-				'browser_ttl'          => 0,
+				'browser_ttl'          => 300,
 				'stale_if_error'       => 86400,
 				'ignored_query_params' => array(
 					'fbclid',
@@ -115,20 +115,45 @@ final class Settings {
 				'enabled'          => false,
 				'schedule'         => 'weekly',
 				'retain_revisions' => 5,
+				'tasks'            => array(
+					'revisions',
+					'auto_drafts',
+					'spam_comments',
+					'trashed_posts',
+					'trashed_comments',
+					'expired_transients',
+					'optimize_tables',
+				),
 			),
 			'bloat'      => array(
-				'disable_emojis'    => false,
-				'disable_embeds'    => false,
-				'heartbeat_seconds' => 60,
-				'limit_revisions'   => 5,
+				'disable_emojis'                 => false,
+				'disable_dashicons'              => false,
+				'disable_embeds'                 => false,
+				'disable_xmlrpc'                 => false,
+				'remove_rsd_link'                => false,
+				'remove_jquery_migrate'          => false,
+				'hide_wp_version'                => false,
+				'remove_shortlink'               => false,
+				'disable_rss_feeds'              => false,
+				'remove_feed_links'              => false,
+				'disable_self_pingbacks'         => false,
+				'disable_rest_api'               => 'default',
+				'remove_rest_api_links'          => false,
+				'disable_google_maps'            => false,
+				'google_maps_exclusions'         => array(),
+				'disable_password_strength_meter' => false,
+				'disable_comments'               => false,
+				'remove_comment_urls'            => false,
+				'blank_favicon'                  => false,
+				'remove_global_styles'           => false,
+				'separate_block_styles'          => false,
+				'heartbeat_mode'                 => 'reduce',
+				'heartbeat_seconds'              => 60,
+				'limit_revisions'                => 5,
+				'autosave_interval'              => 60,
 			),
 			'redis'      => array(
 				'enabled' => false,
-			),
-			'rum'        => array(
-				'enabled'     => false,
-				'sample_rate' => 0.05,
-				'retention'   => 30,
 			),
 			'commerce'   => array(
 				'fluentcart'  => true,
@@ -144,8 +169,10 @@ final class Settings {
 	 */
 	public static function all(): array {
 		$saved = get_option( self::OPTION, array() );
+		$all   = self::merge( self::defaults(), is_array( $saved ) ? $saved : array() );
+		unset( $all['rum'] );
 
-		return self::merge( self::defaults(), is_array( $saved ) ? $saved : array() );
+		return $all;
 	}
 
 	public static function get( string $path, mixed $fallback = null ): mixed {
@@ -204,10 +231,27 @@ final class Settings {
 		$merged['fonts']['font_display'] = in_array( $fontDisplay, array( 'swap', 'fallback', 'optional', 'block' ), true ) ? $fontDisplay : 'swap';
 
 		$schedule                        = (string) ( $merged['database']['schedule'] ?? 'weekly' );
-		$merged['database']['schedule'] = in_array( $schedule, array( 'daily', 'weekly' ), true ) ? $schedule : 'weekly';
+		$merged['database']['schedule'] = in_array( $schedule, array( 'daily', 'weekly', 'monthly' ), true ) ? $schedule : 'weekly';
+		$merged['database']['tasks']    = array_values(
+			array_intersect(
+				self::sanitizeList( $merged['database']['tasks'] ?? array() ),
+				array(
+					'revisions',
+					'auto_drafts',
+					'spam_comments',
+					'trashed_posts',
+					'trashed_comments',
+					'expired_transients',
+					'all_transients',
+					'optimize_tables',
+				)
+			)
+		);
 
-		$merged['rum']['sample_rate'] = max( 0.0, min( 1.0, (float) ( $merged['rum']['sample_rate'] ?? 0.05 ) ) );
-		$merged['rum']['retention']   = max( 1, min( 365, (int) ( $merged['rum']['retention'] ?? 30 ) ) );
+		$restMode                            = (string) ( $merged['bloat']['disable_rest_api'] ?? 'default' );
+		$merged['bloat']['disable_rest_api'] = in_array( $restMode, array( 'default', 'non_admin', 'disabled' ), true ) ? $restMode : 'default';
+		$heartbeatMode                       = (string) ( $merged['bloat']['heartbeat_mode'] ?? 'reduce' );
+		$merged['bloat']['heartbeat_mode']   = in_array( $heartbeatMode, array( 'default', 'reduce', 'disable_dashboard', 'disabled' ), true ) ? $heartbeatMode : 'reduce';
 
 		$booleanPaths = array(
 			array( 'cloudflare', 'enabled' ),
@@ -226,9 +270,25 @@ final class Settings {
 			array( 'fonts', 'preload' ),
 			array( 'database', 'enabled' ),
 			array( 'bloat', 'disable_emojis' ),
+			array( 'bloat', 'disable_dashicons' ),
 			array( 'bloat', 'disable_embeds' ),
+			array( 'bloat', 'disable_xmlrpc' ),
+			array( 'bloat', 'remove_rsd_link' ),
+			array( 'bloat', 'remove_jquery_migrate' ),
+			array( 'bloat', 'hide_wp_version' ),
+			array( 'bloat', 'remove_shortlink' ),
+			array( 'bloat', 'disable_rss_feeds' ),
+			array( 'bloat', 'remove_feed_links' ),
+			array( 'bloat', 'disable_self_pingbacks' ),
+			array( 'bloat', 'remove_rest_api_links' ),
+			array( 'bloat', 'disable_google_maps' ),
+			array( 'bloat', 'disable_password_strength_meter' ),
+			array( 'bloat', 'disable_comments' ),
+			array( 'bloat', 'remove_comment_urls' ),
+			array( 'bloat', 'blank_favicon' ),
+			array( 'bloat', 'remove_global_styles' ),
+			array( 'bloat', 'separate_block_styles' ),
 			array( 'redis', 'enabled' ),
-			array( 'rum', 'enabled' ),
 			array( 'commerce', 'fluentcart' ),
 			array( 'commerce', 'edd' ),
 			array( 'commerce', 'woocommerce' ),
@@ -242,11 +302,14 @@ final class Settings {
 		$merged['database']['retain_revisions']   = max( 0, min( 100, (int) ( $merged['database']['retain_revisions'] ?? 5 ) ) );
 		$merged['bloat']['heartbeat_seconds']     = max( 15, min( 120, (int) ( $merged['bloat']['heartbeat_seconds'] ?? 60 ) ) );
 		$merged['bloat']['limit_revisions']       = max( 0, min( 100, (int) ( $merged['bloat']['limit_revisions'] ?? 5 ) ) );
+		$merged['bloat']['autosave_interval']      = max( 15, min( 3600, (int) ( $merged['bloat']['autosave_interval'] ?? 60 ) ) );
+		$merged['bloat']['google_maps_exclusions'] = self::sanitizeList( $merged['bloat']['google_maps_exclusions'] ?? array() );
 		$merged['media']['lazy_render_selectors'] = self::sanitizeList( $merged['media']['lazy_render_selectors'] ?? array() );
 		$merged['javascript']['exclusions']       = self::sanitizeList( $merged['javascript']['exclusions'] ?? array() );
 		$merged['javascript']['delay_patterns']   = self::sanitizeList( $merged['javascript']['delay_patterns'] ?? array() );
 		$merged['css']['safelist']                = self::sanitizeList( $merged['css']['safelist'] ?? array() );
 		$merged['css']['excluded_stylesheets']    = self::sanitizeList( $merged['css']['excluded_stylesheets'] ?? array() );
+		unset( $merged['rum'] );
 
 		return self::merge( $defaults, $merged );
 	}

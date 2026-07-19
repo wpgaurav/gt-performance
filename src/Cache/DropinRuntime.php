@@ -79,7 +79,7 @@ final class DropinRuntime {
 			exit;
 		}
 
-		$browserTtl = max( 0, (int) ( $cacheConfig['browser_ttl'] ?? 0 ) );
+		$browserTtl = max( 0, (int) ( $cacheConfig['browser_ttl'] ?? 300 ) );
 		$staleTtl   = max( 0, (int) ( $cacheConfig['stale_ttl'] ?? 0 ) );
 
 		header( 'Content-Type: text/html; charset=UTF-8' );

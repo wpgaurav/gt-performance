@@ -1,7 +1,7 @@
 {
   "name": "gauravtiwari/gt-performance",
   "description": "WordPress page caching, server-side optimization, Cloudflare orchestration, and commerce-aware performance controls.",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
@@ -33,7 +33,7 @@
   "scripts": {
     "lint": "phpcs",
     "lint:fix": "phpcbf",
-    "stan": "phpstan analyse --memory-limit=1G",
+    "stan": "phpstan analyse --memory-limit=2G",
     "test": "phpunit",
     "check": [
       "@lint",

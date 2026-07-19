@@ -280,8 +280,16 @@ final class AdminModule implements Module {
 
 	public function databaseClean(): void {
 		$this->guard( 'gtp_database_clean' );
-		$result = ( new Cleaner() )->run();
-		$this->redirect( 'cleaned-' . array_sum( $result ), 'tools' );
+		// The capability and action nonce are verified by guard() above.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		$tasks  = isset( $_POST['tasks'] ) && is_array( $_POST['tasks'] )
+			? array_map( 'sanitize_key', wp_unslash( $_POST['tasks'] ) )
+			: null;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		$cleaner = new Cleaner();
+		$result  = $cleaner->run( null === $tasks ? null : $cleaner->sanitizeTasks( $tasks ) );
+		set_transient( 'gtp_database_result_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS );
+		$this->redirect( 'database-cleaned', 'optimization' );
 	}
 
 	private function renderHeader( string $tab ): void {
@@ -403,10 +411,11 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Cache lifetime', 'gt-performance' ), __( 'Use shorter fresh lifetimes for frequently changing sites and longer stale retention for resilience.', 'gt-performance' ) );
+		$this->renderCachePresets();
 		$this->number( 'cache', 'fresh_ttl', __( 'Fresh TTL', 'gt-performance' ), __( 'Seconds before a cached page needs regeneration.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ) );
 		$this->number( 'cache', 'stale_ttl', __( 'Stale retention', 'gt-performance' ), __( 'How long an expired page remains available for safe stale delivery.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ) );
 		$this->number( 'cache', 'stale_if_error', __( 'Stale if error', 'gt-performance' ), __( 'How long stale HTML may be used when regeneration fails.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ) );
-		$this->number( 'cache', 'browser_ttl', __( 'Browser TTL', 'gt-performance' ), __( 'Client-side HTML cache duration. Leave at zero for safer instant purges.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ) );
+		$this->number( 'cache', 'browser_ttl', __( 'Browser TTL', 'gt-performance' ), __( 'Client-side HTML cache duration. Five minutes keeps visitor browsers conservative.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
 	}
@@ -483,34 +492,84 @@ final class AdminModule implements Module {
 		);
 		$this->panelClose();
 
-		$this->panelOpen( __( 'WordPress and database', 'gt-performance' ), __( 'Reduce background work and clean old data conservatively.', 'gt-performance' ) );
-		$this->checkbox( 'database', 'enabled', __( 'Schedule database cleanup', 'gt-performance' ), __( 'Run the safe cleanup routine on the selected schedule.', 'gt-performance' ), $settings );
+		$this->panelOpen( __( 'WordPress quick toggles', 'gt-performance' ), __( 'Remove front-end requests and metadata WordPress loads globally. Apply the active gauravtiwari.org baseline or choose controls individually.', 'gt-performance' ) );
+		$this->renderWordPressPresets();
+		$this->checkbox( 'bloat', 'disable_emojis', __( 'Disable WordPress emoji assets', 'gt-performance' ), __( 'Remove the legacy emoji detection script and styles.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_dashicons', __( 'Disable Dashicons for visitors', 'gt-performance' ), __( 'Keep Dashicons for logged-in users and remove them from public pages.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_embeds', __( 'Disable WordPress embeds', 'gt-performance' ), __( 'Remove oEmbed discovery and the frontend embed script.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_xmlrpc', __( 'Disable XML-RPC', 'gt-performance' ), __( 'Disable legacy XML-RPC requests while leaving the REST API available.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_rsd_link', __( 'Remove RSD link', 'gt-performance' ), __( 'Remove the Really Simple Discovery link from the document head.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_jquery_migrate', __( 'Remove jQuery Migrate', 'gt-performance' ), __( 'Reduce a legacy dependency. Test older themes and plugins after enabling.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'hide_wp_version', __( 'Remove WordPress version', 'gt-performance' ), __( 'Remove the generator value and WordPress core version query strings.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_shortlink', __( 'Remove shortlink', 'gt-performance' ), __( 'Remove shortlink output from the document head and response headers.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_rss_feeds', __( 'Disable RSS feeds', 'gt-performance' ), __( 'Return a 404 for feed requests. Leave disabled when readers use feeds.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_feed_links', __( 'Remove RSS feed links', 'gt-performance' ), __( 'Keep feeds working but remove automatic discovery links from the document head.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_self_pingbacks', __( 'Disable self pingbacks', 'gt-performance' ), __( 'Prevent WordPress from pinging links that point back to this site.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_rest_api_links', __( 'Remove REST API links', 'gt-performance' ), __( 'Keep the REST API working while removing discovery links from public responses.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_google_maps', __( 'Disable Google Maps', 'gt-performance' ), __( 'Remove Google Maps scripts except on paths listed in Exceptions.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_password_strength_meter', __( 'Disable password strength meter', 'gt-performance' ), __( 'Remove the front-end password meter. Test registration and account forms after enabling.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_comment_urls', __( 'Remove comment author URLs', 'gt-performance' ), __( 'Discard author website links to reduce comment backlink spam.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'blank_favicon', __( 'Add a blank fallback favicon', 'gt-performance' ), __( 'Prevent a missing favicon request when the site has no Site Icon.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_global_styles', __( 'Remove global styles', 'gt-performance' ), __( 'Remove WordPress global and classic theme styles. Use only when the theme does not need them.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'separate_block_styles', __( 'Load separate core block styles', 'gt-performance' ), __( 'Load core block CSS only when the corresponding block is rendered.', 'gt-performance' ), $settings );
+		$this->panelClose();
+
+		$this->panelOpen( __( 'Editor, comments, and APIs', 'gt-performance' ), __( 'Control revision growth, autosaves, Heartbeat, comments, and REST API access.', 'gt-performance' ) );
+		$this->select(
+			'bloat',
+			'heartbeat_mode',
+			__( 'Heartbeat behavior', 'gt-performance' ),
+			__( 'Reduced frequency preserves post locks and autosaves with fewer requests.', 'gt-performance' ),
+			$settings,
+			array(
+				'default'           => __( 'WordPress default', 'gt-performance' ),
+				'reduce'            => __( 'Reduce frequency (recommended)', 'gt-performance' ),
+				'disable_dashboard' => __( 'Disable outside the editor', 'gt-performance' ),
+				'disabled'          => __( 'Disable everywhere', 'gt-performance' ),
+			)
+		);
+		$this->number( 'bloat', 'heartbeat_seconds', __( 'Heartbeat interval', 'gt-performance' ), __( 'Slow the admin Heartbeat API without disabling autosave locks.', 'gt-performance' ), $settings, 15, 120, __( 'seconds', 'gt-performance' ) );
+		$this->number( 'bloat', 'limit_revisions', __( 'WordPress revision limit', 'gt-performance' ), __( 'Filter the number of revisions WordPress retains for each post.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
+		$this->number( 'bloat', 'autosave_interval', __( 'Autosave interval', 'gt-performance' ), __( 'Increase the editor autosave interval to reduce background requests.', 'gt-performance' ), $settings, 15, 3600, __( 'seconds', 'gt-performance' ) );
+		$this->select(
+			'bloat',
+			'disable_rest_api',
+			__( 'REST API access', 'gt-performance' ),
+			__( 'Disabling REST can break the block editor and integrations. The default keeps it available.', 'gt-performance' ),
+			$settings,
+			array(
+				'default'   => __( 'Keep enabled', 'gt-performance' ),
+				'non_admin' => __( 'Administrators only', 'gt-performance' ),
+				'disabled'  => __( 'Disable all requests', 'gt-performance' ),
+			)
+		);
+		$this->checkbox( 'bloat', 'disable_comments', __( 'Disable comments', 'gt-performance' ), __( 'Close comments and pingbacks across all public post types.', 'gt-performance' ), $settings );
+		$this->panelClose();
+
+		$this->panelOpen( __( 'Scheduled database optimization', 'gt-performance' ), __( 'Save cleanup tasks and run a bounded batch daily, weekly, or monthly.', 'gt-performance' ) );
+		$this->checkbox( 'database', 'enabled', __( 'Schedule database cleanup', 'gt-performance' ), __( 'Run the selected database tasks automatically.', 'gt-performance' ), $settings );
 		$this->select(
 			'database',
 			'schedule',
 			__( 'Cleanup schedule', 'gt-performance' ),
-			__( 'Scheduled cleanup processes a bounded batch each run.', 'gt-performance' ),
+			__( 'The schedule starts one hour after settings are saved.', 'gt-performance' ),
 			$settings,
 			array(
-				'daily' => __( 'Daily', 'gt-performance' ),
-				'weekly' => __( 'Weekly', 'gt-performance' ),
+				'daily'   => __( 'Daily', 'gt-performance' ),
+				'weekly'  => __( 'Weekly', 'gt-performance' ),
+				'monthly' => __( 'Monthly', 'gt-performance' ),
 			)
 		);
-		$this->number( 'database', 'retain_revisions', __( 'Revisions to retain', 'gt-performance' ), __( 'Preferred revision retention for cleanup and editor history.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
-		$this->checkbox( 'bloat', 'disable_emojis', __( 'Disable WordPress emoji assets', 'gt-performance' ), __( 'Remove the legacy emoji detection script and styles.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'disable_embeds', __( 'Disable WordPress embeds', 'gt-performance' ), __( 'Remove oEmbed discovery and the frontend embed script.', 'gt-performance' ), $settings );
-		$this->number( 'bloat', 'heartbeat_seconds', __( 'Heartbeat interval', 'gt-performance' ), __( 'Slow the admin Heartbeat API without disabling autosave locks.', 'gt-performance' ), $settings, 15, 120, __( 'seconds', 'gt-performance' ) );
-		$this->number( 'bloat', 'limit_revisions', __( 'WordPress revision limit', 'gt-performance' ), __( 'Filter the number of revisions WordPress retains for each post.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
+		$this->number( 'database', 'retain_revisions', __( 'Scheduled revisions to retain', 'gt-performance' ), __( 'Scheduled cleanup keeps this many recent revisions per post. Manual cleanup removes every selected revision.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
+		$this->databaseTaskSettings( $settings );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Core Web Vitals', 'gt-performance' ), __( 'Collect a small, first-party sample of real-user performance measurements.', 'gt-performance' ) );
-		$this->checkbox( 'rum', 'enabled', __( 'Collect sampled Web Vitals', 'gt-performance' ), __( 'Record LCP, INP, and CLS without loading a third-party analytics library.', 'gt-performance' ), $settings );
-		$this->number( 'rum', 'sample_rate', __( 'Sample rate', 'gt-performance' ), __( 'A value from 0 to 1. For example, 0.05 samples about five percent of visits.', 'gt-performance' ), $settings, 0, 1, '', '0.01' );
-		$this->number( 'rum', 'retention', __( 'Data retention', 'gt-performance' ), __( 'Automatically remove older field data.', 'gt-performance' ), $settings, 1, 365, __( 'days', 'gt-performance' ) );
+		$this->panelOpen( __( 'Diagnostics', 'gt-performance' ), __( 'Keep troubleshooting data local, bounded, and disabled unless it is needed.', 'gt-performance' ) );
 		$this->checkboxRoot( 'debug', __( 'Diagnostic logging', 'gt-performance' ), __( 'Write redacted plugin errors to the GT Performance log directory.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
 		$this->settingsFormClose();
+		$this->renderDatabaseOptimization( $settings );
 	}
 
 	/**
@@ -539,6 +598,10 @@ final class AdminModule implements Module {
 
 		$this->panelOpen( __( 'Media exceptions', 'gt-performance' ), __( 'Selectors let interactive embeds keep their normal rendering behavior.', 'gt-performance' ) );
 		$this->textarea( 'media', 'lazy_render_selectors', __( 'Lazy-render selectors', 'gt-performance' ), __( 'CSS selectors for supported embeds or components that may render after interaction.', 'gt-performance' ), $settings, '.video-embed' );
+		$this->panelClose();
+
+		$this->panelOpen( __( 'WordPress exceptions', 'gt-performance' ), __( 'Keep Google Maps on URLs that require it while disabling the script everywhere else.', 'gt-performance' ) );
+		$this->textarea( 'bloat', 'google_maps_exclusions', __( 'Google Maps path exceptions', 'gt-performance' ), __( 'Enter one path fragment per line, such as /contact/ or /store-locator/.', 'gt-performance' ), $settings, '/contact/' );
 		$this->panelClose();
 
 		$this->settingsFormClose();
@@ -692,6 +755,208 @@ final class AdminModule implements Module {
 			?>
 		</section>
 		<?php
+	}
+
+	private function renderCachePresets(): void {
+		$presets = array(
+			'maximum' => array(
+				'label'          => __( 'Maximum impact', 'gt-performance' ),
+				'description'    => __( '1h · 24h · 5m', 'gt-performance' ),
+				'fresh_ttl'      => 3600,
+				'stale_ttl'      => 86400,
+				'stale_if_error' => 86400,
+				'browser_ttl'    => 300,
+			),
+			'balanced' => array(
+				'label'          => __( 'Balanced', 'gt-performance' ),
+				'description'    => __( '30m · 12h · 5m', 'gt-performance' ),
+				'fresh_ttl'      => 1800,
+				'stale_ttl'      => 43200,
+				'stale_if_error' => 86400,
+				'browser_ttl'    => 300,
+			),
+			'dynamic' => array(
+				'label'          => __( 'Frequently updated', 'gt-performance' ),
+				'description'    => __( '5m · 1h · 5m', 'gt-performance' ),
+				'fresh_ttl'      => 300,
+				'stale_ttl'      => 3600,
+				'stale_if_error' => 21600,
+				'browser_ttl'    => 300,
+			),
+		);
+		?>
+		<div class="gtp-presets" data-gtp-cache-presets>
+			<div class="gtp-presets__heading">
+				<h4><?php esc_html_e( 'One-click presets', 'gt-performance' ); ?></h4>
+				<p><?php esc_html_e( 'Times show fresh cache, shared retention, and browser max-age. Apply a preset, review the fields, then save changes.', 'gt-performance' ); ?></p>
+			</div>
+			<div class="gtp-presets__grid" role="group" aria-label="<?php esc_attr_e( 'Cache lifetime presets', 'gt-performance' ); ?>">
+				<?php foreach ( $presets as $key => $preset ) : ?>
+					<button
+						type="button"
+						class="gtp-preset"
+						data-gtp-cache-preset="<?php echo esc_attr( $key ); ?>"
+						data-fresh-ttl="<?php echo esc_attr( (string) $preset['fresh_ttl'] ); ?>"
+						data-stale-ttl="<?php echo esc_attr( (string) $preset['stale_ttl'] ); ?>"
+						data-stale-if-error="<?php echo esc_attr( (string) $preset['stale_if_error'] ); ?>"
+						data-browser-ttl="<?php echo esc_attr( (string) $preset['browser_ttl'] ); ?>"
+						aria-pressed="false"
+					>
+						<strong><?php echo esc_html( (string) $preset['label'] ); ?></strong>
+						<span><?php echo esc_html( (string) $preset['description'] ); ?></span>
+					</button>
+				<?php endforeach; ?>
+			</div>
+			<p class="gtp-presets__status" data-gtp-cache-preset-status aria-live="polite"></p>
+		</div>
+		<?php
+	}
+
+	private function renderWordPressPresets(): void {
+		?>
+		<div class="gtp-presets gtp-presets--compact" data-gtp-wordpress-presets>
+			<div class="gtp-presets__heading">
+				<h4><?php esc_html_e( 'WordPress presets', 'gt-performance' ); ?></h4>
+				<p><?php esc_html_e( 'The site baseline matches the active request-removal settings on gauravtiwari.org. It does not change comments, feeds, global styles, Heartbeat, revisions, or REST access.', 'gt-performance' ); ?></p>
+			</div>
+			<div class="gtp-presets__actions" role="group" aria-label="<?php esc_attr_e( 'WordPress optimization presets', 'gt-performance' ); ?>">
+				<button type="button" class="button button-secondary" data-gtp-wordpress-preset="gaurav"><?php esc_html_e( 'Apply site baseline', 'gt-performance' ); ?></button>
+				<button type="button" class="button button-secondary" data-gtp-wordpress-preset="clear"><?php esc_html_e( 'Clear quick toggles', 'gt-performance' ); ?></button>
+			</div>
+			<p class="gtp-presets__status" data-gtp-wordpress-preset-status aria-live="polite"></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function databaseTaskSettings( array $settings ): void {
+		$selected = array_map( 'strval', (array) $settings['database']['tasks'] );
+		?>
+		<div class="gtp-field gtp-field--stacked">
+			<div>
+				<span class="gtp-field__label" id="gtp-database-scheduled-tasks"><?php esc_html_e( 'Scheduled tasks', 'gt-performance' ); ?></span>
+				<p><?php esc_html_e( 'Choose what automatic maintenance may remove. Clearing all transients is available only as a manual action.', 'gt-performance' ); ?></p>
+			</div>
+			<div class="gtp-checklist" role="group" aria-labelledby="gtp-database-scheduled-tasks">
+				<input type="hidden" name="<?php echo esc_attr( Settings::OPTION . '[database][tasks][]' ); ?>" value="">
+				<?php foreach ( $this->databaseTaskDefinitions() as $key => $definition ) : ?>
+					<?php if ( 'all_transients' === $key ) : ?>
+						<?php continue; ?>
+					<?php endif; ?>
+					<label>
+						<input type="checkbox" name="<?php echo esc_attr( Settings::OPTION . '[database][tasks][]' ); ?>" value="<?php echo esc_attr( $key ); ?>" <?php checked( in_array( $key, $selected, true ) ); ?>>
+						<span><strong><?php echo esc_html( $definition['label'] ); ?></strong><?php echo esc_html( $definition['description'] ); ?></span>
+					</label>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderDatabaseOptimization( array $settings ): void {
+		$preview      = ( new Cleaner() )->preview();
+		$selected     = array_map( 'strval', (array) $settings['database']['tasks'] );
+		$lastResult   = $this->databaseResult();
+		$definitions  = $this->databaseTaskDefinitions();
+		?>
+		<section class="gtp-panel gtp-database-manual">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Manual database optimization', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Scan results are current. Select only the cleanup tasks you want to run now.', 'gt-performance' ); ?></p>
+				</div>
+				<span class="gtp-status"><?php esc_html_e( 'Manual control', 'gt-performance' ); ?></span>
+			</div>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="gtp_database_clean">
+				<input type="hidden" name="tasks[]" value="">
+				<?php wp_nonce_field( 'gtp_database_clean' ); ?>
+				<div class="gtp-database-task-list" role="group" aria-label="<?php esc_attr_e( 'Manual database optimization tasks', 'gt-performance' ); ?>">
+					<?php foreach ( $definitions as $key => $definition ) : ?>
+						<label class="gtp-database-task">
+							<input type="checkbox" name="tasks[]" value="<?php echo esc_attr( $key ); ?>" <?php checked( in_array( $key, $selected, true ) && 'all_transients' !== $key ); ?>>
+							<span class="gtp-database-task__copy">
+								<strong><?php echo esc_html( $definition['label'] ); ?></strong>
+								<small><?php echo esc_html( $definition['description'] ); ?></small>
+							</span>
+							<span class="gtp-database-task__count"><?php echo esc_html( number_format_i18n( (int) ( $preview[ $key ] ?? 0 ) ) ); ?></span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+				<div class="gtp-database-actions">
+					<p role="note"><?php esc_html_e( 'These changes are permanent. Back up the database before deleting content or clearing all transients.', 'gt-performance' ); ?></p>
+					<?php submit_button( __( 'Run selected optimization', 'gt-performance' ), 'secondary', 'submit', false ); ?>
+				</div>
+			</form>
+			<?php if ( $lastResult ) : ?>
+				<div class="gtp-database-result">
+					<h4><?php esc_html_e( 'Latest manual run', 'gt-performance' ); ?></h4>
+					<dl>
+						<?php foreach ( $definitions as $key => $definition ) : ?>
+							<?php if ( ! isset( $lastResult[ $key ] ) || (int) $lastResult[ $key ] < 1 ) : ?>
+								<?php continue; ?>
+							<?php endif; ?>
+							<div><dt><?php echo esc_html( $definition['label'] ); ?></dt><dd><?php echo esc_html( number_format_i18n( (int) $lastResult[ $key ] ) ); ?></dd></div>
+						<?php endforeach; ?>
+					</dl>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @return array<string, array{label:string,description:string}>
+	 */
+	private function databaseTaskDefinitions(): array {
+		return array(
+			'revisions'          => array(
+				'label'       => __( 'Post revisions', 'gt-performance' ),
+				'description' => __( 'Delete saved revisions. Manual cleanup removes all selected revisions.', 'gt-performance' ),
+			),
+			'auto_drafts'        => array(
+				'label'       => __( 'Auto-drafts', 'gt-performance' ),
+				'description' => __( 'Delete abandoned automatic drafts.', 'gt-performance' ),
+			),
+			'spam_comments'      => array(
+				'label'       => __( 'Spam comments', 'gt-performance' ),
+				'description' => __( 'Permanently delete comments marked as spam.', 'gt-performance' ),
+			),
+			'trashed_posts'      => array(
+				'label'       => __( 'Trashed posts', 'gt-performance' ),
+				'description' => __( 'Permanently delete posts and pages in Trash.', 'gt-performance' ),
+			),
+			'trashed_comments'   => array(
+				'label'       => __( 'Trashed comments', 'gt-performance' ),
+				'description' => __( 'Permanently delete comments in Trash.', 'gt-performance' ),
+			),
+			'expired_transients' => array(
+				'label'       => __( 'Expired transients', 'gt-performance' ),
+				'description' => __( 'Remove expired temporary cache entries.', 'gt-performance' ),
+			),
+			'all_transients'     => array(
+				'label'       => __( 'All transients', 'gt-performance' ),
+				'description' => __( 'Clear every transient row, including active temporary caches.', 'gt-performance' ),
+			),
+			'optimize_tables'    => array(
+				'label'       => __( 'Database tables', 'gt-performance' ),
+				'description' => __( 'Optimize WordPress tables that report reclaimable space.', 'gt-performance' ),
+			),
+		);
+	}
+
+	/**
+	 * @return array<string, int>
+	 */
+	private function databaseResult(): array {
+		$result = get_transient( 'gtp_database_result_' . get_current_user_id() );
+
+		return is_array( $result ) ? array_map( 'intval', $result ) : array();
 	}
 
 	/**
@@ -1043,6 +1308,19 @@ final class AdminModule implements Module {
 	 * @return array{message:string,type:string}
 	 */
 	private function noticeDetails( string $notice ): array {
+		if ( 'database-cleaned' === $notice ) {
+			$count = array_sum( $this->databaseResult() );
+
+			return array(
+				'message' => sprintf(
+					/* translators: %s: number of database rows or table operations processed. */
+					_n( 'Database optimization processed %s item.', 'Database optimization processed %s items.', $count, 'gt-performance' ),
+					number_format_i18n( $count )
+				),
+				'type'    => 'success',
+			);
+		}
+
 		if ( str_starts_with( $notice, 'cleaned-' ) ) {
 			$count = max( 0, (int) substr( $notice, strlen( 'cleaned-' ) ) );
 

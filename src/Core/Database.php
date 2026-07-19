@@ -10,7 +10,15 @@ declare(strict_types=1);
 namespace GTPerformance\Core;
 
 final class Database {
-	public const SCHEMA_VERSION = '1';
+	public const SCHEMA_VERSION = '2';
+
+	public static function maybeUpgrade(): void {
+		if ( self::SCHEMA_VERSION === (string) get_option( 'gt_performance_schema_version', '' ) ) {
+			return;
+		}
+
+		self::install();
+	}
 
 	public static function install(): void {
 		global $wpdb;
@@ -21,7 +29,6 @@ final class Database {
 		$jobs    = $wpdb->prefix . 'gtp_jobs';
 		$deps    = $wpdb->prefix . 'gtp_dependencies';
 		$assets  = $wpdb->prefix . 'gtp_artifacts';
-		$vitals  = $wpdb->prefix . 'gtp_vitals';
 
 		dbDelta(
 			"CREATE TABLE {$jobs} (
@@ -75,21 +82,15 @@ final class Database {
 			) {$charset};"
 		);
 
-		dbDelta(
-			"CREATE TABLE {$vitals} (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-				metric varchar(16) NOT NULL,
-				value decimal(12,3) NOT NULL,
-				rating varchar(20) NOT NULL,
-				template varchar(64) NOT NULL DEFAULT '',
-				cache_status varchar(20) NOT NULL DEFAULT '',
-				device varchar(16) NOT NULL DEFAULT '',
-				recorded_at datetime NOT NULL,
-				PRIMARY KEY  (id),
-				KEY metric_recorded (metric, recorded_at),
-				KEY segment (template, cache_status, device)
-			) {$charset};"
-		);
+		$legacyVitals = $wpdb->prefix . 'gtp_vitals';
+		// Remove the retired real-user measurement table during alpha upgrades.
+		$wpdb->query( "DROP TABLE IF EXISTS `{$legacyVitals}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$settings = get_option( Settings::OPTION, array() );
+		if ( is_array( $settings ) && array_key_exists( 'rum', $settings ) ) {
+			unset( $settings['rum'] );
+			update_option( Settings::OPTION, $settings, false );
+		}
 
 		update_option( 'gt_performance_schema_version', self::SCHEMA_VERSION, false );
 	}
