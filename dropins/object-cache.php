@@ -318,20 +318,96 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			$file   = WP_CONTENT_DIR . '/cache/gt-performance/redis-config.php';
 			$config = is_readable( $file ) ? require $file : array();
 			$config = is_array( $config ) ? $config : array();
+			$config = array_replace( $config, $this->compatibleConstantOverrides() );
+
+			$gtpConstants = array(
+				'host'               => 'GTP_REDIS_HOST',
+				'port'               => 'GTP_REDIS_PORT',
+				'database'           => 'GTP_REDIS_DATABASE',
+				'username'           => 'GTP_REDIS_USERNAME',
+				'password'           => 'GTP_REDIS_PASSWORD',
+				'tls'                => 'GTP_REDIS_TLS',
+				'persistent'         => 'GTP_REDIS_PERSISTENT',
+				'prefix'             => 'GTP_REDIS_PREFIX',
+				'connection_timeout' => 'GTP_REDIS_TIMEOUT',
+				'read_timeout'       => 'GTP_REDIS_READ_TIMEOUT',
+			);
+			foreach ( $gtpConstants as $key => $constant ) {
+				if ( defined( $constant ) ) {
+					$config[ $key ] = constant( $constant );
+				}
+			}
+
+			if ( defined( 'GTP_REDIS_HOST' ) || defined( 'WP_REDIS_HOST' ) || defined( 'WP_REDIS_PATH' ) ) {
+				$config['enabled'] = true;
+			}
+			if ( defined( 'WP_REDIS_DISABLED' ) && (bool) WP_REDIS_DISABLED ) {
+				$config['enabled'] = false;
+			}
+			if ( defined( 'GTP_REDIS_ENABLED' ) ) {
+				$config['enabled'] = (bool) GTP_REDIS_ENABLED;
+			}
 
 			return array(
-				'enabled'            => defined( 'GTP_REDIS_ENABLED' ) ? (bool) GTP_REDIS_ENABLED : (bool) ( $config['enabled'] ?? defined( 'GTP_REDIS_HOST' ) ),
-				'host'               => defined( 'GTP_REDIS_HOST' ) ? (string) GTP_REDIS_HOST : (string) ( $config['host'] ?? '127.0.0.1' ),
-				'port'               => defined( 'GTP_REDIS_PORT' ) ? (int) GTP_REDIS_PORT : (int) ( $config['port'] ?? 6379 ),
-				'database'           => defined( 'GTP_REDIS_DATABASE' ) ? (int) GTP_REDIS_DATABASE : (int) ( $config['database'] ?? 0 ),
-				'username'           => defined( 'GTP_REDIS_USERNAME' ) ? (string) GTP_REDIS_USERNAME : (string) ( $config['username'] ?? '' ),
-				'password'           => defined( 'GTP_REDIS_PASSWORD' ) ? (string) GTP_REDIS_PASSWORD : (string) ( $config['password'] ?? '' ),
-				'tls'                => defined( 'GTP_REDIS_TLS' ) ? (bool) GTP_REDIS_TLS : (bool) ( $config['tls'] ?? false ),
-				'persistent'         => defined( 'GTP_REDIS_PERSISTENT' ) ? (bool) GTP_REDIS_PERSISTENT : (bool) ( $config['persistent'] ?? true ),
-				'prefix'             => defined( 'GTP_REDIS_PREFIX' ) ? (string) GTP_REDIS_PREFIX : (string) ( $config['prefix'] ?? '' ),
-				'connection_timeout' => defined( 'GTP_REDIS_TIMEOUT' ) ? (float) GTP_REDIS_TIMEOUT : (float) ( $config['connection_timeout'] ?? 0.5 ),
-				'read_timeout'       => defined( 'GTP_REDIS_READ_TIMEOUT' ) ? (float) GTP_REDIS_READ_TIMEOUT : (float) ( $config['read_timeout'] ?? 0.5 ),
+				'enabled'            => (bool) ( $config['enabled'] ?? false ),
+				'host'               => (string) ( $config['host'] ?? '127.0.0.1' ),
+				'port'               => (int) ( $config['port'] ?? 6379 ),
+				'database'           => (int) ( $config['database'] ?? 0 ),
+				'username'           => (string) ( $config['username'] ?? '' ),
+				'password'           => (string) ( $config['password'] ?? '' ),
+				'tls'                => (bool) ( $config['tls'] ?? false ),
+				'persistent'         => (bool) ( $config['persistent'] ?? true ),
+				'prefix'             => (string) ( $config['prefix'] ?? '' ),
+				'connection_timeout' => (float) ( $config['connection_timeout'] ?? 0.5 ),
+				'read_timeout'       => (float) ( $config['read_timeout'] ?? 0.5 ),
 			);
+		}
+
+		/**
+		 * Read the scalar wp-config.php constants used by Redis Object Cache.
+		 *
+		 * @return array<string, mixed>
+		 */
+		private function compatibleConstantOverrides(): array {
+			$overrides = array();
+			$constants = array(
+				'host'               => 'WP_REDIS_HOST',
+				'port'               => 'WP_REDIS_PORT',
+				'database'           => 'WP_REDIS_DATABASE',
+				'prefix'             => 'WP_REDIS_PREFIX',
+				'connection_timeout' => 'WP_REDIS_TIMEOUT',
+				'read_timeout'       => 'WP_REDIS_READ_TIMEOUT',
+			);
+			foreach ( $constants as $key => $constant ) {
+				if ( defined( $constant ) ) {
+					$overrides[ $key ] = constant( $constant );
+				}
+			}
+
+			if ( defined( 'WP_REDIS_PASSWORD' ) ) {
+				$password = constant( 'WP_REDIS_PASSWORD' );
+				if ( is_array( $password ) ) {
+					$credentials           = array_values( $password );
+					$overrides['username'] = isset( $credentials[0] ) && is_scalar( $credentials[0] ) ? (string) $credentials[0] : '';
+					$overrides['password'] = isset( $credentials[1] ) && is_scalar( $credentials[1] ) ? (string) $credentials[1] : '';
+				} elseif ( is_scalar( $password ) ) {
+					$overrides['password'] = (string) $password;
+				}
+			}
+
+			$scheme = defined( 'WP_REDIS_SCHEME' ) ? strtolower( (string) WP_REDIS_SCHEME ) : '';
+			if ( defined( 'WP_REDIS_PATH' ) && ( 'unix' === $scheme || ! defined( 'WP_REDIS_HOST' ) ) ) {
+				$overrides['host'] = (string) WP_REDIS_PATH;
+				$overrides['port'] = 0;
+			}
+			if ( '' !== $scheme ) {
+				$overrides['tls'] = in_array( $scheme, array( 'tls', 'rediss', 'ssl' ), true );
+			}
+			if ( ! defined( 'WP_REDIS_PREFIX' ) && defined( 'WP_CACHE_KEY_SALT' ) ) {
+				$overrides['prefix'] = (string) WP_CACHE_KEY_SALT;
+			}
+
+			return $overrides;
 		}
 
 		private function nonPersistent( $group ): bool {

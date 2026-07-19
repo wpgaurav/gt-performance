@@ -5,12 +5,13 @@
 				<div class="gtp-shop-hero__copy">
 					<p class="gtp-shop-kicker">WordPress performance, with cache safety built in</p>
 					<h1 id="gtp-shop-title">Fast public pages. Private carts and accounts.</h1>
-					<p class="gtp-shop-lede">GT Performance combines origin page caching, Cloudflare Free controls, server-side unused CSS, Redis object caching, and WordPress cleanup in one focused plugin.</p>
-					<p>But it starts with a stricter rule: checkout, account, receipt, license, and session state must never become public cache entries.</p>
+					<p class="gtp-shop-lede">GT Performance combines origin page caching, Cloudflare Free, server-side unused CSS, Redis object caching, and WordPress cleanup in one focused plugin.</p>
+					<p class="gtp-shop-price-line"><strong>$199</strong><span>One-time payment · one site · lifetime license</span></p>
 					<div class="gtp-shop-actions">
-						<a class="gtp-shop-button gtp-shop-button--primary" href="#gtp-shop-features">See the controls</a>
-						<a class="gtp-shop-button gtp-shop-button--secondary" href="#gtp-shop-alpha">Read the alpha notes</a>
+						<a class="gtp-shop-button gtp-shop-button--primary" href="{{CHECKOUT_URL}}">Buy GT Performance — $199</a>
+						<a class="gtp-shop-button gtp-shop-button--secondary" href="#gtp-shop-features">See the controls</a>
 					</div>
+					<p class="gtp-shop-safety-note">Checkout, account, receipt, license, and session state stay outside public cache by design.</p>
 					<ul class="gtp-shop-tags" aria-label="Core capabilities">
 						<li>Cloudflare Free</li>
 						<li>Server-side CSS</li>
@@ -154,8 +155,31 @@
 					<p>Alpha users should keep backups, test checkout and account flows, and enable aggressive frontend transformations only after the core cache path is stable.</p>
 				</div>
 				<div class="gtp-shop-alpha__actions">
-					<a class="gtp-shop-button gtp-shop-button--primary" href="https://github.com/wpgaurav/gt-performance/releases">View current release</a>
+					<a class="gtp-shop-button gtp-shop-button--primary" href="{{CHECKOUT_URL}}">Buy GT Performance — $199</a>
+					<a class="gtp-shop-button gtp-shop-button--secondary" href="https://github.com/wpgaurav/gt-performance/releases">View current release</a>
 					<a class="gtp-shop-button gtp-shop-button--secondary" href="https://github.com/wpgaurav/gt-performance">Inspect the source</a>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="gtp-shop-section gtp-shop-section--purchase" aria-labelledby="gtp-shop-purchase-title">
+		<div class="inner block-double-tb block-half-lr">
+			<div class="gtp-shop-purchase">
+				<div>
+					<p class="gtp-shop-kicker">One site, one clear price</p>
+					<h2 id="gtp-shop-purchase-title">Get every GT Performance module for $199.</h2>
+					<p>Use the page cache, Cloudflare Free integration, server-side unused CSS, Redis object cache, database tools, and commerce safeguards under one license.</p>
+				</div>
+				<div class="gtp-shop-offer">
+					<p class="gtp-shop-offer__price"><strong>$199</strong><span>one-time</span></p>
+					<ul>
+						<li>One WordPress site</li>
+						<li>Lifetime license</li>
+						<li>Protected updates in WordPress</li>
+					</ul>
+					<a class="gtp-shop-button gtp-shop-button--primary" href="{{CHECKOUT_URL}}">Continue to secure checkout</a>
+					<small>You are buying an alpha release. Test it on staging before production.</small>
 				</div>
 			</div>
 		</div>

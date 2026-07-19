@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.9 - 2026-07-19
+
+- Moved the live manual database scan and selectable cleanup interface from Optimization to Tools while keeping scheduled database maintenance in Optimization.
+- Returned completed manual cleanup actions to the Tools tab and removed the redundant one-click cleanup card.
+- Added compatible `WP_REDIS_*` configuration for Till Krüss Redis Object Cache, including ACL credential arrays, TCP/TLS and Unix sockets, database, prefix, timeouts, legacy key salt, and the emergency disable constant.
+- Kept `GTP_REDIS_*` constants as highest-precedence overrides and added isolated configuration coverage for compatibility and precedence.
+- Published the $199 FluentCart product page with verified direct-checkout links, one-site lifetime-license details, and responsive purchase sections.
+
 ## 0.1.0-alpha.8 - 2026-07-19
 
 - Added encrypted FluentCart license activation, weekly verification, deactivation, version checks, protected package delivery, and native WordPress update metadata.

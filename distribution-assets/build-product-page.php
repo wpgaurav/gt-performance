@@ -7,14 +7,16 @@ $options = getopt(
 	array(
 		'dashboard-url:',
 		'reports-url:',
+		'checkout-url:',
 	)
 );
 
 $dashboardUrl = isset( $options['dashboard-url'] ) ? (string) $options['dashboard-url'] : '';
 $reportsUrl   = isset( $options['reports-url'] ) ? (string) $options['reports-url'] : '';
+$checkoutUrl  = isset( $options['checkout-url'] ) ? (string) $options['checkout-url'] : '';
 
-if ( '' === $dashboardUrl || '' === $reportsUrl ) {
-	fwrite( STDERR, "Usage: php distribution-assets/build-product-page.php --dashboard-url=<url> --reports-url=<url>\n" );
+if ( '' === $dashboardUrl || '' === $reportsUrl || '' === $checkoutUrl ) {
+	fwrite( STDERR, "Usage: php distribution-assets/build-product-page.php --dashboard-url=<url> --reports-url=<url> --checkout-url=<url>\n" );
 	exit( 1 );
 }
 
@@ -36,6 +38,7 @@ $html = strtr(
 	array(
 		'{{DASHBOARD_URL}}' => $dashboardUrl,
 		'{{REPORTS_URL}}'   => $reportsUrl,
+		'{{CHECKOUT_URL}}'  => $checkoutUrl,
 	)
 );
 

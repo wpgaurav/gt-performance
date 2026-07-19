@@ -30,11 +30,15 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 ### Implemented Product and Release State
 
 - FluentCart product ID: `1170147`.
-- The product page remains a draft with no commercial price selected.
+- The product page is published at $199 with a one-site lifetime license.
 - FluentCart updater responses are top-level JSON objects; the client also accepts the nested `data` shape for compatibility.
 - Protected package URLs are exposed to WordPress only when FluentCart reports a valid activation.
 - The license key and activation hash are encrypted separately at rest.
 - `0.1.0-alpha.8` is the first release with the licensed updater and product identity.
+- GitHub release `v0.1.0-alpha.8` is the package authority. Its ZIP is 314,835 bytes with SHA-256 `c6c279679d5a8a0fbe7cbdcabf15683adfe5037699e0fef0fe1755f865597816`.
+- FluentCart download row `104` points to that exact ZIP; row `103` and the alpha.7 file remain available for rollback.
+- FluentCart's local driver requires `file_path` to be relative to its storage directory. An absolute path passes metadata checks but the signed download resolves to HTML instead of the ZIP.
+- A temporary Studio activation verified valid metadata, the protected package response, ZIP magic bytes, exact size, and the GitHub SHA-256. The temporary license, activation, site, and local option were removed afterward.
 
 ### Marketing Asset System
 
@@ -42,6 +46,8 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 - Exact typography and real WordPress Studio screenshots are composed through `distribution-assets/source/marketing-assets.html`.
 - Directory icons, banners, five screenshots, a FluentCart cover, and a social card are stored outside the installable ZIP.
 - The WordPress-ready product page is generated as a `marketers-delight/inline-page-block` so its scoped CSS follows the established shop-page contract.
+- FluentCart direct checkout for variation `68` uses `?fluent-cart=instant_checkout&item_id=68&quantity=1`; a fresh guest request redirected to Checkout with GT Performance at exactly $199.
+- The published page shows price and direct checkout in the hero, alpha section, and final offer, with cache-busted desktop and 390px phone verification.
 
 ## Scope
 

@@ -13,7 +13,7 @@ Create a production-ready visual asset kit for WordPress and FluentCart listings
 - [x] Phase 5: Create directory, FluentCart, social, and screenshot assets
 - [x] Phase 6: Update package metadata, documentation, and release checks
 - [x] Phase 7: Run automated, Studio, updater-contract, and visual verification
-- [ ] Phase 8: Review the final diff and prepare a verified handoff
+- [x] Phase 8: Review the final diff and prepare a verified handoff
 
 ## Key Questions
 
@@ -32,8 +32,8 @@ Create a production-ready visual asset kit for WordPress and FluentCart listings
 - Keep WordPress-directory artwork in a top-level distribution-assets area excluded from the installable ZIP.
 - Preserve the existing GT Performance visual language: blue accent, neutral surfaces, thin boundaries, restrained radii, and no thick rounded borders.
 - Use Magnific GPT 2 for the original raster mark and background field, then compose all text and real Studio screenshots deterministically.
-- Keep the FluentCart product in draft until price and license-tier decisions are explicit.
-- Release as `0.1.0-alpha.8`; the GitHub release ZIP and FluentCart download must be byte-for-byte identical.
+- The FluentCart product is published at $199 with a one-site lifetime license and verified direct checkout.
+- Release the Tools/Redis/storefront follow-up as `0.1.0-alpha.9`; the GitHub release ZIP and FluentCart download must be byte-for-byte identical.
 
 ## Errors Encountered
 
@@ -42,4 +42,4 @@ Create a production-ready visual asset kit for WordPress and FluentCart listings
 
 ## Status
 
-**Currently in Phase 8** - The updater, draft product page, Magnific-led asset kit, alpha.8 package, and Studio validation are complete. Remaining work is the final diff, commit/push/tag, GitHub release readback, and exact FluentCart package synchronization.
+**In progress** - Alpha.8 and its updater are live. Alpha.9 moves manual database optimization to Tools, reuses Till Krüss Redis constants, and publishes the $199 storefront purchase flow.

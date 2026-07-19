@@ -30,7 +30,7 @@ Test the generated ZIP in WordPress Studio before the tag is created.
 After the release commit is on `main`, create and push an annotated tag:
 
 ```bash
-VERSION=0.1.0-alpha.8
+VERSION=0.1.0-alpha.9
 git tag -a "v${VERSION}" -m "GT Performance ${VERSION}"
 git push origin "v${VERSION}"
 ```
@@ -50,9 +50,27 @@ Do not move a published release tag. Fix a broken release with a new version. If
 ## Verify
 
 ```bash
-VERSION=0.1.0-alpha.8
+VERSION=0.1.0-alpha.9
 gh release view "v${VERSION}"
 gh release download "v${VERSION}" --pattern "gt-performance-*"
 sha256sum --check "gt-performance-${VERSION}.zip.sha256"
 gh attestation verify "gt-performance-${VERSION}.zip" --repo wpgaurav/gt-performance
 ```
+
+## Synchronize FluentCart
+
+GitHub is the package authority. Do not upload the locally built Studio ZIP to FluentCart because ZIP timestamps can produce a different checksum even when the package tree is equivalent.
+
+After the GitHub release succeeds:
+
+1. download the release ZIP and checksum from GitHub;
+2. verify the checksum, package root, plugin header, and stable tag;
+3. copy that exact ZIP into FluentCart storage;
+4. preserve the previous product-download row and file for rollback;
+5. create a new product-download row with a unique identifier and a **relative** `file_path` inside FluentCart's local storage directory;
+6. in one transaction, assert the expected previous version/file ID, then update `license_settings.version`, `license_settings.global_update_file`, WordPress icon/banner/readme metadata, and the FluentCart changelog;
+7. confirm an unlicensed version request returns metadata without a package;
+8. create a temporary non-customer license, activate it from Studio, download the protected ZIP, and compare its size and SHA-256 with the GitHub release;
+9. deactivate and remove the temporary license, activation, and site rows.
+
+The previous row and file are removed only in a later maintenance window after rollback is no longer required.

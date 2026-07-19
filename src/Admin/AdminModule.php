@@ -238,7 +238,7 @@ final class AdminModule implements Module {
 						$this->renderLicense();
 						break;
 					case 'tools':
-						$this->renderTools();
+						$this->renderTools( $settings );
 						break;
 					default:
 						$this->renderDashboard( $settings );
@@ -332,7 +332,7 @@ final class AdminModule implements Module {
 		$cleaner = new Cleaner();
 		$result  = $cleaner->run( null === $tasks ? null : $cleaner->sanitizeTasks( $tasks ) );
 		set_transient( 'gtp_database_result_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS );
-		$this->redirect( 'database-cleaned', 'optimization' );
+		$this->redirect( 'database-cleaned', 'tools' );
 	}
 
 	private function renderHeader( string $tab ): void {
@@ -602,7 +602,6 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->settingsFormClose();
-		$this->renderDatabaseOptimization( $settings );
 	}
 
 	/**
@@ -712,7 +711,7 @@ final class AdminModule implements Module {
 		$this->checkbox( 'commerce', 'woocommerce', __( 'WooCommerce', 'gt-performance' ), __( 'Protect WooCommerce cart, checkout, My Account, order, and session state.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Redis object cache', 'gt-performance' ), __( 'Use PhpRedis credentials or leave fields at their local defaults. wp-config.php constants override generated settings at runtime.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Redis object cache', 'gt-performance' ), __( 'Use PhpRedis credentials or leave fields at their local defaults. GT Performance and standard Redis Object Cache constants override generated settings at runtime.', 'gt-performance' ) );
 		$this->checkbox( 'redis', 'enabled', __( 'Enable Redis object cache', 'gt-performance' ), __( 'Connect the GT Performance object-cache.php drop-in to Redis. Disable this before migrating to another object-cache owner.', 'gt-performance' ), $settings );
 		$this->text( 'redis', 'host', __( 'Redis host or socket', 'gt-performance' ), __( 'Hostname, IP address, or Unix socket path.', 'gt-performance' ), $settings, 'text', '127.0.0.1' );
 		$this->number( 'redis', 'port', __( 'Redis port', 'gt-performance' ), __( 'Use 6379 normally, or 0 with a Unix socket.', 'gt-performance' ), $settings, 0, 65535 );
@@ -742,27 +741,23 @@ final class AdminModule implements Module {
 
 	private function renderRedisConstants(): void {
 		$example = <<<'PHP'
-define( 'GTP_REDIS_ENABLED', true );
-define( 'GTP_REDIS_HOST', '127.0.0.1' );
-define( 'GTP_REDIS_PORT', 6379 );
-define( 'GTP_REDIS_DATABASE', 0 );
-define( 'GTP_REDIS_USERNAME', '' );
-define( 'GTP_REDIS_PASSWORD', 'replace-with-a-secret' );
-define( 'GTP_REDIS_TLS', false );
-define( 'GTP_REDIS_PERSISTENT', true );
-define( 'GTP_REDIS_PREFIX', 'gtp:site:' );
-define( 'GTP_REDIS_TIMEOUT', 0.5 );
-define( 'GTP_REDIS_READ_TIMEOUT', 0.5 );
+define( 'WP_REDIS_HOST', '127.0.0.1' );
+define( 'WP_REDIS_PORT', 6379 );
+define( 'WP_REDIS_DATABASE', 0 );
+define( 'WP_REDIS_PASSWORD', array( 'username', 'replace-with-a-secret' ) );
+define( 'WP_REDIS_PREFIX', 'gtp:site:' );
+define( 'WP_REDIS_TIMEOUT', 0.5 );
+define( 'WP_REDIS_READ_TIMEOUT', 0.5 );
 PHP;
 
 		$this->panelOpen(
-			__( 'wp-config.php overrides', 'gt-performance' ),
-			__( 'Optional constants take precedence over saved Redis settings and are available to the early object-cache drop-in before plugins load.', 'gt-performance' )
+			__( 'Compatible wp-config.php overrides', 'gt-performance' ),
+			__( 'GT Performance reads the same WP_REDIS_* constants used by Till Krüss Redis Object Cache. GTP_REDIS_* constants remain supported and take highest precedence.', 'gt-performance' )
 		);
 		?>
 		<div class="gtp-config-example">
 			<pre><code><?php echo esc_html( $example ); ?></code></pre>
-			<p><?php esc_html_e( 'Add only the constants you need before the WordPress stop-editing comment. Defining GTP_REDIS_HOST enables Redis unless GTP_REDIS_ENABLED is explicitly false.', 'gt-performance' ); ?></p>
+			<p><?php esc_html_e( 'Add only the constants you need before the WordPress stop-editing comment. WP_REDIS_HOST or WP_REDIS_PATH enables Redis unless WP_REDIS_DISABLED is true. Existing GTP_REDIS_* constants do not need to be changed.', 'gt-performance' ); ?></p>
 		</div>
 		<?php
 		$this->panelClose();
@@ -851,12 +846,13 @@ PHP;
 		<?php
 	}
 
-	private function renderTools(): void {
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderTools( array $settings ): void {
 		$dropin  = ( new DropinInstaller() )->status();
 		$wpCache = ( new WpCacheConstant() )->status();
 		$redis   = ( new ObjectCacheInstaller() )->status();
-		$cleaner = new Cleaner();
-		$preview = $cleaner->preview();
 
 		$this->pageIntro( __( 'Tools', 'gt-performance' ), __( 'Install owned drop-ins, purge caches, synchronize Cloudflare, and run bounded database maintenance.', 'gt-performance' ) );
 		?>
@@ -879,21 +875,9 @@ PHP;
 			<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
 			<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtp_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
 			<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
-			<?php
-			$total = array_sum( $preview );
-			$this->operation(
-				__( 'Database cleanup', 'gt-performance' ),
-				sprintf(
-					/* translators: %s: number of cleanup candidates. */
-					_n( '%s current cleanup candidate.', '%s current cleanup candidates.', $total, 'gt-performance' ),
-					number_format_i18n( $total )
-				),
-				'gtp_database_clean',
-				__( 'Run database cleanup', 'gt-performance' )
-			);
-			?>
 		</section>
 		<?php
+		$this->renderDatabaseOptimization( $settings );
 	}
 
 	private function renderLicense(): void {

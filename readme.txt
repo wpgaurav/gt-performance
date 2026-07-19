@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.8
+Stable tag: 0.1.0-alpha.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,13 +51,20 @@ GT Performance compiles dynamic paths, session cookies, and query parameters fro
 
 = Can Redis credentials be configured in wp-config.php? =
 
-Yes. GTP_REDIS_ENABLED, GTP_REDIS_HOST, GTP_REDIS_PORT, GTP_REDIS_DATABASE, GTP_REDIS_USERNAME, GTP_REDIS_PASSWORD, GTP_REDIS_TLS, GTP_REDIS_PERSISTENT, GTP_REDIS_PREFIX, GTP_REDIS_TIMEOUT, and GTP_REDIS_READ_TIMEOUT override saved settings. The Integrations screen provides a copy-ready example.
+Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTP_REDIS_*` constants remain supported and take highest precedence. The Integrations screen provides a copy-ready example.
 
 = How are plugin updates delivered? =
 
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 0.1.0-alpha.9 =
+
+* Moved manual database scanning and selectable cleanup to Tools while keeping scheduled maintenance in Optimization.
+* Made manual cleanup return to Tools and removed the redundant cleanup shortcut.
+* Added compatible Till Krüss Redis Object Cache `WP_REDIS_*` constants, including ACL arrays, TLS, Unix sockets, and emergency disable.
+* Published the $199 product page with verified direct-checkout links and responsive purchase details.
 
 = 0.1.0-alpha.8 =
 

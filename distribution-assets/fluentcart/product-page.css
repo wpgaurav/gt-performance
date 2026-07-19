@@ -93,6 +93,31 @@
 	font-size: 1.3rem !important;
 }
 
+.gtp-shop-hero__copy .gtp-shop-price-line {
+	display: flex;
+	align-items: baseline;
+	gap: 13px;
+	margin: 24px 0 0;
+	color: #fff;
+}
+
+.gtp-shop-price-line strong {
+	font-size: 2rem;
+	line-height: 1;
+}
+
+.gtp-shop-price-line span {
+	color: #b9cfde;
+	font-size: 0.88rem;
+}
+
+.gtp-shop-hero__copy .gtp-shop-safety-note {
+	max-width: 680px;
+	margin: 18px 0 0;
+	color: #9fb9ca;
+	font-size: 0.9rem;
+}
+
 .gtp-shop-actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -352,6 +377,66 @@
 	min-width: 220px;
 }
 
+.gtp-shop-section--purchase {
+	background: var(--gtp-shop-pale);
+}
+
+.gtp-shop-purchase {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+	align-items: center;
+	gap: clamp(36px, 7vw, 96px);
+}
+
+.gtp-shop-purchase > div:first-child > p:last-child {
+	max-width: 720px;
+	margin: 18px 0 0;
+	color: var(--gtp-shop-muted);
+	font-size: 1.08rem;
+}
+
+.gtp-shop-offer {
+	padding: 30px;
+	background: #fff;
+	border: 1px solid var(--gtp-shop-border);
+	border-radius: 6px;
+}
+
+.gtp-shop-offer__price {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin: 0;
+}
+
+.gtp-shop-offer__price strong {
+	font-size: 3.25rem;
+	line-height: 1;
+}
+
+.gtp-shop-offer__price span {
+	color: var(--gtp-shop-muted);
+	font-weight: 650;
+}
+
+.gtp-shop-offer ul {
+	display: grid;
+	gap: 9px;
+	margin: 24px 0;
+	padding-left: 20px;
+}
+
+.gtp-shop-offer .gtp-shop-button {
+	width: 100%;
+}
+
+.gtp-shop-offer small {
+	display: block;
+	margin-top: 14px;
+	color: var(--gtp-shop-muted);
+	line-height: 1.5;
+}
+
 .gtp-shop-faq {
 	border-top: 1px solid var(--gtp-shop-border);
 }
@@ -388,6 +473,10 @@
 		gap: 28px;
 	}
 
+	.gtp-shop-purchase {
+		grid-template-columns: 1fr;
+	}
+
 	.gtp-shop-alpha__actions {
 		display: flex;
 		flex-wrap: wrap;
@@ -421,6 +510,16 @@
 
 	.gtp-shop-button {
 		width: 100%;
+	}
+
+	.gtp-shop-hero__copy .gtp-shop-price-line {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 7px;
+	}
+
+	.gtp-shop-offer {
+		padding: 24px;
 	}
 }
 

@@ -88,4 +88,73 @@ final class RedisConfigurationTest extends TestCase {
 		self::assertFalse( $config['enabled'] );
 		self::assertSame( 'redis.internal', $config['host'] );
 	}
+
+	#[RunInSeparateProcess]
+	public function test_till_kruss_constants_configure_redis_without_duplicate_gtp_constants(): void {
+		define( 'WP_REDIS_HOST', 'shared-redis.internal' );
+		define( 'WP_REDIS_PORT', 6380 );
+		define( 'WP_REDIS_DATABASE', 7 );
+		define( 'WP_REDIS_PASSWORD', array( 'cache-user', 'cache-secret' ) );
+		define( 'WP_REDIS_PREFIX', 'shared-site:' );
+		define( 'WP_REDIS_TIMEOUT', 0.4 );
+		define( 'WP_REDIS_READ_TIMEOUT', 0.6 );
+		define( 'WP_REDIS_SCHEME', 'tls' );
+
+		$config = ( new Configuration() )->constantOverrides(
+			( new Configuration() )->runtime( array() )
+		);
+
+		self::assertTrue( $config['enabled'] );
+		self::assertSame( 'shared-redis.internal', $config['host'] );
+		self::assertSame( 6380, $config['port'] );
+		self::assertSame( 7, $config['database'] );
+		self::assertSame( 'cache-user', $config['username'] );
+		self::assertSame( 'cache-secret', $config['password'] );
+		self::assertSame( 'shared-site:', $config['prefix'] );
+		self::assertSame( 0.4, $config['connection_timeout'] );
+		self::assertSame( 0.6, $config['read_timeout'] );
+		self::assertTrue( $config['tls'] );
+	}
+
+	#[RunInSeparateProcess]
+	public function test_till_kruss_unix_socket_and_emergency_disable_are_honored(): void {
+		define( 'WP_REDIS_SCHEME', 'unix' );
+		define( 'WP_REDIS_PATH', '/run/redis/redis.sock' );
+		define( 'WP_REDIS_DISABLED', true );
+
+		$config = ( new Configuration() )->constantOverrides(
+			( new Configuration() )->runtime(
+				array(
+					'enabled' => true,
+					'host'    => 'saved.internal',
+					'port'    => 6379,
+				)
+			)
+		);
+
+		self::assertFalse( $config['enabled'] );
+		self::assertSame( '/run/redis/redis.sock', $config['host'] );
+		self::assertSame( 0, $config['port'] );
+		self::assertFalse( $config['tls'] );
+	}
+
+	#[RunInSeparateProcess]
+	public function test_gtp_constants_take_precedence_over_till_kruss_constants(): void {
+		define( 'WP_REDIS_HOST', 'shared-redis.internal' );
+		define( 'WP_REDIS_DATABASE', 3 );
+		define( 'WP_REDIS_PASSWORD', array( 'shared-user', 'shared-secret' ) );
+		define( 'GTP_REDIS_HOST', 'gtp-redis.internal' );
+		define( 'GTP_REDIS_DATABASE', 9 );
+		define( 'GTP_REDIS_USERNAME', 'gtp-user' );
+		define( 'GTP_REDIS_PASSWORD', 'gtp-secret' );
+
+		$config = ( new Configuration() )->constantOverrides(
+			( new Configuration() )->runtime( array() )
+		);
+
+		self::assertSame( 'gtp-redis.internal', $config['host'] );
+		self::assertSame( 9, $config['database'] );
+		self::assertSame( 'gtp-user', $config['username'] );
+		self::assertSame( 'gtp-secret', $config['password'] );
+	}
 }

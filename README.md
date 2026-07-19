@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.8`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `0.1.0-alpha.9`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -19,7 +19,7 @@ The current release is `0.1.0-alpha.8`. Origin caching uses a maximum-impact sha
   - critical CSS inline with the remaining CSS in an immutable file.
 - Conservative JavaScript minification, defer, and interaction-delay controls.
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
-- Manual and scheduled database optimization for revisions, drafts, spam, trash, transients, and table space, plus Perfmatters-style WordPress request and bloat controls.
+- Manual database scanning and selectable cleanup in Tools, scheduled database maintenance in Optimization, and Perfmatters-style WordPress request and bloat controls.
 - Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections.
 - Encrypted FluentCart licensing with a dedicated License tab, protected WordPress updates, weekly verification, masked credentials, and on-demand checks.
 - Administrator-bar actions for purging or warming the current page, regenerating its CSS, purging page and edge caches, flushing object cache, testing Redis, and opening reports.
@@ -54,23 +54,19 @@ If collection, parsing, pruning, artifact writing, or HTML serialization fails, 
 
 Open **GT Performance → Integrations** to configure a Redis host or Unix socket, port, database, ACL username, password, TLS, persistent connections, key prefix, and bounded connection/read timeouts. Passwords are encrypted in the WordPress option. The early object-cache drop-in receives a guarded runtime configuration and fails back to request-local caching if Redis is unavailable.
 
-The Integrations screen includes this copy-ready `wp-config.php` example. Constants take precedence over generated settings and are read by both the connection tester and the early object-cache drop-in:
+GT Performance reads the standard constants used by [Till Krüss Redis Object Cache](https://github.com/rhubarbgroup/redis-cache), so an existing configuration does not need to be duplicated. The Integrations screen includes this copy-ready `wp-config.php` example:
 
 ```php
-define( 'GTP_REDIS_ENABLED', true );
-define( 'GTP_REDIS_HOST', '127.0.0.1' );
-define( 'GTP_REDIS_PORT', 6379 );
-define( 'GTP_REDIS_DATABASE', 0 );
-define( 'GTP_REDIS_USERNAME', '' );
-define( 'GTP_REDIS_PASSWORD', 'replace-with-a-secret' );
-define( 'GTP_REDIS_TLS', false );
-define( 'GTP_REDIS_PERSISTENT', true );
-define( 'GTP_REDIS_PREFIX', 'gtp:site:' );
-define( 'GTP_REDIS_TIMEOUT', 0.5 );
-define( 'GTP_REDIS_READ_TIMEOUT', 0.5 );
+define( 'WP_REDIS_HOST', '127.0.0.1' );
+define( 'WP_REDIS_PORT', 6379 );
+define( 'WP_REDIS_DATABASE', 0 );
+define( 'WP_REDIS_PASSWORD', array( 'username', 'replace-with-a-secret' ) );
+define( 'WP_REDIS_PREFIX', 'gtp:site:' );
+define( 'WP_REDIS_TIMEOUT', 0.5 );
+define( 'WP_REDIS_READ_TIMEOUT', 0.5 );
 ```
 
-Add only the constants you need before the WordPress stop-editing comment. `GTP_REDIS_HOST` alone enables the Redis connection unless `GTP_REDIS_ENABLED` is explicitly `false`.
+`WP_REDIS_PATH` with `WP_REDIS_SCHEME` set to `unix` is supported for sockets; `tls` and `rediss` schemes enable TLS. `WP_REDIS_DISABLED` is honored as the emergency switch. Existing `GTP_REDIS_*` constants remain supported and take highest precedence over compatible constants and saved settings.
 
 ## Safe defaults
 
