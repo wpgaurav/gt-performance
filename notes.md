@@ -36,7 +36,7 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 - The license key and activation hash are encrypted separately at rest.
 - `0.1.0-alpha.8` is the first release with the licensed updater and product identity.
 - GitHub release `v0.1.0-alpha.8` is the package authority. Its ZIP is 314,835 bytes with SHA-256 `c6c279679d5a8a0fbe7cbdcabf15683adfe5037699e0fef0fe1755f865597816`.
-- FluentCart download row `104` points to that exact ZIP; row `103` and the alpha.7 file remain available for rollback.
+- FluentCart download row `104` points to that exact ZIP; the alpha.7 file remains in storage for rollback even though its earlier database row is no longer present.
 - FluentCart's local driver requires `file_path` to be relative to its storage directory. An absolute path passes metadata checks but the signed download resolves to HTML instead of the ZIP.
 - A temporary Studio activation verified valid metadata, the protected package response, ZIP magic bytes, exact size, and the GitHub SHA-256. The temporary license, activation, site, and local option were removed afterward.
 
@@ -49,6 +49,9 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 - FluentCart direct checkout for variation `68` uses `?fluent-cart=instant_checkout&item_id=68&quantity=1`; a fresh guest request redirected to Checkout with GT Performance at exactly $199.
 - The published page shows price and direct checkout in the hero, alpha section, and final offer, with cache-busted desktop and 390px phone verification.
 - FluentCart's protected-package token is colon-delimited, so a raw local identity such as `localhost:8887` is parsed incorrectly during download. GT Performance alpha.10 uses a stable `.invalid` identity only when the WordPress home URL contains a port; ordinary production URLs are unchanged.
+- GitHub release `v0.1.0-alpha.10` is the current package authority. Its ZIP is 316,279 bytes with SHA-256 `619a26573b31091ea23a06fbc4db87979fd5c1e4bd89f8dbc06947e5937bcd8e`.
+- FluentCart download row `106` points to that exact alpha.10 ZIP. Rows `105` (alpha.9) and `104` (alpha.8) and their files remain available for rollback.
+- A disposable Studio site activated a temporary one-site license from a `localhost:8887` installation, received valid alpha.10 metadata, downloaded the protected ZIP with matching size, ZIP magic bytes, and GitHub SHA-256, deactivated cleanly, and left zero temporary license, activation, site, or local-option records.
 
 ## Scope
 

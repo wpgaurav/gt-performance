@@ -42,4 +42,4 @@ Create a production-ready visual asset kit for WordPress and FluentCart listings
 
 ## Status
 
-**In progress** - Alpha.9 is published and synchronized. Alpha.10 adds the port-safe Studio license identity required for a clean final protected-package download test.
+**Complete** - Alpha.10 is published and synchronized to FluentCart. The protected package downloaded from a licensed `localhost:8887` Studio site is byte-for-byte identical to GitHub, and all temporary license records were removed.
