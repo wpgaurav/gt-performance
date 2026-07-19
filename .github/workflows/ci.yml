@@ -2,10 +2,16 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -14,22 +20,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ["8.1", "8.3"]
+        php: ["8.1", "8.3", "8.5"]
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
           tools: composer:v2
           extensions: dom, json, mbstring
-      - uses: actions/cache@v4
+
+      - name: Cache Composer downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/composer/files
           key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
-      - run: composer install --no-interaction --prefer-dist
-      - run: composer check
+          restore-keys: composer-${{ runner.os }}-${{ matrix.php }}-
+
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-version
+
+      - name: Install development dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Validate release surfaces
+        run: php bin/release-metadata.php
+
+      - name: Run quality suite
+        run: composer check
 
   package:
     name: Release package
@@ -37,17 +59,45 @@ jobs:
     needs: quality
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: "8.1"
           coverage: none
           tools: composer:v2
           extensions: dom, json
-      - run: chmod +x bin/build-package.sh
-      - run: ./bin/build-package.sh
-      - uses: actions/upload-artifact@v4
+
+      - name: Read validated version
+        id: metadata
+        run: php bin/release-metadata.php --github-output="$GITHUB_OUTPUT"
+
+      - name: Build production ZIP
+        env:
+          GTP_PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: ./bin/build-package.sh
+
+      - name: Verify packaged version
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+          ZIP_NAME: ${{ steps.metadata.outputs.zip_name }}
+        run: |
+          set -euo pipefail
+          unzip -p "dist/${ZIP_NAME}" gt-performance/gt-performance.php | grep -F "Version: ${VERSION}"
+          unzip -p "dist/${ZIP_NAME}" gt-performance/readme.txt | grep -F "Stable tag: ${VERSION}"
+          (
+            cd dist
+            sha256sum "${ZIP_NAME}" > "${ZIP_NAME}.sha256"
+          )
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: gt-performance
-          path: dist/*.zip
+          name: gt-performance-${{ steps.metadata.outputs.version }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
           if-no-files-found: error
+          retention-days: 14

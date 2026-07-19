@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-alpha.7 - 2026-07-19
+
+- Added partial and validated regular-expression matching to the unused-CSS selector safelist.
+- Added automatic Perfmatters feature ownership plus compatibility reporting for Akismet, Jetpack, Jetpack Boost, FlyingPress, WP Rocket, LiteSpeed Cache, WP Super Cache, W3 Total Cache, Autoptimize, and Core Forms.
+- Added Jetpack visitor-state cache bypasses and automatic Akismet/Jetpack CSS and JavaScript safeguards.
+- Added encrypted Redis credentials, TLS, ACL username, logical database, persistent connection, prefix, timeout, health-test, guarded drop-in installation controls, and documented `wp-config.php` constants for every connection setting.
+- Added administrator-bar actions for current-page purge, cache warming, CSS regeneration, full page/edge purge, object-cache flush, Redis testing, and report/settings navigation.
+- Added a pinned GitHub Actions release flow with version-surface validation, changelog release notes, PHP quality gates, verified ZIP packaging, SHA-256 checksums, artifact provenance attestations, and automatic prerelease publishing.
+
 ## 0.1.0-alpha.6 - 2026-07-19
 
 - Replaced the CSS delivery dropdown with explicit Generated file, Inline all used CSS, and Critical inline + remaining file choices.

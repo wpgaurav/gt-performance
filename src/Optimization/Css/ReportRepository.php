@@ -115,6 +115,31 @@ final class ReportRepository {
 		);
 	}
 
+	public function invalidateUrl( string $url ): int {
+		global $wpdb;
+
+		$table        = $wpdb->prefix . 'gtp_artifacts';
+		$fingerprints = array_map(
+			static fn( string $mode ): string => hash( 'sha256', $url . '|' . $mode ),
+			array( 'file', 'inline', 'hybrid' )
+		);
+		$placeholders = implode( ', ', array_fill( 0, count( $fingerprints ), '%s' ) );
+		// The table name is built from the trusted WordPress prefix and the placeholder count is generated internally.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$query = $wpdb->prepare(
+			"UPDATE {$table} SET status = %s, last_used_at = %s WHERE type = %s AND fingerprint IN ({$placeholders})",
+			'stale',
+			current_time( 'mysql', true ),
+			self::TYPE,
+			...$fingerprints
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$result = $wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+		return is_int( $result ) ? $result : 0;
+	}
+
 	/**
 	 * @return list<array<string, mixed>>
 	 */

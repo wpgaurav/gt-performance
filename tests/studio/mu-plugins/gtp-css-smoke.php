@@ -59,7 +59,10 @@ add_action(
 		$settings['css']['enabled']                  = true;
 		$settings['css']['mode']                     = $modes[ $mode ];
 		$settings['css']['critical_budget']          = 'hybrid-fallback' === $mode ? 2048 : 14336;
-		$settings['css']['safelist']                 = array( '.gtp-safelisted' );
+		$settings['css']['safelist']                 = array(
+			'gtp-safe',
+			'/\.gtp-regex-[a-z]+/',
+		);
 		update_option( \GTPerformance\Core\Settings::OPTION, $settings, false );
 	},
 	-10000
@@ -82,6 +85,7 @@ add_action(
 		}
 		echo '.gtp-below-fold{display:block}.gtp-unused{display:none}';
 		echo '.gtp-safelisted{outline:1px solid green}';
+		echo '.gtp-regex-kept{border-bottom:1px solid green}';
 		echo '</style></head><body><main class="gtp-used">';
 		echo '<h1>GT Performance unused CSS smoke test</h1>';
 		for ( $index = 0; $index < 170; ++$index ) {

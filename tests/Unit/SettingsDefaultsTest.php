@@ -36,4 +36,23 @@ final class SettingsDefaultsTest extends TestCase {
 	public function testRealUserMeasurementSettingsAreRetired(): void {
 		self::assertArrayNotHasKey( 'rum', Settings::defaults() );
 	}
+
+	public function testCompatibilityProtectionDefaultsToAutomatic(): void {
+		$integrations = Settings::defaults()['integrations'];
+
+		self::assertTrue( $integrations['auto_protection'] );
+		self::assertSame( 'automatic', $integrations['perfmatters_owner'] );
+		self::assertTrue( $integrations['akismet'] );
+		self::assertTrue( $integrations['jetpack'] );
+	}
+
+	public function testRedisCredentialsDefaultToSafeLocalValues(): void {
+		$redis = Settings::defaults()['redis'];
+
+		self::assertFalse( $redis['enabled'] );
+		self::assertSame( '127.0.0.1', $redis['host'] );
+		self::assertSame( 6379, $redis['port'] );
+		self::assertSame( '', $redis['password'] );
+		self::assertTrue( $redis['persistent'] );
+	}
 }

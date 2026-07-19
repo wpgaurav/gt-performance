@@ -32,6 +32,10 @@ final class Paths {
 		return self::cacheRoot() . '/config.php';
 	}
 
+	public static function redisConfig(): string {
+		return self::cacheRoot() . '/redis-config.php';
+	}
+
 	public static function logs(): string {
 		return self::cacheRoot() . '/logs';
 	}

@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate and publish
+    runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.1"
+          coverage: none
+          tools: composer:v2
+          extensions: dom, json, mbstring
+
+      - name: Cache Composer downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ runner.os }}-release-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-release-
+
+      - name: Validate tag and release metadata
+        id: metadata
+        run: php bin/release-metadata.php --tag="$GITHUB_REF_NAME" --notes-file="$RUNNER_TEMP/release-notes.md" --github-output="$GITHUB_OUTPUT"
+
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-version
+
+      - name: Install development dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run release quality suite
+        run: composer check
+
+      - name: Build production ZIP
+        env:
+          GTP_PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: ./bin/build-package.sh
+
+      - name: Verify packaged version and checksum
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+          ZIP_NAME: ${{ steps.metadata.outputs.zip_name }}
+        run: |
+          set -euo pipefail
+          unzip -p "dist/${ZIP_NAME}" gt-performance/gt-performance.php | grep -F "Version: ${VERSION}"
+          unzip -p "dist/${ZIP_NAME}" gt-performance/readme.txt | grep -F "Stable tag: ${VERSION}"
+          (
+            cd dist
+            sha256sum "${ZIP_NAME}" > "${ZIP_NAME}.sha256"
+            sha256sum --check "${ZIP_NAME}.sha256"
+          )
+
+      - name: Retain the verified release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ steps.metadata.outputs.version }}
+          path: |
+            dist/${{ steps.metadata.outputs.zip_name }}
+            dist/${{ steps.metadata.outputs.zip_name }}.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attest the release ZIP
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: dist/${{ steps.metadata.outputs.zip_name }}
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ steps.metadata.outputs.prerelease }}
+          TAG: ${{ steps.metadata.outputs.tag }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+          ZIP_NAME: ${{ steps.metadata.outputs.zip_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists."
+            exit 1
+          fi
+
+          args=(
+            "${TAG}"
+            "dist/${ZIP_NAME}#GT Performance ${VERSION}"
+            "dist/${ZIP_NAME}.sha256#SHA-256 checksum"
+            --title "GT Performance ${VERSION}"
+            --notes-file "$RUNNER_TEMP/release-notes.md"
+            --verify-tag
+            --fail-on-no-commits
+          )
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            args+=(--prerelease --latest=false)
+          fi
+
+          gh release create "${args[@]}"

@@ -23,6 +23,7 @@ final class JavaScriptOptimizer {
 
 		$processor  = new \WP_HTML_Tag_Processor( $html );
 		$exclusions = array_map( 'strval', (array) Settings::get( 'javascript.exclusions', array() ) );
+		$exclusions = apply_filters( 'gt_performance_javascript_exclusions', $exclusions );
 		$patterns   = array_map( 'strval', (array) Settings::get( 'javascript.delay_patterns', array() ) );
 		$hasDelayed = false;
 

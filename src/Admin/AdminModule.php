@@ -15,11 +15,15 @@ use GTPerformance\Cache\WpCacheConstant;
 use GTPerformance\Cloudflare\ClientFactory;
 use GTPerformance\Cloudflare\RuleManager;
 use GTPerformance\Cloudflare\TokenCipher;
+use GTPerformance\Compatibility\PluginDetector;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Paths;
+use GTPerformance\Core\SecretCipher;
 use GTPerformance\Core\Settings;
 use GTPerformance\Database\Cleaner;
 use GTPerformance\Optimization\Css\ReportRepository;
+use GTPerformance\Optimization\Css\SelectorSafelist;
+use GTPerformance\Redis\ConnectionTester;
 use GTPerformance\Redis\ObjectCacheInstaller;
 
 final class AdminModule implements Module {
@@ -49,6 +53,7 @@ final class AdminModule implements Module {
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'afterSettingsUpdate' ), 10, 2 );
 		add_action( 'admin_post_gtp_install_dropin', array( $this, 'installDropin' ) );
 		add_action( 'admin_post_gtp_install_redis', array( $this, 'installRedis' ) );
+		add_action( 'admin_post_gtp_test_redis', array( $this, 'testRedis' ) );
 		add_action( 'admin_post_gtp_purge', array( $this, 'purge' ) );
 		add_action( 'admin_post_gtp_cloudflare_sync', array( $this, 'cloudflareSync' ) );
 		add_action( 'admin_post_gtp_database_clean', array( $this, 'databaseClean' ) );
@@ -140,6 +145,9 @@ final class AdminModule implements Module {
 		$input['cloudflare'] = isset( $input['cloudflare'] ) && is_array( $input['cloudflare'] )
 			? $input['cloudflare']
 			: array();
+		$input['redis']      = isset( $input['redis'] ) && is_array( $input['redis'] )
+			? $input['redis']
+			: array();
 		$cipher              = new TokenCipher();
 
 		foreach ( array( 'api_token', 'global_api_key' ) as $secretKey ) {
@@ -149,6 +157,28 @@ final class AdminModule implements Module {
 			} elseif ( ! str_starts_with( $secret, 'sodium:' ) && ! str_starts_with( $secret, 'openssl:' ) ) {
 				$input['cloudflare'][ $secretKey ] = $cipher->encrypt( $secret );
 			}
+		}
+
+		$redisPassword = trim( (string) ( $input['redis']['password'] ?? '' ) );
+		if ( '' === $redisPassword ) {
+			$input['redis']['password'] = (string) $current['redis']['password'];
+		} elseif ( ! str_starts_with( $redisPassword, 'sodium:' ) && ! str_starts_with( $redisPassword, 'openssl:' ) ) {
+			$input['redis']['password'] = ( new SecretCipher( 'redis' ) )->encrypt( $redisPassword );
+		}
+
+		$patterns   = SelectorSafelist::split( $input['css']['safelist'] ?? array() );
+		$validation = ( new SelectorSafelist() )->validate( array_map( 'sanitize_text_field', $patterns ) );
+		if ( $validation['invalid'] ) {
+			add_settings_error(
+				Settings::OPTION,
+				'gtp_invalid_css_regex',
+				sprintf(
+					/* translators: %s: invalid selector regular expressions. */
+					__( 'These selector regular expressions were not saved because they are invalid: %s', 'gt-performance' ),
+					implode( ', ', array_slice( $validation['invalid'], 0, 3 ) )
+				),
+				'error'
+			);
 		}
 
 		$clean = Settings::sanitize( $input );
@@ -179,6 +209,7 @@ final class AdminModule implements Module {
 		<div class="wrap gtp-admin">
 			<?php $this->renderHeader( $tab ); ?>
 			<?php $this->renderNotice(); ?>
+			<?php settings_errors( Settings::OPTION ); ?>
 			<main class="gtp-admin__main">
 				<?php
 				switch ( $tab ) {
@@ -239,6 +270,12 @@ final class AdminModule implements Module {
 		$this->guard( 'gtp_install_redis' );
 		$result = ( new ObjectCacheInstaller() )->install();
 		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'redis-installed', 'tools' );
+	}
+
+	public function testRedis(): void {
+		$this->guard( 'gtp_test_redis' );
+		$result = ( new ConnectionTester() )->test();
+		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'redis-connected', 'integrations' );
 	}
 
 	public function purge(): void {
@@ -575,8 +612,8 @@ final class AdminModule implements Module {
 		$this->textarea( 'cache', 'ignored_query_params', __( 'Ignore marketing parameters', 'gt-performance' ), __( 'Remove these parameters from the origin cache key so campaign URLs share public HTML.', 'gt-performance' ), $settings, 'utm_source' );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Unused CSS exceptions', 'gt-performance' ), __( 'Use fragments, classes, IDs, or stylesheet URLs. Add the smallest stable pattern that protects the dynamic component.', 'gt-performance' ) );
-		$this->textarea( 'css', 'safelist', __( 'Selector safelist', 'gt-performance' ), __( 'Always retain selectors containing these fragments, even if they are absent from initial HTML.', 'gt-performance' ), $settings, '.is-open' );
+		$this->panelOpen( __( 'Unused CSS exceptions', 'gt-performance' ), __( 'Use partial selector matches, regular expressions, or stylesheet URLs. Add the smallest stable pattern that protects the dynamic component.', 'gt-performance' ) );
+		$this->textarea( 'css', 'safelist', __( 'Selector safelist', 'gt-performance' ), __( 'One pattern per line. Plain text is a partial match; use a delimited expression such as /^\\.modal(?:--|\\b)/i for regex matching.', 'gt-performance' ), $settings, ".is-open\n/^\\.modal(?:--|\\b)/i" );
 		$this->textarea( 'css', 'excluded_stylesheets', __( 'Excluded stylesheets', 'gt-performance' ), __( 'Leave matching stylesheets untouched and loaded normally.', 'gt-performance' ), $settings, '/checkout.css' );
 		$this->panelClose();
 
@@ -638,23 +675,129 @@ final class AdminModule implements Module {
 	 * @param array<string, mixed> $settings Settings.
 	 */
 	private function renderIntegrations( array $settings ): void {
-		$this->pageIntro( __( 'Integrations', 'gt-performance' ), __( 'Automatically add cart, checkout, account, receipt, session-cookie, and transactional query exceptions for active commerce plugins.', 'gt-performance' ) );
+		$this->pageIntro( __( 'Integrations', 'gt-performance' ), __( 'Coordinate optimization ownership, protect plugin state, and connect a persistent Redis object cache without overlapping work.', 'gt-performance' ) );
 		$this->settingsFormOpen();
+
+		$this->panelOpen( __( 'Optimization ownership', 'gt-performance' ), __( 'GT Performance coordinates known overlap instead of letting two plugins rewrite the same response.', 'gt-performance' ) );
+		$this->checkbox( 'integrations', 'auto_protection', __( 'Automatic conflict protection', 'gt-performance' ), __( 'Detect active performance plugins, preserve known dynamic state, and apply supported ownership filters.', 'gt-performance' ), $settings );
+		$this->select(
+			'integrations',
+			'perfmatters_owner',
+			__( 'Perfmatters ownership', 'gt-performance' ),
+			__( 'Automatic lets GT Performance own only the front-end features enabled here. Page cache, Cloudflare, commerce, and Redis remain independent.', 'gt-performance' ),
+			$settings,
+			array(
+				'automatic'      => __( 'Automatic per feature (recommended)', 'gt-performance' ),
+				'gt_performance' => __( 'GT Performance owns front-end optimization', 'gt-performance' ),
+				'perfmatters'    => __( 'Perfmatters owns front-end optimization', 'gt-performance' ),
+			)
+		);
+		$this->panelClose();
+
+		$this->panelOpen( __( 'Service safeguards', 'gt-performance' ), __( 'These protections activate only when the matching plugin is active.', 'gt-performance' ) );
+		$this->checkbox( 'integrations', 'akismet', __( 'Akismet compatibility', 'gt-performance' ), __( 'Keep the privacy notice and anti-spam front-end assets when unused CSS or JavaScript optimization runs.', 'gt-performance' ), $settings );
+		$this->checkbox( 'integrations', 'jetpack', __( 'Jetpack compatibility', 'gt-performance' ), __( 'Protect forms, comments, subscriptions, search, VideoPress, and visitor-state cookies from unsafe optimization or public caching.', 'gt-performance' ), $settings );
+		$this->panelClose();
+
 		$this->panelOpen( __( 'Commerce safeguards', 'gt-performance' ), __( 'Only active integrations contribute bypass rules. Custom cache exceptions remain available separately.', 'gt-performance' ) );
 		$this->checkbox( 'commerce', 'fluentcart', __( 'FluentCart', 'gt-performance' ), __( 'Protect FluentCart cart, checkout, account, order, and customer-session state.', 'gt-performance' ), $settings );
 		$this->checkbox( 'commerce', 'edd', __( 'Easy Digital Downloads', 'gt-performance' ), __( 'Protect EDD checkout, purchase history, receipts, and session state.', 'gt-performance' ), $settings );
 		$this->checkbox( 'commerce', 'woocommerce', __( 'WooCommerce', 'gt-performance' ), __( 'Protect WooCommerce cart, checkout, My Account, order, and session state.', 'gt-performance' ), $settings );
 		$this->panelClose();
+
+		$this->panelOpen( __( 'Redis object cache', 'gt-performance' ), __( 'Use PhpRedis credentials or leave fields at their local defaults. wp-config.php constants override generated settings at runtime.', 'gt-performance' ) );
+		$this->checkbox( 'redis', 'enabled', __( 'Enable Redis object cache', 'gt-performance' ), __( 'Connect the GT Performance object-cache.php drop-in to Redis. Disable this before migrating to another object-cache owner.', 'gt-performance' ), $settings );
+		$this->text( 'redis', 'host', __( 'Redis host or socket', 'gt-performance' ), __( 'Hostname, IP address, or Unix socket path.', 'gt-performance' ), $settings, 'text', '127.0.0.1' );
+		$this->number( 'redis', 'port', __( 'Redis port', 'gt-performance' ), __( 'Use 6379 normally, or 0 with a Unix socket.', 'gt-performance' ), $settings, 0, 65535 );
+		$this->number( 'redis', 'database', __( 'Redis database', 'gt-performance' ), __( 'Logical Redis database number reserved for this site.', 'gt-performance' ), $settings, 0, 255 );
+		$this->text( 'redis', 'username', __( 'Redis username', 'gt-performance' ), __( 'Optional ACL username. Leave blank for password-only authentication.', 'gt-performance' ), $settings );
+		$this->password( 'redis', 'password', __( 'Redis password', 'gt-performance' ), __( 'Encrypted in WordPress. Leave blank to keep the saved password.', 'gt-performance' ), ! empty( $settings['redis']['password'] ) );
+		$this->checkbox( 'redis', 'tls', __( 'Use TLS', 'gt-performance' ), __( 'Connect with tls:// when the Redis provider requires encrypted transport.', 'gt-performance' ), $settings );
+		$this->checkbox( 'redis', 'persistent', __( 'Persistent connection', 'gt-performance' ), __( 'Reuse the PhpRedis connection between requests when the host supports it.', 'gt-performance' ), $settings );
+		$this->text( 'redis', 'prefix', __( 'Cache key prefix', 'gt-performance' ), __( 'Optional. Leave blank for an automatic site-specific prefix.', 'gt-performance' ), $settings, 'text', 'gtp:site:' );
+		$this->number( 'redis', 'connection_timeout', __( 'Connection timeout', 'gt-performance' ), __( 'Fail back to request-local cache quickly when Redis is unavailable.', 'gt-performance' ), $settings, 0.1, 10, __( 'seconds', 'gt-performance' ), '0.1' );
+		$this->number( 'redis', 'read_timeout', __( 'Read timeout', 'gt-performance' ), __( 'Maximum time to wait for a Redis response.', 'gt-performance' ), $settings, 0.1, 10, __( 'seconds', 'gt-performance' ), '0.1' );
+		$this->panelClose();
+
 		$this->settingsFormClose();
+		$this->renderRedisConstants();
+		$this->renderPluginCompatibilityList( $settings );
 		?>
-		<section class="gtp-panel">
-			<div class="gtp-integration-row">
-				<div>
-					<h3><?php esc_html_e( 'Core Forms', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Poll voter cookies are removed only on pages without polls. Real poll pages keep voter identity and bypass public cache.', 'gt-performance' ); ?></p>
-				</div>
-				<span class="gtp-status gtp-status--success"><?php esc_html_e( 'Automatic', 'gt-performance' ); ?></span>
+		<section class="gtp-panel gtp-operation-panel">
+			<div>
+				<h3><?php esc_html_e( 'Test Redis credentials', 'gt-performance' ); ?></h3>
+				<p><?php esc_html_e( 'Save first, then run a bounded connection, authentication, database selection, and ping check.', 'gt-performance' ); ?></p>
 			</div>
+			<?php $this->actionButton( 'gtp_test_redis', __( 'Test Redis connection', 'gt-performance' ) ); ?>
+		</section>
+		<?php
+	}
+
+	private function renderRedisConstants(): void {
+		$example = <<<'PHP'
+define( 'GTP_REDIS_ENABLED', true );
+define( 'GTP_REDIS_HOST', '127.0.0.1' );
+define( 'GTP_REDIS_PORT', 6379 );
+define( 'GTP_REDIS_DATABASE', 0 );
+define( 'GTP_REDIS_USERNAME', '' );
+define( 'GTP_REDIS_PASSWORD', 'replace-with-a-secret' );
+define( 'GTP_REDIS_TLS', false );
+define( 'GTP_REDIS_PERSISTENT', true );
+define( 'GTP_REDIS_PREFIX', 'gtp:site:' );
+define( 'GTP_REDIS_TIMEOUT', 0.5 );
+define( 'GTP_REDIS_READ_TIMEOUT', 0.5 );
+PHP;
+
+		$this->panelOpen(
+			__( 'wp-config.php overrides', 'gt-performance' ),
+			__( 'Optional constants take precedence over saved Redis settings and are available to the early object-cache drop-in before plugins load.', 'gt-performance' )
+		);
+		?>
+		<div class="gtp-config-example">
+			<pre><code><?php echo esc_html( $example ); ?></code></pre>
+			<p><?php esc_html_e( 'Add only the constants you need before the WordPress stop-editing comment. Defining GTP_REDIS_HOST enables Redis unless GTP_REDIS_ENABLED is explicitly false.', 'gt-performance' ); ?></p>
+		</div>
+		<?php
+		$this->panelClose();
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderPluginCompatibilityList( array $settings ): void {
+		$detector = new PluginDetector();
+		?>
+		<section class="gtp-panel gtp-integration-list">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Detected plugin compatibility', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Foreign cache drop-ins are never overwritten. Active optimization owners that need a manual choice are flagged here.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<?php foreach ( $detector->catalog() as $id => $plugin ) : ?>
+				<?php
+				$active = $detector->active( $id );
+				$tone   = 'neutral';
+				$label  = __( 'Not active', 'gt-performance' );
+				if ( $active ) {
+					$tone  = 'success';
+					$label = __( 'Protected', 'gt-performance' );
+					if ( 'cache' === $plugin['group'] || in_array( $id, array( 'autoptimize', 'jetpack-boost' ), true ) ) {
+						$tone  = 'warning';
+						$label = __( 'Review ownership', 'gt-performance' );
+					} elseif ( 'perfmatters' === $id && 'perfmatters' === (string) $settings['integrations']['perfmatters_owner'] ) {
+						$label = __( 'Perfmatters owns optimization', 'gt-performance' );
+					}
+				}
+				?>
+				<div class="gtp-integration-row">
+					<div>
+						<h3><?php echo esc_html( $plugin['name'] ); ?></h3>
+						<p><?php echo esc_html( $plugin['protection'] ); ?></p>
+					</div>
+					<span class="gtp-status gtp-status--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $label ); ?></span>
+				</div>
+			<?php endforeach; ?>
 		</section>
 		<?php
 	}
@@ -726,7 +869,7 @@ final class AdminModule implements Module {
 		</section>
 		<section class="gtp-tools-grid">
 			<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtp_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
-			<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Install the owned object-cache.php only when PhpRedis is available and no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Install Redis drop-in', 'gt-performance' ) ); ?>
+			<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
 			<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtp_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
 			<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
 			<?php
@@ -1370,6 +1513,7 @@ final class AdminModule implements Module {
 		$notices = array(
 			'dropin-installed'          => array( __( 'The page-cache drop-in was installed.', 'gt-performance' ), 'success' ),
 			'redis-installed'           => array( __( 'The Redis object-cache drop-in was installed.', 'gt-performance' ), 'success' ),
+			'redis-connected'           => array( __( 'Redis accepted the saved credentials and passed the connection test.', 'gt-performance' ), 'success' ),
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
 			'cloudflare-synced'         => array( __( 'Cloudflare connected and the managed cache rule was synchronized.', 'gt-performance' ), 'success' ),
 			'gtp_cloudflare_token'      => array( __( 'Enter a Cloudflare API token, save the settings, then connect again.', 'gt-performance' ), 'error' ),
@@ -1390,8 +1534,12 @@ final class AdminModule implements Module {
 			'gtp_wp_config_write'       => array( __( 'GT Performance could not write the temporary wp-config.php update.', 'gt-performance' ), 'error' ),
 			'gtp_wp_config_publish'     => array( __( 'GT Performance could not publish the wp-config.php update safely.', 'gt-performance' ), 'error' ),
 			'gtp_redis_extension'       => array( __( 'The PHP Redis extension is not installed on this server.', 'gt-performance' ), 'warning' ),
+			'gtp_redis_disabled'        => array( __( 'Enable Redis object caching and save the settings before testing the connection.', 'gt-performance' ), 'warning' ),
+			'gtp_redis_connect'         => array( __( 'Redis could not be reached with the saved host, TLS, or credentials.', 'gt-performance' ), 'error' ),
+			'gtp_redis_ping'            => array( __( 'Redis accepted the connection but did not answer the health check.', 'gt-performance' ), 'error' ),
 			'gtp_redis_conflict'        => array( __( 'Another plugin owns object-cache.php. Remove that conflict before installing the Redis drop-in.', 'gt-performance' ), 'warning' ),
 			'gtp_redis_install'         => array( __( 'GT Performance could not install the Redis object-cache drop-in.', 'gt-performance' ), 'error' ),
+			'quick-action-invalid'      => array( __( 'That quick action is not available.', 'gt-performance' ), 'warning' ),
 		);
 
 		if ( isset( $notices[ $notice ] ) ) {

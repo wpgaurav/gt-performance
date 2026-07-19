@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.6
+Stable tag: 0.1.0-alpha.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +17,8 @@ GT Performance combines an atomic origin page cache with server-side CSS and fro
 FluentCart, Easy Digital Downloads, and WooCommerce adapters protect cart, checkout, account, receipt, session-cookie, and transactional query state from public caching.
 
 Unused CSS can be delivered as an immutable file, fully inline, or as critical CSS inline with the remaining CSS in a file.
+
+Perfmatters ownership coordination, Akismet and Jetpack safeguards, Redis credentials, and administrator-bar cache actions are built in.
 
 This is an alpha. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
@@ -46,7 +48,21 @@ Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining 
 
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
 
+= Can Redis credentials be configured in wp-config.php? =
+
+Yes. GTP_REDIS_ENABLED, GTP_REDIS_HOST, GTP_REDIS_PORT, GTP_REDIS_DATABASE, GTP_REDIS_USERNAME, GTP_REDIS_PASSWORD, GTP_REDIS_TLS, GTP_REDIS_PERSISTENT, GTP_REDIS_PREFIX, GTP_REDIS_TIMEOUT, and GTP_REDIS_READ_TIMEOUT override saved settings. The Integrations screen provides a copy-ready example.
+
 == Changelog ==
+
+= 0.1.0-alpha.7 =
+
+* Added partial and regular-expression unused-CSS selector safelists.
+* Added Perfmatters ownership coordination and common plugin compatibility reporting.
+* Added Akismet and Jetpack CSS, JavaScript, and visitor-state cache safeguards.
+* Added encrypted Redis credentials, TLS, ACL, database, prefix, timeouts, testing, and guarded installation.
+* Added documented wp-config.php constants for every Redis connection setting.
+* Added admin-bar cache, CSS, object-cache, Redis, report, and settings actions.
+* Added a GitHub Actions release pipeline with version validation, checksums, provenance, and automatic prereleases.
 
 = 0.1.0-alpha.6 =
 

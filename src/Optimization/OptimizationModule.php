@@ -36,13 +36,29 @@ final class OptimizationModule implements Module {
 	}
 
 	public function optimize( string $html ): string {
-		$html = $this->css->optimize( $html );
-		$html = $this->javascript->optimize( $html );
-		$html = $this->media->optimize( $html );
-		$html = $this->images->rewriteHtml( $html );
-		$html = $this->fonts->optimize( $html );
-		$html = $this->embeds->optimize( $html );
+		if ( $this->stageEnabled( 'css' ) ) {
+			$html = $this->css->optimize( $html );
+		}
+		if ( $this->stageEnabled( 'javascript' ) ) {
+			$html = $this->javascript->optimize( $html );
+		}
+		if ( $this->stageEnabled( 'media' ) ) {
+			$html = $this->media->optimize( $html );
+		}
+		if ( $this->stageEnabled( 'images' ) ) {
+			$html = $this->images->rewriteHtml( $html );
+		}
+		if ( $this->stageEnabled( 'fonts' ) ) {
+			$html = $this->fonts->optimize( $html );
+		}
+		if ( $this->stageEnabled( 'embeds' ) ) {
+			$html = $this->embeds->optimize( $html );
+		}
 
 		return apply_filters( 'gt_performance_optimized_html', $html );
+	}
+
+	private function stageEnabled( string $stage ): bool {
+		return (bool) apply_filters( 'gt_performance_optimize_stage', true, $stage );
 	}
 }

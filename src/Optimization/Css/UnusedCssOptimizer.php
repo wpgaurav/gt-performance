@@ -66,6 +66,7 @@ final class UnusedCssOptimizer {
 			}
 
 			$safelist             = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
+			$safelist             = apply_filters( 'gt_performance_css_safelist', $safelist, $url );
 			$preserveDynamicStates = (bool) Settings::get( 'css.keep_dynamic_states', true );
 			$used                 = $this->pruner->prune( $css, $document, 'used', $safelist, $preserveDynamicStates );
 			if ( '' === trim( $used ) ) {

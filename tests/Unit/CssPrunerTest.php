@@ -55,4 +55,39 @@ final class CssPrunerTest extends TestCase {
 		self::assertStringNotContainsString( '.button:hover', $output );
 		self::assertStringNotContainsString( '.missing:hover', $output );
 	}
+
+	public function test_safelist_plain_text_uses_partial_selector_matching(): void {
+		$output = ( new CssPruner() )->prune(
+			'.dialog.is-open{display:block}.unused{display:none}',
+			$this->document(),
+			'used',
+			array( 'is-open' )
+		);
+
+		self::assertStringContainsString( '.dialog.is-open', $output );
+		self::assertStringNotContainsString( '.unused', $output );
+	}
+
+	public function test_safelist_accepts_delimited_regular_expressions(): void {
+		$output = ( new CssPruner() )->prune(
+			'.modal--visible{display:block}.modal-idle{display:none}',
+			$this->document(),
+			'used',
+			array( '/^\\.modal--(?:visible|open)$/i' )
+		);
+
+		self::assertStringContainsString( '.modal--visible', $output );
+		self::assertStringNotContainsString( '.modal-idle', $output );
+	}
+
+	public function test_invalid_safelist_regular_expressions_are_ignored(): void {
+		$output = ( new CssPruner() )->prune(
+			'.missing{display:none}',
+			$this->document(),
+			'used',
+			array( '/[invalid/' )
+		);
+
+		self::assertStringNotContainsString( '.missing', $output );
+	}
 }

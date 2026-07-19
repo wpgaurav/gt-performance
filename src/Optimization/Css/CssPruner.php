@@ -17,9 +17,11 @@ use Symfony\Component\CssSelector\CssSelectorConverter;
 
 final class CssPruner {
 	private CssSelectorConverter $converter;
+	private SelectorSafelist $safelist;
 
 	public function __construct() {
 		$this->converter = new CssSelectorConverter();
+		$this->safelist  = new SelectorSafelist();
 	}
 
 	/**
@@ -85,13 +87,11 @@ final class CssPruner {
 	 * @return array{used:bool,critical:bool}
 	 */
 	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist, bool $preserveDynamicStates ): array {
-		foreach ( $safelist as $fragment ) {
-			if ( '' !== $fragment && str_contains( $selector, $fragment ) ) {
-				return array(
-					'used'     => true,
-					'critical' => true,
-				);
-			}
+		if ( $this->safelist->matches( $selector, $safelist ) ) {
+			return array(
+				'used'     => true,
+				'critical' => true,
+			);
 		}
 
 		if ( ':root' === trim( $selector ) || in_array( trim( $selector ), array( 'html', 'body', 'html body', '*' ), true ) ) {

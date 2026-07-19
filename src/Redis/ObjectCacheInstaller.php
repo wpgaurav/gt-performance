@@ -32,6 +32,10 @@ final class ObjectCacheInstaller {
 		if ( 'conflict' === $this->status() ) {
 			return new \WP_Error( 'gtp_redis_conflict', __( 'Another object-cache.php drop-in is already installed.', 'gt-performance' ) );
 		}
+		$connection = ( new ConnectionTester() )->test();
+		if ( is_wp_error( $connection ) ) {
+			return $connection;
+		}
 
 		$source = GTP_DIR . '/dropins/object-cache.php';
 		$temp   = $this->target() . '.' . wp_generate_uuid4() . '.tmp';

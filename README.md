@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.6`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `0.1.0-alpha.7`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -11,6 +11,8 @@ The current release is `0.1.0-alpha.6`. Origin caching uses a maximum-impact sha
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule backup, and automatic fallback when a Free zone rejects custom query-string cache keys.
 - First-class bypass policies and product invalidation for FluentCart, Easy Digital Downloads, and WooCommerce.
 - Core Forms poll compatibility: the global voter cookie is suppressed only on pages without polls, while real poll pages remain uncached.
+- Automatic optimization ownership for Perfmatters, plus active-plugin compatibility reporting for common cache and optimization plugins.
+- Akismet and Jetpack safeguards for dynamic selectors, sensitive scripts, forms, comments, subscriptions, media, search, and visitor-state cookies.
 - Server-side unused CSS processing with three delivery modes:
   - immutable external file;
   - fully inline;
@@ -19,6 +21,7 @@ The current release is `0.1.0-alpha.6`. Origin caching uses a maximum-impact sha
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
 - Manual and scheduled database optimization for revisions, drafts, spam, trash, transients, and table space, plus Perfmatters-style WordPress request and bloat controls.
 - Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections.
+- Administrator-bar actions for purging or warming the current page, regenerating its CSS, purging page and edge caches, flushing object cache, testing Redis, and opening reports.
 - Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
 - Redacted logs, WP-CLI doctor/cache/queue/Cloudflare/database commands, durable jobs, retries, and dead-letter state.
@@ -27,7 +30,7 @@ The full product architecture and 1.0 roadmap are in [PRODUCT-PLAN.md](PRODUCT-P
 
 ## How unused CSS works
 
-GT Performance processes the final anonymous HTML response on the WordPress server. It collects eligible same-origin stylesheets and inline style blocks, parses them into a CSS syntax tree, matches selectors against the rendered document, and keeps configured safelist and dynamic-state selectors conservatively. Excluded or cross-origin stylesheets remain untouched.
+GT Performance processes the final anonymous HTML response on the WordPress server. It collects eligible same-origin stylesheets and inline style blocks, parses them into a CSS syntax tree, matches selectors against the rendered document, and keeps configured safelist and dynamic-state selectors conservatively. Safelist lines use partial matching by default and accept validated delimited regular expressions such as `/^\.modal(?:--|\b)/i`. Excluded or cross-origin stylesheets remain untouched.
 
 After a non-empty used-CSS result is verified, the original collected style nodes are replaced according to the selected delivery mode:
 
@@ -45,6 +48,28 @@ If collection, parsing, pruning, artifact writing, or HTML serialization fails, 
 - A writable `wp-content` directory for origin caching
 - Optional: Cloudflare proxied DNS and a scoped API token or legacy Global API Key
 - Optional: PhpRedis for the object-cache drop-in
+
+## Redis object cache
+
+Open **GT Performance → Integrations** to configure a Redis host or Unix socket, port, database, ACL username, password, TLS, persistent connections, key prefix, and bounded connection/read timeouts. Passwords are encrypted in the WordPress option. The early object-cache drop-in receives a guarded runtime configuration and fails back to request-local caching if Redis is unavailable.
+
+The Integrations screen includes this copy-ready `wp-config.php` example. Constants take precedence over generated settings and are read by both the connection tester and the early object-cache drop-in:
+
+```php
+define( 'GTP_REDIS_ENABLED', true );
+define( 'GTP_REDIS_HOST', '127.0.0.1' );
+define( 'GTP_REDIS_PORT', 6379 );
+define( 'GTP_REDIS_DATABASE', 0 );
+define( 'GTP_REDIS_USERNAME', '' );
+define( 'GTP_REDIS_PASSWORD', 'replace-with-a-secret' );
+define( 'GTP_REDIS_TLS', false );
+define( 'GTP_REDIS_PERSISTENT', true );
+define( 'GTP_REDIS_PREFIX', 'gtp:site:' );
+define( 'GTP_REDIS_TIMEOUT', 0.5 );
+define( 'GTP_REDIS_READ_TIMEOUT', 0.5 );
+```
+
+Add only the constants you need before the WordPress stop-editing comment. `GTP_REDIS_HOST` alone enables the Redis connection unless `GTP_REDIS_ENABLED` is explicitly `false`.
 
 ## Safe defaults
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTP_PACKAGE_VERSION:-0.1.0-alpha.6}"
+VERSION="${GTP_PACKAGE_VERSION:-0.1.0-alpha.7}"
 BUILD_ROOT="${ROOT}/build/package"
 PLUGIN_DIR="${BUILD_ROOT}/gt-performance"
 ARCHIVE="${ROOT}/dist/gt-performance-${VERSION}.zip"
@@ -23,6 +23,7 @@ rsync -a \
 	--exclude 'phpcs.xml.dist' \
 	--exclude 'phpstan.neon.dist' \
 	--exclude 'phpunit.xml.dist' \
+	--exclude 'RELEASING.md' \
 	--exclude 'task_plan.md' \
 	--exclude 'tests' \
 	--exclude 'VALIDATION.md' \

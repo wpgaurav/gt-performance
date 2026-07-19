@@ -21,6 +21,11 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		/**
 		 * @var array<string, mixed>
 		 */
+		private array $config = array();
+
+		/**
+		 * @var array<string, mixed>
+		 */
 		private array $local = array();
 
 		/**
@@ -44,7 +49,8 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		}
 
 		public function add( $key, $value, $group = 'default', $expire = 0 ): bool {
-			if ( false !== $this->get( $key, $group, false, $found ) && $found ) {
+			$this->get( $key, $group, false, $found );
+			if ( $found ) {
 				return false;
 			}
 
@@ -250,18 +256,37 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			}
 
 			try {
-				$redis   = new \Redis();
-				$host    = defined( 'GTP_REDIS_HOST' ) ? (string) GTP_REDIS_HOST : '127.0.0.1';
-				$port    = defined( 'GTP_REDIS_PORT' ) ? (int) GTP_REDIS_PORT : 6379;
-				$timeout = defined( 'GTP_REDIS_TIMEOUT' ) ? (float) GTP_REDIS_TIMEOUT : 0.5;
-				if ( ! $redis->connect( $host, $port, $timeout ) ) {
+				$this->config = $this->configuration();
+				if ( ! (bool) $this->config['enabled'] ) {
 					return;
 				}
-				if ( defined( 'GTP_REDIS_PASSWORD' ) && '' !== GTP_REDIS_PASSWORD ) {
-					$redis->auth( GTP_REDIS_PASSWORD );
+
+				$redis      = new \Redis();
+				$host       = (string) $this->config['host'];
+				$host       = (bool) $this->config['tls'] && ! str_contains( $host, '://' ) ? 'tls://' . $host : $host;
+				$port       = (int) $this->config['port'];
+				$timeout    = (float) $this->config['connection_timeout'];
+				$persistent = (bool) $this->config['persistent'];
+				$connected  = $persistent
+					? $redis->pconnect( $host, $port, $timeout, 'gt-performance-' . md5( $this->basePrefix() ) )
+					: $redis->connect( $host, $port, $timeout );
+				if ( ! $connected ) {
+					return;
 				}
-				if ( defined( 'GTP_REDIS_DATABASE' ) ) {
-					$redis->select( (int) GTP_REDIS_DATABASE );
+				$redis->setOption( \Redis::OPT_READ_TIMEOUT, (float) $this->config['read_timeout'] );
+
+				$username = (string) $this->config['username'];
+				$password = (string) $this->config['password'];
+				if ( '' !== $password || '' !== $username ) {
+					$authenticated = '' !== $username
+						? $redis->auth( array( $username, $password ) )
+						: $redis->auth( $password );
+					if ( ! $authenticated ) {
+						return;
+					}
+				}
+				if ( ! $redis->select( (int) $this->config['database'] ) ) {
+					return;
 				}
 				$this->redis = $redis;
 			} catch ( \Throwable ) {
@@ -278,11 +303,35 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		}
 
 		private function basePrefix(): string {
-			$prefix = defined( 'GTP_REDIS_PREFIX' )
-				? (string) GTP_REDIS_PREFIX
-				: 'gtp:' . md5( ( defined( 'DB_NAME' ) ? DB_NAME : 'wordpress' ) . ABSPATH ) . ':';
+			$prefix = (string) ( $this->config['prefix'] ?? '' );
+			if ( '' === $prefix ) {
+				$prefix = 'gtp:' . md5( ( defined( 'DB_NAME' ) ? DB_NAME : 'wordpress' ) . ABSPATH );
+			}
 
-			return $prefix;
+			return rtrim( $prefix, ':' ) . ':';
+		}
+
+		/**
+		 * @return array<string, mixed>
+		 */
+		private function configuration(): array {
+			$file   = WP_CONTENT_DIR . '/cache/gt-performance/redis-config.php';
+			$config = is_readable( $file ) ? require $file : array();
+			$config = is_array( $config ) ? $config : array();
+
+			return array(
+				'enabled'            => defined( 'GTP_REDIS_ENABLED' ) ? (bool) GTP_REDIS_ENABLED : (bool) ( $config['enabled'] ?? defined( 'GTP_REDIS_HOST' ) ),
+				'host'               => defined( 'GTP_REDIS_HOST' ) ? (string) GTP_REDIS_HOST : (string) ( $config['host'] ?? '127.0.0.1' ),
+				'port'               => defined( 'GTP_REDIS_PORT' ) ? (int) GTP_REDIS_PORT : (int) ( $config['port'] ?? 6379 ),
+				'database'           => defined( 'GTP_REDIS_DATABASE' ) ? (int) GTP_REDIS_DATABASE : (int) ( $config['database'] ?? 0 ),
+				'username'           => defined( 'GTP_REDIS_USERNAME' ) ? (string) GTP_REDIS_USERNAME : (string) ( $config['username'] ?? '' ),
+				'password'           => defined( 'GTP_REDIS_PASSWORD' ) ? (string) GTP_REDIS_PASSWORD : (string) ( $config['password'] ?? '' ),
+				'tls'                => defined( 'GTP_REDIS_TLS' ) ? (bool) GTP_REDIS_TLS : (bool) ( $config['tls'] ?? false ),
+				'persistent'         => defined( 'GTP_REDIS_PERSISTENT' ) ? (bool) GTP_REDIS_PERSISTENT : (bool) ( $config['persistent'] ?? true ),
+				'prefix'             => defined( 'GTP_REDIS_PREFIX' ) ? (string) GTP_REDIS_PREFIX : (string) ( $config['prefix'] ?? '' ),
+				'connection_timeout' => defined( 'GTP_REDIS_TIMEOUT' ) ? (float) GTP_REDIS_TIMEOUT : (float) ( $config['connection_timeout'] ?? 0.5 ),
+				'read_timeout'       => defined( 'GTP_REDIS_READ_TIMEOUT' ) ? (float) GTP_REDIS_READ_TIMEOUT : (float) ( $config['read_timeout'] ?? 0.5 ),
+			);
 		}
 
 		private function nonPersistent( $group ): bool {
