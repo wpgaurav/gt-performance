@@ -65,8 +65,9 @@ final class UnusedCssOptimizer {
 				$css .= "\n@media " . $stylesheet->media . " {\n" . $stylesheet->css . "\n}\n";
 			}
 
-			$safelist = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
-			$used     = $this->pruner->prune( $css, $document, 'used', $safelist );
+			$safelist             = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
+			$preserveDynamicStates = (bool) Settings::get( 'css.keep_dynamic_states', true );
+			$used                 = $this->pruner->prune( $css, $document, 'used', $safelist, $preserveDynamicStates );
 			if ( '' === trim( $used ) ) {
 				throw new \RuntimeException( 'The used CSS result was empty.' );
 			}
@@ -80,22 +81,25 @@ final class UnusedCssOptimizer {
 				throw new \RuntimeException( 'The HTML document has no head element.' );
 			}
 
-			$outputs = array();
+			$outputs  = array();
+			$fallback = '';
 			if ( 'inline' === $mode ) {
 				$outputs[] = $this->appendInline( $document, $head, $used, 'used' );
 			} elseif ( 'hybrid' === $mode ) {
-				$critical  = $this->pruner->prune( $css, $document, 'critical', $safelist );
-				$remaining = $this->pruner->prune( $css, $document, 'remaining', $safelist );
+				$critical  = $this->pruner->prune( $css, $document, 'critical', $safelist, $preserveDynamicStates );
+				$remaining = $this->pruner->prune( $css, $document, 'remaining', $safelist, $preserveDynamicStates );
 				$budget    = (int) Settings::get( 'css.critical_budget', 14336 );
 
 				if ( strlen( $critical ) > $budget ) {
-					$critical  = $used;
-					$remaining = '';
-				}
-
-				$outputs[] = $this->appendInline( $document, $head, $critical, 'critical' );
-				if ( '' !== trim( $remaining ) ) {
-					$outputs[] = $this->appendFile( $document, $head, $remaining, 'remaining' );
+					$outputs[] = $this->appendFile( $document, $head, $used, 'used' );
+					$fallback  = 'critical_budget_exceeded';
+				} else {
+					if ( '' !== trim( $critical ) ) {
+						$outputs[] = $this->appendInline( $document, $head, $critical, 'critical' );
+					}
+					if ( '' !== trim( $remaining ) ) {
+						$outputs[] = $this->appendFile( $document, $head, $remaining, 'remaining' );
+					}
 				}
 			} else {
 				$outputs[] = $this->appendFile( $document, $head, $used, 'used' );
@@ -123,6 +127,7 @@ final class UnusedCssOptimizer {
 					'original_bytes'  => strlen( $css ),
 					'generated_bytes' => array_sum( array_column( $outputs, 'bytes' ) ),
 					'outputs'         => $outputs,
+					'fallback'        => $fallback,
 					'duration_ms'     => $this->duration( $started ),
 				)
 			);

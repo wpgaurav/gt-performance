@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.5
+Stable tag: 0.1.0-alpha.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,11 +38,21 @@ No. The baseline uses Cache Rules and targeted purge available on Cloudflare Fre
 
 No. Stylesheet collection, selector analysis, pruning, and artifact creation run on the WordPress server.
 
+= Can used CSS be inlined? =
+
+Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining file. Hybrid mode falls back to a generated file if the critical segment exceeds its inline budget.
+
 = Are checkout pages cached? =
 
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
 
 == Changelog ==
+
+= 0.1.0-alpha.6 =
+
+* Replaced the CSS delivery dropdown with explicit Generated file, Inline all used CSS, and Critical inline + remaining file choices.
+* Made the dynamic-state preservation setting control hover, focus, open, checked, and related selector retention.
+* Changed Hybrid mode to fall back to a generated file when critical CSS exceeds the inline budget.
 
 = 0.1.0-alpha.5 =
 

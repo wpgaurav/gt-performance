@@ -369,6 +369,64 @@
 	font-weight: 600;
 }
 
+.gtp-radio-options {
+	width: 100%;
+	max-width: 520px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-top: 1px solid #f0f0f1;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.gtp-radio-option {
+	display: grid;
+	grid-template-columns: 20px minmax(0, 1fr);
+	gap: 10px;
+	padding: 13px 12px;
+	cursor: pointer;
+}
+
+.gtp-radio-option + .gtp-radio-option {
+	border-top: 1px solid #f0f0f1;
+}
+
+.gtp-radio-option:has(input:checked) {
+	background: var(--gtp-accent-soft);
+}
+
+.gtp-radio-option__control {
+	display: flex;
+	align-items: center;
+	min-height: 20px;
+}
+
+.gtp-radio-option input[type="radio"] {
+	margin: 0;
+}
+
+.gtp-radio-option__copy {
+	min-width: 0;
+}
+
+.gtp-radio-option strong,
+.gtp-radio-option small {
+	display: block;
+}
+
+.gtp-radio-option strong {
+	font-weight: 600;
+	line-height: 20px;
+}
+
+.gtp-radio-option small {
+	margin-top: 3px;
+	color: var(--gtp-muted);
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 1.45;
+}
+
 .gtp-database-manual > form {
 	margin: 0;
 }
@@ -881,8 +939,14 @@
 	}
 
 	.gtp-database-actions p,
-	.gtp-database-task__copy small {
+	.gtp-database-task__copy small,
+	.gtp-radio-option small {
 		font-size: 16px;
+	}
+
+	.gtp-radio-option input[type="radio"] {
+		width: 20px;
+		height: 20px;
 	}
 
 	.gtp-database-actions .button {

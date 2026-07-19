@@ -429,19 +429,8 @@ final class AdminModule implements Module {
 
 		$this->panelOpen( __( 'Unused CSS', 'gt-performance' ), __( 'Analyze rendered HTML on this server and deliver only matching selectors.', 'gt-performance' ) );
 		$this->checkbox( 'css', 'enabled', __( 'Remove unused CSS', 'gt-performance' ), __( 'Generate page-specific CSS when an eligible page is rendered.', 'gt-performance' ), $settings );
-		$this->select(
-			'css',
-			'mode',
-			__( 'CSS delivery', 'gt-performance' ),
-			__( 'Hybrid keeps the most important CSS inline and writes the remainder to an immutable file.', 'gt-performance' ),
-			$settings,
-			array(
-				'file'   => __( 'Generated file', 'gt-performance' ),
-				'inline' => __( 'Fully inline', 'gt-performance' ),
-				'hybrid' => __( 'Critical inline + remaining file', 'gt-performance' ),
-			)
-		);
-		$this->number( 'css', 'critical_budget', __( 'Critical CSS budget', 'gt-performance' ), __( 'Maximum critical CSS size before hybrid mode safely falls back.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ) );
+		$this->cssDeliveryOptions( $settings );
+		$this->number( 'css', 'critical_budget', __( 'Hybrid inline budget', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode. If the segment exceeds this limit, all used CSS is delivered as a generated file.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ) );
 		$this->checkbox( 'css', 'keep_dynamic_states', __( 'Preserve dynamic states', 'gt-performance' ), __( 'Keep selectors used for hover, focus, open, checked, and other interactive states.', 'gt-performance' ), $settings );
 		$this->inlineLink( __( 'See generated CSS files and processing status', 'gt-performance' ), $this->tabUrl( 'css-reports' ) );
 		$this->panelClose();
@@ -808,6 +797,50 @@ final class AdminModule implements Module {
 				<?php endforeach; ?>
 			</div>
 			<p class="gtp-presets__status" data-gtp-cache-preset-status aria-live="polite"></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function cssDeliveryOptions( array $settings ): void {
+		$name     = Settings::OPTION . '[css][mode]';
+		$selected = (string) $settings['css']['mode'];
+		$options  = array(
+			'file'   => array(
+				'label'       => __( 'Generated file', 'gt-performance' ),
+				'description' => __( 'Keeps HTML smaller and lets browsers cache the page-specific stylesheet.', 'gt-performance' ),
+			),
+			'inline' => array(
+				'label'       => __( 'Inline all used CSS', 'gt-performance' ),
+				'description' => __( 'Removes the stylesheet request, but repeats the complete used CSS inside each HTML response.', 'gt-performance' ),
+			),
+			'hybrid' => array(
+				'label'       => __( 'Critical inline + remaining file', 'gt-performance' ),
+				'description' => __( 'Inlines conservatively detected early-page CSS and loads the remaining used CSS from a cacheable file.', 'gt-performance' ),
+			),
+		);
+		?>
+		<div class="gtp-field">
+			<div>
+				<div class="gtp-field__label" id="gtp-css-delivery-label"><?php esc_html_e( 'CSS delivery', 'gt-performance' ); ?></div>
+				<p><?php esc_html_e( 'Choose how the reduced, page-specific CSS is added to the response.', 'gt-performance' ); ?></p>
+			</div>
+			<fieldset class="gtp-radio-options" aria-labelledby="gtp-css-delivery-label">
+				<legend class="screen-reader-text"><?php esc_html_e( 'CSS delivery', 'gt-performance' ); ?></legend>
+				<?php foreach ( $options as $value => $option ) : ?>
+					<label class="gtp-radio-option">
+						<span class="gtp-radio-option__control">
+							<input type="radio" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>" <?php checked( $selected, $value ); ?>>
+						</span>
+						<span class="gtp-radio-option__copy">
+							<strong><?php echo esc_html( $option['label'] ); ?></strong>
+							<small><?php echo esc_html( $option['description'] ); ?></small>
+						</span>
+					</label>
+				<?php endforeach; ?>
+			</fieldset>
 		</div>
 		<?php
 	}

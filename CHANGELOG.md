@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.6 - 2026-07-19
+
+- Replaced the CSS delivery dropdown with explicit Generated file, Inline all used CSS, and Critical inline + remaining file choices.
+- Made the dynamic-state preservation setting control hover, focus, open, checked, and related selector retention.
+- Changed Hybrid mode to fall back to a generated file when critical CSS exceeds the inline budget.
+
 ## 0.1.0-alpha.5 - 2026-07-19
 
 - Added one-click Maximum Impact, Balanced, and Frequently Updated cache lifetime presets that populate the existing fields without saving unexpectedly.

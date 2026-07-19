@@ -42,4 +42,17 @@ final class CssPrunerTest extends TestCase {
 		self::assertStringContainsString( '.hero', $critical );
 		self::assertStringNotContainsString( '.hero', $remaining );
 	}
+
+	public function test_dynamic_state_preservation_can_be_disabled(): void {
+		$output = ( new CssPruner() )->prune(
+			'.button:hover{color:red}.missing:hover{color:blue}',
+			$this->document(),
+			'used',
+			array(),
+			false
+		);
+
+		self::assertStringNotContainsString( '.button:hover', $output );
+		self::assertStringNotContainsString( '.missing:hover', $output );
+	}
 }

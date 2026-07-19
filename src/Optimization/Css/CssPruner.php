@@ -25,12 +25,12 @@ final class CssPruner {
 	/**
 	 * @param list<string> $safelist Selector fragments.
 	 */
-	public function prune( string $css, \DOMDocument $document, string $segment = 'used', array $safelist = array() ): string {
+	public function prune( string $css, \DOMDocument $document, string $segment = 'used', array $safelist = array(), bool $preserveDynamicStates = true ): string {
 		$stylesheet = ( new Parser( $css ) )->parse();
 		$xpath      = new \DOMXPath( $document );
 		$critical   = $this->criticalPaths( $document );
 
-		$this->pruneList( $stylesheet, $xpath, $segment, $critical, $safelist );
+		$this->pruneList( $stylesheet, $xpath, $segment, $critical, $safelist, $preserveDynamicStates );
 
 		return $stylesheet->render( OutputFormat::createCompact() );
 	}
@@ -39,7 +39,7 @@ final class CssPruner {
 	 * @param array<string, true> $critical Critical DOM paths.
 	 * @param list<string>        $safelist Selector fragments.
 	 */
-	private function pruneList( CSSList $cssList, \DOMXPath $xpath, string $segment, array $critical, array $safelist ): void {
+	private function pruneList( CSSList $cssList, \DOMXPath $xpath, string $segment, array $critical, array $safelist, bool $preserveDynamicStates ): void {
 		foreach ( $cssList->getContents() as $item ) {
 			if ( $item instanceof DeclarationBlock ) {
 				$kept = array();
@@ -48,7 +48,7 @@ final class CssPruner {
 						? (string) $selectorObject->getSelector()
 						: (string) $selectorObject;
 
-					$match = $this->matches( $selector, $xpath, $critical, $safelist );
+					$match = $this->matches( $selector, $xpath, $critical, $safelist, $preserveDynamicStates );
 					if ( 'used' === $segment && $match['used'] ) {
 						$kept[] = $selectorObject;
 					} elseif ( 'critical' === $segment && $match['critical'] ) {
@@ -71,7 +71,7 @@ final class CssPruner {
 				if ( str_contains( $class, 'keyframe' ) ) {
 					continue;
 				}
-				$this->pruneList( $item, $xpath, $segment, $critical, $safelist );
+				$this->pruneList( $item, $xpath, $segment, $critical, $safelist, $preserveDynamicStates );
 				if ( array() === $item->getContents() ) {
 					$cssList->remove( $item );
 				}
@@ -84,7 +84,7 @@ final class CssPruner {
 	 * @param list<string>        $safelist Selector fragments.
 	 * @return array{used:bool,critical:bool}
 	 */
-	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist ): array {
+	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist, bool $preserveDynamicStates ): array {
 		foreach ( $safelist as $fragment ) {
 			if ( '' !== $fragment && str_contains( $selector, $fragment ) ) {
 				return array(
@@ -101,7 +101,7 @@ final class CssPruner {
 			);
 		}
 
-		$testSelector = $this->stripDynamicPseudo( $selector );
+		$testSelector = $preserveDynamicStates ? $this->stripDynamicPseudo( $selector ) : trim( $selector );
 		if ( '' === $testSelector || str_contains( $testSelector, '::' ) ) {
 			return array(
 				'used'     => true,
