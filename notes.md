@@ -47,7 +47,7 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 ### Implemented Product and Release State
 
 - FluentCart product ID: `1170147`.
-- The product page is published at $199 with a one-site lifetime license.
+- The product page is published at $199 with a 25-site lifetime license.
 - FluentCart updater responses are top-level JSON objects; the client also accepts the nested `data` shape for compatibility.
 - Protected package URLs are exposed to WordPress only when FluentCart reports a valid activation.
 - The license key and activation hash are encrypted separately at rest.
@@ -69,6 +69,11 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 - GitHub release `v0.1.0-alpha.10` is the current package authority. Its ZIP is 316,279 bytes with SHA-256 `619a26573b31091ea23a06fbc4db87979fd5c1e4bd89f8dbc06947e5937bcd8e`.
 - FluentCart download row `106` points to that exact alpha.10 ZIP. Rows `105` (alpha.9) and `104` (alpha.8) and their files remain available for rollback.
 - A disposable Studio site activated a temporary one-site license from a `localhost:8887` installation, received valid alpha.10 metadata, downloaded the protected ZIP with matching size, ZIP magic bytes, and GitHub SHA-256, deactivated cleanly, and left zero temporary license, activation, site, or local-option records.
+- The alpha.11 tag passed code and package validation but its release stopped before publication because GitHub provenance attestations are unavailable for user-owned private repositories. The tag was kept immutable.
+- Alpha.12 conditionally skips only the unavailable private-repository attestation step. GitHub release `v0.1.0-alpha.12` is the package authority; its ZIP is 349,385 bytes with SHA-256 `5fd42dd4b236a280ce03a28c8cc95d0003f7e135e85c1c1212c22b1bbb94e646`.
+- FluentCart download row `107` points to the exact alpha.12 GitHub ZIP. Alpha.10 row `106` and its stored file remain available for rollback.
+- A temporary non-customer license activated against the public FluentCart endpoint, received valid alpha.12 metadata, downloaded the protected package with the exact GitHub checksum, and was removed with its activation and site rows.
+- Gatilab and the established WordPress Studio site both report alpha.12 active. Gatilab retained its owned page-cache and Redis drop-ins, while Studio demonstrated the expected origin-cache MISS-to-HIT transition with the one-hour fresh, 24-hour stale, and five-minute browser profile.
 
 ## Scope
 
