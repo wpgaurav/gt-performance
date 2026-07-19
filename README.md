@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.3`. Aggressive transformations are opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `0.1.0-alpha.4`. Aggressive transformations are opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -18,7 +18,10 @@ The current release is `0.1.0-alpha.3`. Aggressive transformations are opt-in. C
 - Conservative JavaScript minification, defer, and interaction-delay controls.
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
 - Database dry-run/cleanup, common WordPress bloat controls, optional Redis object-cache drop-in, and sampled Core Web Vitals collection.
-- Native Settings screen, redacted logs, WP-CLI doctor/cache/queue/Cloudflare/database commands, durable jobs, retries, and dead-letter state.
+- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections.
+- Comprehensive cache, CSS, JavaScript, media, font, database, bloat, RUM, Cloudflare, commerce, and exception controls.
+- Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
+- Redacted logs, WP-CLI doctor/cache/queue/Cloudflare/database commands, durable jobs, retries, and dead-letter state.
 
 The full product architecture and 1.0 roadmap are in [PRODUCT-PLAN.md](PRODUCT-PLAN.md).
 
@@ -45,7 +48,7 @@ The recommended setup is a scoped token for the site’s zone with:
 - Cache Rules edit access;
 - Cache purge access.
 
-Enter the token under **Settings → GT Performance**, add the domain, then select **Connect/sync Cloudflare**. The Zone ID is optional and can be discovered from the domain.
+Open **GT Performance → Cloudflare**, enter the token and domain, then select **Connect/sync Cloudflare**. The Zone ID is optional and can be discovered from the domain.
 
 Legacy Global API Key authentication is also supported. Select **Global API Key**, then enter the account email, Global API Key, and domain. The key is encrypted at rest with the same site-keyed cipher used for scoped tokens. A scoped token remains safer because its permissions can be limited to one zone.
 

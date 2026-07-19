@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.4 - 2026-07-19
+
+- Replaced the Settings submenu with a standalone top-level GT Performance admin at `admin.php?page=gt-performance`, while redirecting the legacy URL.
+- Added focused Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections with responsive WordPress-native controls.
+- Exposed cache query/path/cookie exceptions, CSS safelists and stylesheet exclusions, JavaScript exclusions and delay patterns, and media selector exceptions.
+- Exposed the remaining cache, CSS, JavaScript, media, font, database, WordPress cleanup, RUM, Cloudflare, and commerce settings.
+- Added persistent unused CSS generation reports with live processing, ready, stale, skipped, and failed indicators plus delivery, size, savings, duration, and errors.
+
 ## 0.1.0-alpha.3 - 2026-07-18
 
 - Added Core Forms compatibility that selectively removes its globally emitted voter cookie only on pages without polls.

@@ -197,12 +197,22 @@ final class Settings {
 		$merged['css']['mode']            = in_array( $mode, array( 'file', 'inline', 'hybrid' ), true ) ? $mode : 'file';
 		$merged['css']['critical_budget'] = max( 2048, min( 51200, (int) ( $merged['css']['critical_budget'] ?? 14336 ) ) );
 
+		$format                     = (string) ( $merged['media']['format'] ?? 'webp' );
+		$merged['media']['format'] = in_array( $format, array( 'webp', 'avif' ), true ) ? $format : 'webp';
+
+		$fontDisplay                     = (string) ( $merged['fonts']['font_display'] ?? 'swap' );
+		$merged['fonts']['font_display'] = in_array( $fontDisplay, array( 'swap', 'fallback', 'optional', 'block' ), true ) ? $fontDisplay : 'swap';
+
+		$schedule                        = (string) ( $merged['database']['schedule'] ?? 'weekly' );
+		$merged['database']['schedule'] = in_array( $schedule, array( 'daily', 'weekly' ), true ) ? $schedule : 'weekly';
+
 		$merged['rum']['sample_rate'] = max( 0.0, min( 1.0, (float) ( $merged['rum']['sample_rate'] ?? 0.05 ) ) );
 		$merged['rum']['retention']   = max( 1, min( 365, (int) ( $merged['rum']['retention'] ?? 30 ) ) );
 
 		$booleanPaths = array(
 			array( 'cloudflare', 'enabled' ),
 			array( 'css', 'enabled' ),
+			array( 'css', 'keep_dynamic_states' ),
 			array( 'javascript', 'minify' ),
 			array( 'javascript', 'defer' ),
 			array( 'javascript', 'delay' ),
@@ -229,6 +239,9 @@ final class Settings {
 
 		$merged['media']['compression']           = max( 30, min( 100, (int) ( $merged['media']['compression'] ?? 82 ) ) );
 		$merged['media']['critical_images']       = max( 0, min( 10, (int) ( $merged['media']['critical_images'] ?? 2 ) ) );
+		$merged['database']['retain_revisions']   = max( 0, min( 100, (int) ( $merged['database']['retain_revisions'] ?? 5 ) ) );
+		$merged['bloat']['heartbeat_seconds']     = max( 15, min( 120, (int) ( $merged['bloat']['heartbeat_seconds'] ?? 60 ) ) );
+		$merged['bloat']['limit_revisions']       = max( 0, min( 100, (int) ( $merged['bloat']['limit_revisions'] ?? 5 ) ) );
 		$merged['media']['lazy_render_selectors'] = self::sanitizeList( $merged['media']['lazy_render_selectors'] ?? array() );
 		$merged['javascript']['exclusions']       = self::sanitizeList( $merged['javascript']['exclusions'] ?? array() );
 		$merged['javascript']['delay_patterns']   = self::sanitizeList( $merged['javascript']['delay_patterns'] ?? array() );

@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, core web vitals
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.3
+Stable tag: 0.1.0-alpha.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,7 +23,7 @@ This is an alpha. Aggressive modules are disabled by default and should be teste
 == Installation ==
 
 1. Upload and activate GT Performance.
-2. Open Settings > GT Performance.
+2. Open GT Performance in the main WordPress admin menu.
 3. Install the page-cache drop-in.
 4. Enable only the modules you have tested for your theme and plugins.
 5. Optionally connect a scoped Cloudflare API token or a legacy Global API Key with account email, then synchronize the managed cache rule.
@@ -43,6 +43,13 @@ No. Stylesheet collection, selector analysis, pruning, and artifact creation run
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
 
 == Changelog ==
+
+= 0.1.0-alpha.4 =
+
+* Added a standalone top-level settings app with focused Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools tabs.
+* Exposed the full cache, optimization, Cloudflare, commerce, RUM, cleanup, and exception configuration.
+* Added live server-side unused CSS generation reports with processing, ready, stale, skipped, and failed states.
+* Added generated output size, savings, delivery mode, error, and refresh indicators for unused CSS.
 
 = 0.1.0-alpha.3 =
 

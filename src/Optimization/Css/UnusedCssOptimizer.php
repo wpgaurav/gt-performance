@@ -18,6 +18,7 @@ final class UnusedCssOptimizer {
 		private readonly StylesheetCollector $collector = new StylesheetCollector(),
 		private readonly CssPruner $pruner = new CssPruner(),
 		private readonly ArtifactStore $artifacts = new ArtifactStore(),
+		private readonly ReportRepository $reports = new ReportRepository(),
 	) {
 	}
 
@@ -26,6 +27,10 @@ final class UnusedCssOptimizer {
 			return $html;
 		}
 
+		$mode        = (string) Settings::get( 'css.mode', 'file' );
+		$url         = $this->requestUrl();
+		$fingerprint = $this->reports->begin( $url, $mode );
+		$started     = microtime( true );
 		$previous = libxml_use_internal_errors( true );
 
 		try {
@@ -40,6 +45,18 @@ final class UnusedCssOptimizer {
 				(array) Settings::get( 'css.excluded_stylesheets', array() )
 			);
 			if ( ! $collected['stylesheets'] ) {
+				$this->reports->complete(
+					$fingerprint,
+					$mode,
+					'skipped',
+					'',
+					array(
+						'url'         => $url,
+						'stylesheets' => 0,
+						'reason'      => 'No eligible stylesheets were found.',
+						'duration_ms' => $this->duration( $started ),
+					)
+				);
 				return $html;
 			}
 
@@ -63,9 +80,9 @@ final class UnusedCssOptimizer {
 				throw new \RuntimeException( 'The HTML document has no head element.' );
 			}
 
-			$mode = (string) Settings::get( 'css.mode', 'file' );
+			$outputs = array();
 			if ( 'inline' === $mode ) {
-				$this->appendInline( $document, $head, $used, 'used' );
+				$outputs[] = $this->appendInline( $document, $head, $used, 'used' );
 			} elseif ( 'hybrid' === $mode ) {
 				$critical  = $this->pruner->prune( $css, $document, 'critical', $safelist );
 				$remaining = $this->pruner->prune( $css, $document, 'remaining', $safelist );
@@ -76,12 +93,12 @@ final class UnusedCssOptimizer {
 					$remaining = '';
 				}
 
-				$this->appendInline( $document, $head, $critical, 'critical' );
+				$outputs[] = $this->appendInline( $document, $head, $critical, 'critical' );
 				if ( '' !== trim( $remaining ) ) {
-					$this->appendFile( $document, $head, $remaining, 'remaining' );
+					$outputs[] = $this->appendFile( $document, $head, $remaining, 'remaining' );
 				}
 			} else {
-				$this->appendFile( $document, $head, $used, 'used' );
+				$outputs[] = $this->appendFile( $document, $head, $used, 'used' );
 			}
 
 			$output = $document->saveHTML();
@@ -89,8 +106,30 @@ final class UnusedCssOptimizer {
 				throw new \RuntimeException( 'The optimized HTML result was empty.' );
 			}
 
+			$files = array_values(
+				array_filter(
+					$outputs,
+					static fn( array $item ): bool => 'file' === $item['delivery']
+				)
+			);
+			$this->reports->complete(
+				$fingerprint,
+				$mode,
+				'ready',
+				isset( $files[0]['path'] ) ? (string) $files[0]['path'] : '',
+				array(
+					'url'             => $url,
+					'stylesheets'     => count( $collected['stylesheets'] ),
+					'original_bytes'  => strlen( $css ),
+					'generated_bytes' => array_sum( array_column( $outputs, 'bytes' ) ),
+					'outputs'         => $outputs,
+					'duration_ms'     => $this->duration( $started ),
+				)
+			);
+
 			return preg_replace( '/^<\\?xml[^>]+>\\s*/', '', $output ) ?? $output;
 		} catch ( \Throwable $throwable ) {
+			$this->reports->fail( $fingerprint, $mode, $url, $throwable->getMessage() );
 			$this->logger->log( 'error', 'Unused CSS optimization failed; original HTML returned', array( 'error' => $throwable->getMessage() ) );
 
 			return $html;
@@ -100,14 +139,26 @@ final class UnusedCssOptimizer {
 		}
 	}
 
-	private function appendInline( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): void {
+	/**
+	 * @return array{delivery:string,kind:string,bytes:int}
+	 */
+	private function appendInline( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): array {
 		$style = $document->createElement( 'style' );
 		$style->setAttribute( 'data-gt-performance', $kind );
 		$style->appendChild( $document->createTextNode( $css ) );
 		$head->appendChild( $style );
+
+		return array(
+			'delivery' => 'inline',
+			'kind'     => $kind,
+			'bytes'    => strlen( $css ),
+		);
 	}
 
-	private function appendFile( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): void {
+	/**
+	 * @return array{delivery:string,kind:string,bytes:int,path:string,url:string}
+	 */
+	private function appendFile( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): array {
 		$artifact = $this->artifacts->write( $css, $kind );
 		$binary   = hex2bin( $artifact['hash'] );
 		$link     = $document->createElement( 'link' );
@@ -117,5 +168,24 @@ final class UnusedCssOptimizer {
 		$link->setAttribute( 'integrity', 'sha256-' . base64_encode( false === $binary ? '' : $binary ) );
 		$link->setAttribute( 'crossorigin', 'anonymous' );
 		$head->appendChild( $link );
+
+		return array(
+			'delivery' => 'file',
+			'kind'     => $kind,
+			'bytes'    => strlen( $css ),
+			'path'     => $artifact['path'],
+			'url'      => $artifact['url'],
+		);
+	}
+
+	private function requestUrl(): string {
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
+		$path = is_string( $path ) ? $path : '/';
+
+		return esc_url_raw( home_url( $path ) );
+	}
+
+	private function duration( float $started ): int {
+		return max( 0, (int) round( ( microtime( true ) - $started ) * 1000 ) );
 	}
 }
