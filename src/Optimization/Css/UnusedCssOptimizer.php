@@ -29,6 +29,13 @@ final class UnusedCssOptimizer {
 
 		$mode        = (string) Settings::get( 'css.mode', 'file' );
 		$url         = $this->requestUrl();
+		$preview     = isset( $_GET['gtp_css_preview'] )
+			&& current_user_can( 'manage_options' )
+			&& wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['gtp_css_preview'] ) ), 'gtp_css_preview' );
+		$rollout     = (int) Settings::get( 'css.rollout_percent', 100 );
+		if ( ! ( new Rollout() )->allows( $url, $rollout, (bool) $preview ) ) {
+			return $html;
+		}
 		$fingerprint = $this->reports->begin( $url, $mode );
 		$started     = microtime( true );
 		$previous = libxml_use_internal_errors( true );

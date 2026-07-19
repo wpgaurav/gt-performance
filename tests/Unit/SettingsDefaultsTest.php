@@ -55,4 +55,15 @@ final class SettingsDefaultsTest extends TestCase {
 		self::assertSame( '', $redis['password'] );
 		self::assertTrue( $redis['persistent'] );
 	}
+
+	public function testDifferentiationFeaturesFailClosedByDefault(): void {
+		$defaults = Settings::defaults();
+
+		self::assertSame( 100, $defaults['css']['rollout_percent'] );
+		self::assertSame( array(), $defaults['css']['trained_selectors'] );
+		self::assertFalse( $defaults['private_fragments']['enabled'] );
+		self::assertFalse( $defaults['fleet']['enabled'] );
+		self::assertTrue( $defaults['fleet']['allow_imports'] );
+		self::assertContains( 'commerce', $defaults['fleet']['policy_modules'] );
+	}
 }

@@ -875,6 +875,121 @@
 	font-size: 12px;
 }
 
+.gtp-panel-note {
+	margin: 0 !important;
+	padding: 20px 24px 22px;
+}
+
+.gtp-text-danger {
+	color: var(--gtp-danger) !important;
+}
+
+.gtp-inline-form {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 20px 24px;
+	border-bottom: 1px solid var(--gtp-border);
+}
+
+.gtp-inline-form input.regular-text {
+	flex: 1 1 auto;
+	max-width: none;
+	min-height: 36px;
+}
+
+.gtp-inline-form .submit,
+.gtp-panel-actions .submit {
+	margin: 0;
+	padding: 0;
+}
+
+.gtp-panel-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 18px 24px 22px;
+	border-top: 1px solid var(--gtp-border);
+}
+
+.gtp-panel-actions--wrap {
+	flex-wrap: wrap;
+}
+
+.gtp-panel-actions form {
+	margin: 0;
+}
+
+.gtp-code-detail {
+	padding: 18px 24px 22px;
+	border-top: 1px solid var(--gtp-border);
+}
+
+.gtp-code-detail strong,
+.gtp-code-detail code {
+	display: block;
+}
+
+.gtp-code-detail code {
+	overflow-wrap: anywhere;
+	margin-top: 8px;
+	padding: 10px 12px;
+	background: var(--gtp-bg);
+	font-size: 12px;
+	line-height: 1.55;
+}
+
+.gtp-history-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 14px 24px;
+	border-top: 1px solid #f0f0f1;
+}
+
+.gtp-history-row strong,
+.gtp-history-row small {
+	display: block;
+}
+
+.gtp-history-row small {
+	margin-top: 3px;
+	color: var(--gtp-muted);
+}
+
+.gtp-token-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 0 24px 22px;
+}
+
+.gtp-token-list code {
+	padding: 4px 7px;
+	background: var(--gtp-bg);
+	border: 1px solid var(--gtp-border);
+	border-radius: 3px;
+}
+
+.gtp-policy-import {
+	padding: 20px 24px 22px;
+}
+
+.gtp-policy-import textarea {
+	display: block;
+	width: 100%;
+	resize: vertical;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+}
+
+.gtp-policy-import .submit {
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+
 @keyframes gtp-spin {
 	to {
 		transform: rotate(360deg);
@@ -976,6 +1091,31 @@
 	}
 
 	.gtp-report-note {
+		padding-right: 20px;
+		padding-left: 20px;
+	}
+
+	.gtp-inline-form {
+		align-items: stretch;
+		flex-direction: column;
+		padding: 20px;
+	}
+
+	.gtp-inline-form .button,
+	.gtp-panel-actions .button {
+		min-height: 44px;
+	}
+
+	.gtp-panel-actions,
+	.gtp-code-detail,
+	.gtp-policy-import,
+	.gtp-panel-note {
+		padding-right: 20px;
+		padding-left: 20px;
+	}
+
+	.gtp-history-row {
+		align-items: flex-start;
 		padding-right: 20px;
 		padding-left: 20px;
 	}

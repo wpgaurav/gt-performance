@@ -43,6 +43,8 @@ final class Settings {
 					'preview',
 					's',
 					'wc-ajax',
+					'gtp_verify',
+					'gtp_css_preview',
 				),
 				'bypass_paths'         => array(
 					'/wp-admin/',
@@ -78,6 +80,8 @@ final class Settings {
 				'mode'                 => 'file',
 				'critical_budget'      => 14336,
 				'keep_dynamic_states'  => true,
+				'rollout_percent'       => 100,
+				'trained_selectors'     => array(),
 				'safelist'             => array(),
 				'excluded_stylesheets' => array(),
 			),
@@ -170,6 +174,16 @@ final class Settings {
 				'edd'         => true,
 				'woocommerce' => true,
 			),
+			'private_fragments' => array(
+				'enabled'       => false,
+				'cart_count'    => true,
+				'account_link'  => true,
+			),
+			'fleet'      => array(
+				'enabled'        => false,
+				'allow_imports'  => true,
+				'policy_modules' => array( 'cache', 'css', 'javascript', 'media', 'fonts', 'database', 'bloat', 'commerce', 'integrations', 'private_fragments' ),
+			),
 			'integrations' => array(
 				'auto_protection'   => true,
 				'perfmatters_owner' => 'automatic',
@@ -239,6 +253,8 @@ final class Settings {
 		$mode                             = (string) ( $merged['css']['mode'] ?? 'file' );
 		$merged['css']['mode']            = in_array( $mode, array( 'file', 'inline', 'hybrid' ), true ) ? $mode : 'file';
 		$merged['css']['critical_budget'] = max( 2048, min( 51200, (int) ( $merged['css']['critical_budget'] ?? 14336 ) ) );
+		$rollout                           = (int) ( $merged['css']['rollout_percent'] ?? 100 );
+		$merged['css']['rollout_percent'] = in_array( $rollout, array( 0, 10, 25, 50, 100 ), true ) ? $rollout : 100;
 
 		$format                     = (string) ( $merged['media']['format'] ?? 'webp' );
 		$merged['media']['format'] = in_array( $format, array( 'webp', 'avif' ), true ) ? $format : 'webp';
@@ -314,6 +330,11 @@ final class Settings {
 			array( 'commerce', 'fluentcart' ),
 			array( 'commerce', 'edd' ),
 			array( 'commerce', 'woocommerce' ),
+			array( 'private_fragments', 'enabled' ),
+			array( 'private_fragments', 'cart_count' ),
+			array( 'private_fragments', 'account_link' ),
+			array( 'fleet', 'enabled' ),
+			array( 'fleet', 'allow_imports' ),
 			array( 'integrations', 'auto_protection' ),
 			array( 'integrations', 'akismet' ),
 			array( 'integrations', 'jetpack' ),
@@ -343,7 +364,15 @@ final class Settings {
 		$safelist                                  = \GTPerformance\Optimization\Css\SelectorSafelist::split( $merged['css']['safelist'] ?? array() );
 		$safelist                                  = array_map( 'sanitize_text_field', $safelist );
 		$merged['css']['safelist']                 = ( new \GTPerformance\Optimization\Css\SelectorSafelist() )->validate( $safelist )['valid'];
+		$trained                                   = self::sanitizeList( $merged['css']['trained_selectors'] ?? array() );
+		$merged['css']['trained_selectors']        = ( new \GTPerformance\Optimization\Css\SelectorObservation() )->sanitizeMany( $trained );
 		$merged['css']['excluded_stylesheets']    = self::sanitizeList( $merged['css']['excluded_stylesheets'] ?? array() );
+		$merged['fleet']['policy_modules']         = array_values(
+			array_intersect(
+				self::sanitizeList( $merged['fleet']['policy_modules'] ?? array() ),
+				array_keys( $defaults )
+			)
+		);
 		unset( $merged['rum'] );
 
 		return self::merge( $defaults, $merged );

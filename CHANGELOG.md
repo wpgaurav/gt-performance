@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-alpha.11 - 2026-07-19
+
+- Added Explain This Page diagnostics backed by the production cache policy, deterministic cache keys, local artifact metadata, and compiled edge expectations.
+- Added Verified Purge with bounded redacted receipts covering origin removal, post-purge response fingerprints, response privacy signals, and Cloudflare cache headers.
+- Added a Cloudflare Free rule compiler with exact expression preview, managed-rule drift detection, competing-rule overlap warnings, expected create/update/noop operation, and ten-rule capacity reporting.
+- Added Commerce Safety Lab in-memory policy simulation and safe read-only checks for FluentCart, Easy Digital Downloads, and WooCommerce dynamic routes.
+- Added administrator-only Unused CSS Training Mode with bounded selector observation, one-hour sessions, candidate review, publication, rollback, and deterministic 0/10/25/50/100 percent rollout cohorts.
+- Added opt-in signed Private Islands for explicitly registered cart-count, account-link, and developer fragments with private no-store responses and fail-closed public fallbacks.
+- Added a 25-site Fleet Console foundation using five-minute, one-use, license-signed configuration bundles with recursive credential removal and no remote-code capability.
+- Added standalone Safety Lab and Fleet screens, Cloudflare plan UI, administrator-bar shortcuts, WP-CLI commands, and focused unit coverage for the new policy and signing layers.
+
 ## 0.1.0-alpha.10 - 2026-07-19
 
 - Added stable, port-safe license identities for Studio and other local WordPress sites so FluentCart protected-package signatures are not corrupted by `localhost:PORT` values.

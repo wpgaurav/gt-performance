@@ -2,13 +2,14 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.10`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `0.1.0-alpha.11`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
 - Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, related-page invalidation, and preload queue.
 - Reversible `WP_CACHE` management and drop-in ownership checks, including exact restoration of existing single-line declarations.
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule backup, and automatic fallback when a Free zone rejects custom query-string cache keys.
+- A Cloudflare Free rule compiler that previews the exact expression, managed-rule drift, competing rules, operation, and remaining ten-rule budget before synchronization.
 - First-class bypass policies and product invalidation for FluentCart, Easy Digital Downloads, and WooCommerce.
 - Core Forms poll compatibility: the global voter cookie is suppressed only on pages without polls, while real poll pages remain uncached.
 - Automatic optimization ownership for Perfmatters, plus active-plugin compatibility reporting for common cache and optimization plugins.
@@ -17,12 +18,18 @@ The current release is `0.1.0-alpha.10`. Origin caching uses a maximum-impact sh
   - immutable external file;
   - fully inline;
   - critical CSS inline with the remaining CSS in an immutable file.
+- Unused CSS Training Mode that records bounded structural selectors during an administrator browsing session, then supports review, publication, rollback, and deterministic 0/10/25/50/100 percent rollout cohorts.
 - Conservative JavaScript minification, defer, and interaction-delay controls.
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
 - Manual database scanning and selectable cleanup in Tools, scheduled database maintenance in Optimization, and Perfmatters-style WordPress request and bloat controls.
-- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections.
+- Explain This Page diagnostics with cache-decision reasons, deterministic key, local artifact state, and the expected Cloudflare result.
+- Verified Purge receipts that compare bounded response fingerprints and cache headers after origin and edge invalidation without storing page bodies.
+- Commerce Safety Lab policy simulation and safe read-only route checks for active FluentCart, EDD, and WooCommerce adapters.
+- Opt-in Private Islands for signed, explicitly registered cart-count, account-link, and developer fragments whose responses are always private and `no-store`.
+- A 25-site Fleet Console foundation for short-lived, one-use, license-signed configuration bundles that exclude credentials and cannot execute code.
+- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, Safety Lab, CSS Reports, Fleet, License, and Tools sections.
 - Encrypted FluentCart licensing with a dedicated License tab, protected WordPress updates, weekly verification, masked credentials, and on-demand checks.
-- Administrator-bar actions for purging or warming the current page, regenerating its CSS, purging page and edge caches, flushing object cache, testing Redis, and opening reports.
+- Administrator-bar actions for explaining, purging, or purge-verifying the current page, warming it, regenerating its CSS, controlling CSS Training Mode, purging page and edge caches, flushing object cache, testing Redis, and opening safety reports.
 - Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
 - Redacted logs, WP-CLI doctor/cache/queue/Cloudflare/database commands, durable jobs, retries, and dead-letter state.
@@ -40,6 +47,26 @@ After a non-empty used-CSS result is verified, the original collected style node
 - **Critical inline + remaining file:** conservatively detected early-page CSS is inlined and the remaining used CSS is written to a hashed file. If the critical segment exceeds the configured inline budget, the optimizer falls back to a generated file instead of inflating the HTML.
 
 If collection, parsing, pruning, artifact writing, or HTML serialization fails, GT Performance returns the original HTML and stylesheets.
+
+Training Mode is administrator-only and expires after one hour. It observes element IDs and classes while an administrator exercises menus, dialogs, validation states, carts, and other interactive UI. It never records text, form values, cookies, or customer data. Candidates remain separate until reviewed and published. The staged rollout control assigns each URL to a stable cohort, and setting it to zero restores original stylesheets immediately.
+
+## Diagnostics and safety
+
+Open **GT Performance → Safety Lab** to explain a public URL, run a purge with readback, or test active commerce adapters. Explain This Page reuses the production eligibility policy instead of approximating it. Verified Purge stores a bounded receipt containing timestamps, hashes, status, `Age`, Cloudflare cache state, and public/private response signals; it does not retain HTML bodies.
+
+Commerce Safety Lab first simulates every registered dynamic path, cookie prefix, and query parameter in memory. It then sends safe `GET` requests to configured cart, checkout, account, and receipt routes. It never creates an order, changes a cart, follows a payment action, or writes customer data.
+
+## Private Islands
+
+Private Islands is disabled by default. When enabled in **Integrations**, the shortcode `[gtp_private_island id="commerce_cart_count"]` renders a public fallback that is replaced through a signed private request. `commerce_account_link` is also registered by default. Developers can add explicit fragments through `gt_performance_private_fragments`; arbitrary callbacks or markup requested by a visitor are never executed.
+
+Every fragment response sends `Cache-Control: no-store, private, max-age=0`. If JavaScript, signature validation, or the endpoint fails, the public fallback remains in place.
+
+## Fleet Console
+
+Fleet Console moves reviewed settings between activations that share the same valid GT Performance license. Exports expire after five minutes and imports are accepted only once. License keys, Cloudflare credentials, Redis credentials, updater state, and other secret fields are stripped recursively even when their parent module is selected.
+
+The receiver applies only sanitized GT Performance settings. It does not install plugins, upload files, evaluate PHP, or expose a remote command channel. Sites can disable importing and remain export-only.
 
 ## Requirements
 
@@ -72,7 +99,7 @@ define( 'WP_REDIS_READ_TIMEOUT', 0.5 );
 
 The origin cache setting defaults on with one hour of freshness, 24 hours of shared retention and stale-if-error protection, and five minutes of browser caching. It remains inactive until the owned page-cache drop-in and `WP_CACHE` are installed. Logged-in caching stays off, and commerce adapters continue to bypass personalized state.
 
-Cloudflare changes, unused CSS, JavaScript transformations, database automation, Redis, image rewriting, and font hosting remain disabled until enabled by an administrator. Image dimensions and non-critical lazy loading are the only low-risk frontend transformation defaults.
+Cloudflare changes, unused CSS, CSS Training Mode, Private Islands, Fleet Console, JavaScript transformations, database automation, Redis, image rewriting, and font hosting remain disabled until enabled by an administrator. Image dimensions and non-critical lazy loading are the only low-risk frontend transformation defaults.
 
 When unused CSS parsing, stylesheet fetching, artifact writing, or HTML serialization fails, the original HTML and stylesheets are returned.
 
@@ -85,6 +112,8 @@ The recommended setup is a scoped token for the site’s zone with:
 - Cache purge access.
 
 Open **GT Performance → Cloudflare**, enter the token and domain, then select **Connect/sync Cloudflare**. The Zone ID is optional and can be discovered from the domain.
+
+Select **Preview rule plan** before synchronization to inspect the exact managed expression, whether GT Performance will create, update, or leave the rule unchanged, competing rule overlaps, and remaining Cloudflare Free rule capacity. GT Performance will not create its rule when the ten-rule budget is already full.
 
 Legacy Global API Key authentication is also supported. Select **Global API Key**, then enter the account email, Global API Key, and domain. The key is encrypted at rest with the same site-keyed cipher used for scoped tokens. A scoped token remains safer because its permissions can be limited to one zone.
 

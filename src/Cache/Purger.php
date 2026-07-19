@@ -41,29 +41,6 @@ final class Purger {
 	}
 
 	private function fromUrl( string $url ): ?RequestContext {
-		$parts = wp_parse_url( $url );
-		if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
-			return null;
-		}
-
-		$query = array();
-		parse_str( (string) ( $parts['query'] ?? '' ), $query );
-		$scalar = array();
-		foreach ( $query as $key => $value ) {
-			if ( is_scalar( $value ) ) {
-				$scalar[ (string) $key ] = (string) $value;
-			}
-		}
-
-		return new RequestContext(
-			'GET',
-			(string) ( $parts['scheme'] ?? 'https' ),
-			(string) $parts['host'],
-			(string) ( $parts['path'] ?? '/' ),
-			$scalar,
-			array(),
-			array(),
-			'',
-		);
+		return RequestContext::fromUrl( $url );
 	}
 }

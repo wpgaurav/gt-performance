@@ -1,5 +1,22 @@
 # Notes: GT Performance Product Research
 
+## 2026-07-19 Differentiation Suite Implementation
+
+### Product Boundary
+
+- The work applies to the plugin itself. Product-page demo and marketing updates follow only after verified plugin behavior exists.
+- The differentiator is provable cache correctness for WordPress commerce, not another Core Web Vitals dashboard.
+- Initial implementation order: Explain This Page, Verified Purge, Cloudflare Rule Compiler, Commerce Safety Lab, CSS Training Mode, Private Islands, then the 25-site Fleet Console.
+
+### Guardrails
+
+- Diagnostics must redact secrets, cookies, authorization values, nonce values, and private response bodies.
+- Commerce tests must not create orders, capture payments, alter stock, apply persistent coupons, or reuse customer sessions.
+- Private Islands must require explicit fragment registration and authenticated/signed delivery; failure leaves the private element empty rather than exposing cached state.
+- CSS Training Mode must only accept selector observations from authorized administrators in a short-lived training session.
+- Fleet exports may contain sanitized configuration and fingerprints, never credentials or encrypted credential blobs.
+- Cloudflare compilation must preserve unrelated customer rules and show a dry-run diff before mutation.
+
 ## 2026-07-19 Distribution and Updater Research
 
 ### Scope

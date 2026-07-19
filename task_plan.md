@@ -1,45 +1,59 @@
-# Task Plan: GT Performance Marketing Assets and FluentCart Updater
+# Task Plan: GT Performance Differentiation Suite
 
 ## Goal
 
-Create a production-ready visual asset kit for WordPress and FluentCart listings, then implement and verify a secure FluentCart Pro licensed updater that follows the proven ACF Blocks contract.
+Implement the seven-feature product roadmap in the plugin itself with secure admin controls, deterministic diagnostics, safe fallbacks, automated tests, and a release-ready package.
+
+## Scope
+
+1. Explain This Page cache diagnostics.
+2. Verified origin and Cloudflare purge receipts.
+3. Cloudflare Free rule compiler with rule-budget and drift reporting.
+4. Commerce Safety Lab for FluentCart, EDD, and WooCommerce.
+5. Unused CSS Training Mode with selector capture and staged artifacts.
+6. Private Islands for explicitly registered private fragments.
+7. A 25-site Fleet Console foundation using signed, non-secret configuration bundles.
 
 ## Phases
 
-- [x] Phase 1: Establish scope, safety constraints, and planning workspace
-- [x] Phase 2: Reverse-engineer the ACF Blocks and FluentCart Pro updater contracts
-- [x] Phase 3: Define the GT Performance product, updater, and asset architecture
-- [x] Phase 4: Implement the licensed updater and admin license experience
-- [x] Phase 5: Create directory, FluentCart, social, and screenshot assets
-- [x] Phase 6: Update package metadata, documentation, and release checks
-- [x] Phase 7: Run automated, Studio, updater-contract, and visual verification
-- [x] Phase 8: Review the final diff and prepare a verified handoff
+- [x] Phase 1: Re-triage the repository and establish constraints
+- [x] Phase 2: Map existing cache, Cloudflare, commerce, CSS, admin, and persistence seams
+- [x] Phase 3: Implement shared diagnostics, receipts, and safety data models
+- [x] Phase 4: Implement Cloudflare compiler and Commerce Safety Lab
+- [x] Phase 5: Implement CSS Training Mode and Private Islands
+- [x] Phase 6: Implement the Fleet Console foundation and policy bundles
+- [x] Phase 7: Integrate the standalone admin UI, admin bar, CLI, and documentation
+- [x] Phase 8: Run static analysis, unit tests, build/package checks, and Studio smoke tests
+- [x] Phase 9: Review the final diff and prepare a verified handoff
 
 ## Key Questions
 
-1. Which request fields, routes, response fields, and error semantics does FluentCart Pro require?
-2. Which parts of the ACF Blocks updater are reusable and which should be hardened or redesigned?
-3. What stable product identifier should GT Performance use before the FluentCart product is published?
-4. How should license keys and activation hashes be stored, redacted, and removed?
-5. Which assets are required for WordPress.org, FluentCart, GitHub, and general marketing?
-6. How do we keep directory assets outside the customer ZIP while preserving a canonical source?
+1. Which existing services can be extended without adding request-path overhead?
+2. How can edge verification distinguish Cloudflare from origin without exposing secrets?
+3. Which commerce checks can be safely automated without creating real orders?
+4. How can CSS selector training remain opt-in, bounded, private, and reversible?
+5. How can private fragments fail closed when JavaScript, REST, or nonce validation fails?
+6. What fleet functionality is safe without creating a remote arbitrary-code channel?
 
 ## Decisions Made
 
-- Treat the local ACF Blocks implementation and the installed FluentCart Pro server code as the updater contract authorities.
-- Do not publish or mutate a FluentCart product until its exact post, variation, license metadata, and updater download row are verified.
-- Use the public GitHub release artifact as the future FluentCart customer artifact so both delivery surfaces share the same package tree.
-- Keep WordPress-directory artwork in a top-level distribution-assets area excluded from the installable ZIP.
-- Preserve the existing GT Performance visual language: blue accent, neutral surfaces, thin boundaries, restrained radii, and no thick rounded borders.
-- Use Magnific GPT 2 for the original raster mark and background field, then compose all text and real Studio screenshots deterministically.
-- The FluentCart product is published at $199 with a one-site lifetime license and verified direct checkout.
-- Release the Tools/Redis/storefront follow-up as `0.1.0-alpha.10`; alpha.10 adds the port-safe Studio updater fix found during the final protected-package test. The GitHub release ZIP and FluentCart download must be byte-for-byte identical.
+- Keep Core Web Vitals measurement out of scope.
+- Prefer deterministic evidence and reason codes over opaque scores or AI recommendations.
+- Default every commerce, fragment, CSS-training, and fleet feature to fail closed.
+- Never cache authenticated fragment responses or persist their HTML.
+- Keep Cloudflare Free compatibility as the baseline and compile into its rule budget.
+- Treat fleet bundles as configuration-only, signed exports; do not add remote code execution.
+- Preserve PHP 8.1 and WordPress 6.6 minimums already established by the project.
 
 ## Errors Encountered
 
-- Studio MCP is not exposed in this Codex session. Use the standalone WordPress Studio CLI for package/runtime validation.
-- Custom cron schedules were not registered during activation because `plugins_loaded` had already fired. Register the shared schedule callback around the activation-time scheduling calls.
+- PHPUnit passed with 59 tests and 161 assertions after the initial implementation slice.
+- The first full check exposed a missing PHP output boundary in the new Fleet tab and several WordPress coding-standard formatting/sanitization findings. The boundary and JSON-field handling were corrected before the complete gate passed.
+- Release validation correctly rejected the stale Composer content hash after the alpha.11 metadata change. A dependency-preserving lock refresh resolved it.
+- The first Studio admin-render probe over-escaped a PHP namespace in the WP-CLI evaluation string. WordPress itself remained healthy and the corrected probe passed.
+- The first CLI smoke probe used the shorthand `gtp`; the existing registered namespace is `gt-performance`. The runtime command passed under the correct namespace.
+- The combined Studio teardown command was rejected before execution because it included a generic file-removal operation. Studio's scoped stop/delete commands and the patch mechanism completed teardown safely.
 
 ## Status
 
-**Complete** - Alpha.10 is published and synchronized to FluentCart. The protected package downloaded from a licensed `localhost:8887` Studio site is byte-for-byte identical to GitHub, and all temporary license records were removed.
+**Complete** - All seven features, admin/CLI surfaces, release metadata, production package, automated gates, Studio runtime checks, responsive browser checks, and teardown are complete. Publishing remains intentionally separate.

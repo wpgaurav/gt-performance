@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.10
+Stable tag: 0.1.0-alpha.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,8 @@ FluentCart, Easy Digital Downloads, and WooCommerce adapters protect cart, check
 Unused CSS can be delivered as an immutable file, fully inline, or as critical CSS inline with the remaining CSS in a file.
 
 Perfmatters ownership coordination, Akismet and Jetpack safeguards, Redis credentials, and administrator-bar cache actions are built in.
+
+Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a 25-site policy console add deterministic diagnostics and safer deployment controls.
 
 This is an alpha. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
@@ -45,9 +47,17 @@ No. Stylesheet collection, selector analysis, pruning, and artifact creation run
 
 Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining file. Hybrid mode falls back to a generated file if the critical segment exceeds its inline budget.
 
+= What does CSS Training Mode collect? =
+
+Only bounded element IDs and classes observed while an administrator browses the site. It does not collect text, field values, cookies, or customer data. Candidates must be reviewed and published before they affect generated CSS.
+
 = Are checkout pages cached? =
 
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
+
+= Does Fleet Console provide remote access? =
+
+No. It accepts only short-lived, one-use, license-signed GT Performance setting bundles. Secrets are stripped, settings are sanitized again on import, and no file upload, plugin installation, PHP evaluation, or remote command path exists.
 
 = Can Redis credentials be configured in wp-config.php? =
 
@@ -58,6 +68,16 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 0.1.0-alpha.11 =
+
+* Added Explain This Page cache-decision diagnostics and redacted verified-purge receipts.
+* Added a Cloudflare Free rule compiler with exact-expression preview, drift, overlap, operation, and ten-rule budget reporting.
+* Added Commerce Safety Lab policy simulation and safe read-only checks for FluentCart, EDD, and WooCommerce.
+* Added administrator-only unused-CSS Training Mode, candidate review, publication, rollback, and stable percentage rollout cohorts.
+* Added opt-in signed Private Islands with private no-store delivery and conservative fallbacks.
+* Added a 25-site Fleet Console foundation using expiring one-use configuration bundles with recursive secret removal.
+* Added matching standalone admin, admin-bar, WP-CLI, tests, and documentation.
 
 = 0.1.0-alpha.10 =
 

@@ -4,11 +4,37 @@
 
 Validated on 2026-07-19:
 
-- WordPress Coding Standards: 59 production PHP files passed.
+- WordPress Coding Standards: 92 scanned PHP files passed.
 - PHPStan: level 6 passed with WordPress and WP-CLI stubs.
-- PHPUnit: 21 tests and 39 assertions passed.
+- PHPUnit: 61 tests and 170 assertions passed.
 - Composer security audit: no known vulnerable packages.
 - Release package: production dependencies installed, ZIP integrity passed, and no development dependencies included.
+
+## WordPress Studio CLI alpha.11 differentiation run
+
+Runtime:
+
+- WordPress Studio CLI 1.15.0
+- WordPress 7.0.2
+- PHP 8.2.32
+- Fresh disposable native Studio site
+- Packaged GT Performance `0.1.0-alpha.11`
+
+Verified:
+
+- The production ZIP installed and activated without warnings or fatals; its package, plugin header, stable tag, and runtime constant all report alpha.11.
+- Dashboard navigation exposes Safety Lab, CSS Reports, Fleet, and the existing screens without raw internal notice keys.
+- Optimization, Safety Lab, and Fleet rendered in the browser with no console warnings or errors and no page-level horizontal overflow.
+- At a 390px viewport, main and panel gutters resolve to 20px, panels retain 20px bottom separation, and only the tab bar scrolls horizontally.
+- The owned page-cache drop-in installed successfully, enabled `WP_CACHE`, and changed an anonymous homepage request from `X-GT-Cache: MISS` to `HIT`.
+- Explain This Page returned the production eligibility reason, exact deterministic cache key, fresh artifact metadata, and expected Cloudflare expression.
+- Purge and Verify removed the fresh origin artifact, observed stable response fingerprints, recorded a safe MISS followed by HIT, and returned a verified receipt.
+- The Cloudflare rule compiler produced a within-budget create plan without mutating Cloudflare; live API sync remains credential-dependent.
+- The CSS training repository accepted one valid structural selector, rejected an attribute-value selector, and exposed the Training Mode screen.
+- Unused CSS file, inline, hybrid, and hybrid budget-fallback modes removed the known unused selector while preserving used state; setting rollout to zero restored the original stylesheet immediately.
+- The signed Private Islands endpoint returned the registered cart count with `Cache-Control: no-store, private, max-age=0` and `X-GT-Private-Fragments: BYPASS`.
+- Commerce Safety Lab completed cleanly with no active commerce plugins; adapter policy behavior remains covered by focused unit tests and full checkout E2E remains an external integration gate.
+- Fleet export correctly failed closed while disabled, and its signed REST receiver route was registered without granting an arbitrary-code surface.
 
 ## WordPress Studio CLI admin and unused CSS run
 

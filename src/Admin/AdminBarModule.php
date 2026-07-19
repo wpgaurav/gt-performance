@@ -11,7 +11,9 @@ namespace GTPerformance\Admin;
 
 use GTPerformance\Cache\Purger;
 use GTPerformance\Contracts\Module;
+use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Optimization\Css\ReportRepository;
+use GTPerformance\Optimization\Css\TrainingRepository;
 use GTPerformance\Redis\ConnectionTester;
 
 final class AdminBarModule implements Module {
@@ -44,10 +46,34 @@ final class AdminBarModule implements Module {
 
 		$url = $this->currentPublicUrl();
 		if ( null !== $url ) {
+			$bar->add_node(
+				array(
+					'parent' => 'gt-performance',
+					'id'     => 'gtp-explain-current',
+					'title'  => __( 'Explain this page', 'gt-performance' ),
+					'href'   => add_query_arg(
+						array(
+							'page'    => 'gt-performance',
+							'tab'     => 'safety',
+							'gtp_url' => $url,
+						),
+						admin_url( 'admin.php' )
+					),
+				)
+			);
 			$this->actionNode( $bar, 'gtp-purge-current', __( 'Purge this URL', 'gt-performance' ), 'purge-url', $url );
+			$this->actionNode( $bar, 'gtp-verify-current', __( 'Purge and verify this URL', 'gt-performance' ), 'purge-verify', $url );
 			$this->actionNode( $bar, 'gtp-warm-current', __( 'Warm this URL', 'gt-performance' ), 'warm-url', $url );
 			$this->actionNode( $bar, 'gtp-css-current', __( 'Regenerate CSS for this URL', 'gt-performance' ), 'regenerate-css', $url );
 		}
+
+		$training = ( new TrainingRepository() )->state();
+		$this->actionNode(
+			$bar,
+			'gtp-css-training-toggle',
+			! empty( $training['active'] ) ? __( 'Stop CSS Training Mode', 'gt-performance' ) : __( 'Start CSS Training Mode', 'gt-performance' ),
+			! empty( $training['active'] ) ? 'stop-css-training' : 'start-css-training'
+		);
 
 		$this->actionNode( $bar, 'gtp-purge-all', __( 'Purge page and edge caches', 'gt-performance' ), 'purge-all' );
 		$this->actionNode( $bar, 'gtp-flush-object', __( 'Flush object cache', 'gt-performance' ), 'flush-object' );
@@ -58,6 +84,14 @@ final class AdminBarModule implements Module {
 				'id'     => 'gtp-css-reports',
 				'title'  => __( 'View CSS reports', 'gt-performance' ),
 				'href'   => admin_url( 'admin.php?page=gt-performance&tab=css-reports' ),
+			)
+		);
+		$bar->add_node(
+			array(
+				'parent' => 'gt-performance',
+				'id'     => 'gtp-safety-lab',
+				'title'  => __( 'Open Safety Lab', 'gt-performance' ),
+				'href'   => admin_url( 'admin.php?page=gt-performance&tab=safety' ),
 			)
 		);
 		$bar->add_node(
@@ -98,6 +132,23 @@ final class AdminBarModule implements Module {
 					( new Purger() )->purgeUrl( $url );
 					$this->warm( $url );
 				}
+				break;
+
+			case 'purge-verify':
+				if ( null !== $url ) {
+					$result = ( new PurgeVerifier() )->verify( $url );
+					$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : ( 'verified' === ( $result['status'] ?? '' ) ? 'purge-verified' : 'purge-warning' ), 'safety' );
+				}
+				break;
+
+			case 'start-css-training':
+				( new TrainingRepository() )->start( get_current_user_id() );
+				$this->redirect( 'css-training-started', 'css-reports' );
+				break;
+
+			case 'stop-css-training':
+				( new TrainingRepository() )->stop();
+				$this->redirect( 'css-training-stopped', 'css-reports' );
 				break;
 
 			case 'purge-all':

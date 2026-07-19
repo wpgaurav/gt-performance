@@ -12,11 +12,38 @@ namespace GTPerformance\Cloudflare;
 use GTPerformance\Core\Settings;
 
 final class RuleManager {
-	private const RULE_REF = 'gt-performance-free-html-cache';
-
 	public function __construct(
 		private readonly ApiClient $client,
+		private readonly RuleCompiler $compiler = new RuleCompiler(),
 	) {
+	}
+
+	/**
+	 * @param array<string, mixed> $cache Cache policy.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	public function preview( string $zoneId, string $host, array $cache ): array|\WP_Error {
+		$entrypoint = $this->client->request(
+			'GET',
+			'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint'
+		);
+
+		if ( is_wp_error( $entrypoint ) ) {
+			$errorData = $entrypoint->get_error_data();
+			$status    = is_array( $errorData ) ? (int) ( $errorData['status'] ?? 0 ) : 0;
+			if ( 404 !== $status ) {
+				return $entrypoint;
+			}
+
+			return $this->compiler->plan( $host, $cache, array() );
+		}
+
+		$ruleset = (array) ( $entrypoint['result'] ?? array() );
+		$rules   = array_values( array_filter( (array) ( $ruleset['rules'] ?? array() ), 'is_array' ) );
+		$plan    = $this->compiler->plan( $host, $cache, $rules );
+		$plan['ruleset_id'] = (string) ( $ruleset['id'] ?? '' );
+
+		return $plan;
 	}
 
 	/**
@@ -29,7 +56,7 @@ final class RuleManager {
 			'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint'
 		);
 
-		$rule = $this->rule( $host, $cache );
+		$rule = $this->compiler->rule( $host, $cache );
 
 		if ( is_wp_error( $entrypoint ) ) {
 			$errorData = $entrypoint->get_error_data();
@@ -58,9 +85,17 @@ final class RuleManager {
 		}
 
 		update_option( 'gt_performance_cloudflare_backup', $ruleset, false );
+		$rules = array_values( array_filter( (array) ( $ruleset['rules'] ?? array() ), 'is_array' ) );
+		$plan  = $this->compiler->plan( $host, $cache, $rules );
+		if ( ! (bool) $plan['within_budget'] ) {
+			return new \WP_Error(
+				'gtp_cloudflare_rule_budget',
+				__( 'The Cloudflare Free Cache Rules budget is full. Remove an unused rule or let GT Performance update its existing managed rule.', 'gt-performance' )
+			);
+		}
 
-		foreach ( (array) ( $ruleset['rules'] ?? array() ) as $existing ) {
-			if ( is_array( $existing ) && self::RULE_REF === ( $existing['ref'] ?? '' ) ) {
+		foreach ( $rules as $existing ) {
+			if ( RuleCompiler::MANAGED_RULE_REF === ( $existing['ref'] ?? '' ) ) {
 				$ruleId = (string) ( $existing['id'] ?? '' );
 				if ( '' === $ruleId ) {
 					break;
@@ -78,42 +113,6 @@ final class RuleManager {
 			'POST',
 			'zones/' . rawurlencode( $zoneId ) . '/rulesets/' . rawurlencode( $rulesetId ) . '/rules',
 			$rule
-		);
-	}
-
-	/**
-	 * @param array<string, mixed> $cache Cache policy.
-	 * @return array<string, mixed>
-	 */
-	private function rule( string $host, array $cache ): array {
-		$ignored = array_values( array_filter( array_map( 'strval', (array) ( $cache['ignored_query_params'] ?? array() ) ) ) );
-		$action  = array(
-			'cache'       => true,
-			'edge_ttl'    => array( 'mode' => 'respect_origin' ),
-			'browser_ttl' => array( 'mode' => 'respect_origin' ),
-			'serve_stale' => array( 'disable_stale_while_updating' => false ),
-			'cache_key'   => array(
-				'cache_deception_armor'      => true,
-				'ignore_query_strings_order' => true,
-				'cache_by_device_type'       => (bool) ( $cache['separate_mobile'] ?? false ),
-			),
-		);
-
-		if ( $ignored ) {
-			$action['cache_key']['custom_key'] = array(
-				'query_string' => array(
-					'exclude' => array( 'list' => $ignored ),
-				),
-			);
-		}
-
-		return array(
-			'ref'               => self::RULE_REF,
-			'description'       => 'GT Performance: cache eligible public HTML',
-			'expression'        => ( new RuleExpression() )->compile( $host, $cache ),
-			'action'            => 'set_cache_settings',
-			'action_parameters' => $action,
-			'enabled'           => true,
 		);
 	}
 

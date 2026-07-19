@@ -67,6 +67,33 @@ final class RequestContext {
 	}
 
 	/**
+	 * Build a safe, cookie-free request context for diagnostics and policy previews.
+	 *
+	 * @param array<string, string> $cookies Diagnostic cookie names and inert values.
+	 * @param array<string, string> $headers Diagnostic request headers.
+	 */
+	public static function fromUrl( string $url, array $cookies = array(), array $headers = array(), string $userAgent = '' ): ?self {
+		$parts = parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
+			return null;
+		}
+
+		$query = array();
+		parse_str( (string) ( $parts['query'] ?? '' ), $query );
+
+		return new self(
+			'GET',
+			'https' === strtolower( (string) ( $parts['scheme'] ?? 'https' ) ) ? 'https' : 'http',
+			strtolower( (string) $parts['host'] ),
+			self::normalizePath( (string) ( $parts['path'] ?? '/' ) ),
+			self::scalarMap( $query ),
+			$cookies,
+			array_change_key_case( $headers, CASE_LOWER ),
+			$userAgent,
+		);
+	}
+
+	/**
 	 * @param array<mixed> $values Values.
 	 * @return array<string, string>
 	 */
@@ -81,7 +108,7 @@ final class RequestContext {
 		return $result;
 	}
 
-	private static function normalizePath( string $path ): string {
+	public static function normalizePath( string $path ): string {
 		$path = '/' . ltrim( $path, '/' );
 
 		$normalized = preg_replace( '#/+#', '/', $path );
