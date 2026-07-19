@@ -30,8 +30,9 @@ Test the generated ZIP in WordPress Studio before the tag is created.
 After the release commit is on `main`, create and push an annotated tag:
 
 ```bash
-git tag -a v0.1.0-alpha.7 -m "GT Performance 0.1.0-alpha.7"
-git push origin v0.1.0-alpha.7
+VERSION=0.1.0-alpha.8
+git tag -a "v${VERSION}" -m "GT Performance ${VERSION}"
+git push origin "v${VERSION}"
 ```
 
 The Release workflow:
@@ -49,8 +50,9 @@ Do not move a published release tag. Fix a broken release with a new version. If
 ## Verify
 
 ```bash
-gh release view v0.1.0-alpha.7
-gh release download v0.1.0-alpha.7 --pattern "gt-performance-*"
-sha256sum --check gt-performance-0.1.0-alpha.7.zip.sha256
-gh attestation verify gt-performance-0.1.0-alpha.7.zip --repo wpgaurav/gt-performance
+VERSION=0.1.0-alpha.8
+gh release view "v${VERSION}"
+gh release download "v${VERSION}" --pattern "gt-performance-*"
+sha256sum --check "gt-performance-${VERSION}.zip.sha256"
+gh attestation verify "gt-performance-${VERSION}.zip" --repo wpgaurav/gt-performance
 ```

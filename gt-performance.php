@@ -1,9 +1,9 @@
 <?php
 /*
 Plugin Name: GT Performance
-Plugin URI: https://gauravtiwari.org/
+Plugin URI: https://gauravtiwari.org/product/gt-performance/
 Description: Safe WordPress page caching, server-side optimization, Cloudflare orchestration, and commerce-aware performance controls.
-Version: 0.1.0-alpha.7
+Version: 0.1.0-alpha.8
 Requires at least: 6.6
 Requires PHP: 8.1
 Author: Gaurav Tiwari
@@ -24,10 +24,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GTP_VERSION', '0.1.0-alpha.7' );
+define( 'GTP_VERSION', '0.1.0-alpha.8' );
 define( 'GTP_FILE', __FILE__ );
 define( 'GTP_DIR', __DIR__ );
 define( 'GTP_BASENAME', plugin_basename( __FILE__ ) );
+
+if ( ! defined( 'GTP_FLUENTCART_ITEM_ID' ) ) {
+	define( 'GTP_FLUENTCART_ITEM_ID', 1170147 );
+}
+
+if ( ! defined( 'GTP_LICENSE_SERVER_URL' ) ) {
+	define( 'GTP_LICENSE_SERVER_URL', 'https://gauravtiwari.org/' );
+}
 
 $gtp_vendor = GTP_DIR . '/vendor/autoload.php';
 if ( is_readable( $gtp_vendor ) ) {

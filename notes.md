@@ -1,5 +1,48 @@
 # Notes: GT Performance Product Research
 
+## 2026-07-19 Distribution and Updater Research
+
+### Scope
+
+- Build canonical marketing and directory assets for GT Performance.
+- Match the updater contract used by ACF Blocks and served by FluentCart Pro.
+- Keep FluentCart publication as a separate, verified release operation once the exact GT Performance product exists.
+
+### Confirmed WordPress Directory Asset Contract
+
+- Normal banner: `banner-772x250.png`.
+- Retina banner: `banner-1544x500.png`; it supplements rather than replaces the normal banner.
+- Normal icon: `icon-128x128.png`.
+- Retina icon: `icon-256x256.png`.
+- Optional vector icon: `icon.svg`, with PNG fallback still required.
+- Screenshots use `screenshot-1.png`, `screenshot-2.png`, and so on, with matching captions in `readme.txt`.
+- Directory assets belong beside `trunk` and `tags` in WordPress.org SVN, not inside the customer plugin ZIP.
+
+Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-assets/
+
+### Safety Constraints
+
+- Never print FluentCart license keys, activation hashes, signed package URLs, customer data, or SSH credentials.
+- Parse only the required SSH command from `~/.env`; never source the file.
+- Preserve the previous FluentCart download row and file during an eventual product release.
+- Use an expected-old-state check and transaction for future product version/file mutations.
+
+### Implemented Product and Release State
+
+- FluentCart product ID: `1170147`.
+- The product page remains a draft with no commercial price selected.
+- FluentCart updater responses are top-level JSON objects; the client also accepts the nested `data` shape for compatibility.
+- Protected package URLs are exposed to WordPress only when FluentCart reports a valid activation.
+- The license key and activation hash are encrypted separately at rest.
+- `0.1.0-alpha.8` is the first release with the licensed updater and product identity.
+
+### Marketing Asset System
+
+- Magnific GPT 2 produced the original 2048 × 2048 icon master and 3072 × 2048 background field.
+- Exact typography and real WordPress Studio screenshots are composed through `distribution-assets/source/marketing-assets.html`.
+- Directory icons, banners, five screenshots, a FluentCart cover, and a social card are stored outside the installable ZIP.
+- The WordPress-ready product page is generated as a `marketers-delight/inline-page-block` so its scoped CSS follows the established shop-page contract.
+
 ## Scope
 
 This file records the research and constraints used to create `PRODUCT-PLAN.md`. It is not an implementation specification.

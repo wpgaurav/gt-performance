@@ -29,5 +29,6 @@ final class Deactivator {
 
 		wp_clear_scheduled_hook( 'gt_performance_run_queue' );
 		wp_clear_scheduled_hook( 'gt_performance_database_cleanup' );
+		wp_clear_scheduled_hook( 'gt_performance_verify_license' );
 	}
 }

@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.7`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `0.1.0-alpha.8`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -21,6 +21,7 @@ The current release is `0.1.0-alpha.7`. Origin caching uses a maximum-impact sha
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
 - Manual and scheduled database optimization for revisions, drafts, spam, trash, transients, and table space, plus Perfmatters-style WordPress request and bloat controls.
 - Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools sections.
+- Encrypted FluentCart licensing with a dedicated License tab, protected WordPress updates, weekly verification, masked credentials, and on-demand checks.
 - Administrator-bar actions for purging or warming the current page, regenerating its CSS, purging page and edge caches, flushing object cache, testing Redis, and opening reports.
 - Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
@@ -96,6 +97,18 @@ Credentials may instead be supplied in `wp-config.php` through `GTP_CLOUDFLARE_A
 GT Performance uses the normal Cloudflare CDN fetch path and Cache Rules; it does not require APO, Workers, Cache Reserve, Argo, or an Enterprise plan.
 
 If Cloudflare Free does not expose custom cache-key controls on the zone, GT Performance retries with a portable rule. Marketing query parameters will still be normalized by the origin cache, while Cloudflare may keep separate edge entries for those URLs.
+
+## License and protected updates
+
+Open **GT Performance → License** and activate the key from your FluentCart account. GT Performance encrypts the key and activation hash separately, checks version metadata through the normal WordPress update flow, and receives a temporary package URL only for a valid site activation.
+
+A deployment-managed key may be defined before the WordPress stop-editing comment:
+
+```php
+define( 'GTP_LICENSE_KEY', 'replace-with-your-license-key' );
+```
+
+The saved option never replaces a `GTP_LICENSE_KEY` constant. Deactivate the site from the License tab before removing or moving a deployment-managed key.
 
 ## Development
 

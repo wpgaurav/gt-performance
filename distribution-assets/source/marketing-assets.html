@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>GT Performance marketing assets</title>
+	<link rel="stylesheet" href="./marketing-assets.css">
+</head>
+<body>
+	<section class="asset asset--cover" data-asset="cover" aria-label="GT Performance FluentCart product cover">
+		<div class="brand">
+			<img class="brand__icon brand__icon--cover" src="../magnific/gt-performance-icon-master.png" alt="">
+			<div>
+				<p class="eyebrow">WORDPRESS PERFORMANCE, UNDER CONTROL</p>
+				<p class="brand__name">GT Performance</p>
+			</div>
+		</div>
+
+		<div class="cover__copy">
+			<h1>Faster WordPress.<br>Private carts stay private.</h1>
+			<p>Origin caching, Cloudflare Free, server-side unused CSS, Redis, and commerce-safe delivery in one plugin.</p>
+			<div class="pill-row" aria-label="Key features">
+				<span>Cloudflare Free</span>
+				<span>Server-side CSS</span>
+				<span>Commerce safe</span>
+			</div>
+		</div>
+
+		<div class="product-shot product-shot--cover">
+			<div class="product-shot__bar">
+				<span class="product-shot__label">Performance control center</span>
+				<span class="status"><i></i> Live interface</span>
+			</div>
+			<img src="../wordpress-org/screenshot-1.png" alt="GT Performance dashboard running in WordPress Studio">
+		</div>
+
+		<p class="cover__footer">CACHE · CLOUDFLARE · UNUSED CSS · REDIS · FLUENTCART · EDD · WOOCOMMERCE</p>
+	</section>
+
+	<section class="asset asset--banner" data-asset="banner" aria-label="GT Performance WordPress directory banner">
+		<div class="banner__copy">
+			<div class="brand brand--compact">
+				<img class="brand__icon" src="../magnific/gt-performance-icon-master.png" alt="">
+				<p class="brand__name">GT Performance</p>
+			</div>
+			<h1>Fast pages.<br>Correct sessions.</h1>
+			<p>Cache, Cloudflare Free, unused CSS, and Redis without sacrificing checkout safety.</p>
+		</div>
+		<div class="product-shot product-shot--banner">
+			<div class="product-shot__bar">
+				<span class="product-shot__label">Real WordPress admin</span>
+				<span class="status"><i></i> Active</span>
+			</div>
+			<img src="../wordpress-org/screenshot-1.png" alt="GT Performance dashboard running in WordPress Studio">
+		</div>
+	</section>
+
+	<section class="asset asset--social" data-asset="social" aria-label="GT Performance social card">
+		<div class="social__copy">
+			<div class="brand brand--compact">
+				<img class="brand__icon" src="../magnific/gt-performance-icon-master.png" alt="">
+				<p class="brand__name">GT Performance</p>
+			</div>
+			<p class="eyebrow">SERVER-SIDE UNUSED CSS</p>
+			<h1>Remove CSS.<br>Keep the evidence.</h1>
+			<p>Generated files, inline critical CSS, selector safelists, and a visual report for every URL.</p>
+		</div>
+		<div class="product-shot product-shot--social">
+			<div class="product-shot__bar">
+				<span class="product-shot__label">CSS Reports</span>
+				<span class="status"><i></i> 5 ready</span>
+			</div>
+			<img src="../wordpress-org/screenshot-4.png" alt="GT Performance CSS Reports running in WordPress Studio">
+		</div>
+	</section>
+
+	<script>
+		const requestedAsset = new URLSearchParams(window.location.search).get('asset') || 'cover';
+		document.querySelectorAll('[data-asset]').forEach((asset) => {
+			asset.hidden = asset.dataset.asset !== requestedAsset;
+		});
+	</script>
+</body>
+</html>

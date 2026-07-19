@@ -21,6 +21,8 @@ use GTPerformance\Core\Paths;
 use GTPerformance\Core\SecretCipher;
 use GTPerformance\Core\Settings;
 use GTPerformance\Database\Cleaner;
+use GTPerformance\Licensing\Configuration as LicenseConfiguration;
+use GTPerformance\Licensing\LicenseRepository;
 use GTPerformance\Optimization\Css\ReportRepository;
 use GTPerformance\Optimization\Css\SelectorSafelist;
 use GTPerformance\Redis\ConnectionTester;
@@ -40,6 +42,7 @@ final class AdminModule implements Module {
 		'cloudflare',
 		'integrations',
 		'css-reports',
+		'license',
 		'tools',
 	);
 
@@ -231,6 +234,9 @@ final class AdminModule implements Module {
 					case 'css-reports':
 						$this->renderCssReports();
 						break;
+					case 'license':
+						$this->renderLicense();
+						break;
 					case 'tools':
 						$this->renderTools();
 						break;
@@ -338,6 +344,7 @@ final class AdminModule implements Module {
 			'cloudflare'   => __( 'Cloudflare', 'gt-performance' ),
 			'integrations' => __( 'Integrations', 'gt-performance' ),
 			'css-reports'  => __( 'CSS Reports', 'gt-performance' ),
+			'license'      => __( 'License', 'gt-performance' ),
 			'tools'        => __( 'Tools', 'gt-performance' ),
 		);
 		?>
@@ -885,6 +892,82 @@ PHP;
 				__( 'Run database cleanup', 'gt-performance' )
 			);
 			?>
+		</section>
+		<?php
+	}
+
+	private function renderLicense(): void {
+		$repository    = new LicenseRepository();
+		$configuration = new LicenseConfiguration();
+		$state         = $repository->state();
+		$status        = (string) $state['status'];
+		$tone          = match ( $status ) {
+			'valid' => 'success',
+			'invalid' => 'danger',
+			default => 'neutral',
+		};
+		$statusLabel   = match ( $status ) {
+			'valid' => __( 'Active', 'gt-performance' ),
+			'invalid' => __( 'Needs attention', 'gt-performance' ),
+			default => __( 'Not activated', 'gt-performance' ),
+		};
+
+		$this->pageIntro(
+			__( 'License and updates', 'gt-performance' ),
+			__( 'Connect this site to your FluentCart license for protected plugin downloads and WordPress update notices.', 'gt-performance' )
+		);
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'GT Performance license', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'The license key and activation hash are encrypted before WordPress saves them.', 'gt-performance' ); ?></p>
+				</div>
+				<span class="gtp-status gtp-status--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $statusLabel ); ?></span>
+			</div>
+			<?php if ( $repository->hasCredentials() ) : ?>
+				<dl class="gtp-definition-list">
+					<div><dt><?php esc_html_e( 'License', 'gt-performance' ); ?></dt><dd><?php echo esc_html( '' !== $repository->maskedKey() ? $repository->maskedKey() : __( 'Activation stored', 'gt-performance' ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'License source', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $repository->isConstantManaged() ? __( 'wp-config.php', 'gt-performance' ) : __( 'Encrypted database option', 'gt-performance' ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Plan', 'gt-performance' ); ?></dt><dd><?php echo esc_html( '' !== (string) $state['variation_title'] ? (string) $state['variation_title'] : __( 'GT Performance', 'gt-performance' ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Expiration', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->licenseExpiration( (string) $state['expiration_date'] ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Last verified', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->licenseLastChecked( (string) $state['last_checked_at'] ) ); ?></dd></div>
+				</dl>
+				<div class="gtp-license-actions">
+					<?php $this->actionButton( 'gtp_license_check', __( 'Check license and updates', 'gt-performance' ) ); ?>
+					<?php $this->actionButton( 'gtp_license_deactivate', __( 'Deactivate on this site', 'gt-performance' ) ); ?>
+				</div>
+				<?php if ( $repository->isConstantManaged() ) : ?>
+					<p class="gtp-license-note"><?php esc_html_e( 'GTP_LICENSE_KEY is defined in wp-config.php. Remove that constant after deactivating if this site should stop using the key.', 'gt-performance' ); ?></p>
+				<?php endif; ?>
+			<?php else : ?>
+				<form class="gtp-license-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="gtp_license_activate">
+					<?php wp_nonce_field( 'gtp_license_activate' ); ?>
+					<label for="gtp-license-key"><?php esc_html_e( 'License key', 'gt-performance' ); ?></label>
+					<p><?php esc_html_e( 'Paste the license key from your FluentCart account. GT Performance never displays the full key again after activation.', 'gt-performance' ); ?></p>
+					<div>
+						<input id="gtp-license-key" class="regular-text" type="password" name="license_key" value="" autocomplete="off" required>
+						<?php submit_button( __( 'Activate license', 'gt-performance' ), 'primary', 'submit', false ); ?>
+					</div>
+				</form>
+			<?php endif; ?>
+		</section>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Protected updates', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'WordPress checks FluentCart for version metadata and receives a temporary download only when this site has a valid activation.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<dl class="gtp-definition-list">
+				<div><dt><?php esc_html_e( 'Product', 'gt-performance' ); ?></dt><dd><?php esc_html_e( 'GT Performance', 'gt-performance' ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'FluentCart product ID', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) $configuration->itemId() ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Installed version', 'gt-performance' ); ?></dt><dd><?php echo esc_html( GTP_VERSION ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Automatic checks', 'gt-performance' ); ?></dt><dd><?php esc_html_e( 'Every 3 hours through WordPress', 'gt-performance' ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'License verification', 'gt-performance' ); ?></dt><dd><?php esc_html_e( 'Weekly and on demand', 'gt-performance' ); ?></dd></div>
+			</dl>
+			<div class="gtp-inline-link"><a href="<?php echo esc_url( $configuration->releasesUrl() ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View release history', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 		</section>
 		<?php
 	}
@@ -1516,6 +1599,19 @@ PHP;
 			'redis-connected'           => array( __( 'Redis accepted the saved credentials and passed the connection test.', 'gt-performance' ), 'success' ),
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
 			'cloudflare-synced'         => array( __( 'Cloudflare connected and the managed cache rule was synchronized.', 'gt-performance' ), 'success' ),
+			'license-activated'         => array( __( 'The GT Performance license was activated for this site.', 'gt-performance' ), 'success' ),
+			'license-deactivated'       => array( __( 'The GT Performance license was deactivated for this site.', 'gt-performance' ), 'success' ),
+			'license-checked'           => array( __( 'The license and available plugin update were checked.', 'gt-performance' ), 'success' ),
+			'gtp_license_key'           => array( __( 'Enter a GT Performance license key, then activate again.', 'gt-performance' ), 'error' ),
+			'gtp_license_missing'       => array( __( 'Activate a GT Performance license before checking for updates.', 'gt-performance' ), 'warning' ),
+			'gtp_license_invalid'       => array( __( 'The saved license is not valid for this site. Check the key or activation limit in your account.', 'gt-performance' ), 'error' ),
+			'gtp_license_connection'    => array( __( 'The license server could not be reached. Your saved license was left unchanged.', 'gt-performance' ), 'error' ),
+			'gtp_license_response'      => array( __( 'The license server returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
+			'gtp_license_rejected'      => array( __( 'FluentCart rejected the license request. Check the key, site activation, or product access.', 'gt-performance' ), 'error' ),
+			'gtp_license_product'       => array( __( 'The GT Performance FluentCart product is not configured.', 'gt-performance' ), 'error' ),
+			'gtp_license_save'          => array( __( 'GT Performance could not encrypt and save the license on this site.', 'gt-performance' ), 'error' ),
+			'gtp_license_deactivate'    => array( __( 'FluentCart did not confirm deactivation, so the saved license was kept.', 'gt-performance' ), 'error' ),
+			'gtp_license_update_response' => array( __( 'The license server returned incomplete update information.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_token'      => array( __( 'Enter a Cloudflare API token, save the settings, then connect again.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_email'      => array( __( 'Enter the Cloudflare account email used with the Global API Key.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_global_key' => array( __( 'Enter a Cloudflare Global API Key, save the settings, then connect again.', 'gt-performance' ), 'error' ),
@@ -1563,6 +1659,35 @@ PHP;
 		);
 
 		return $labels[ $mode ] ?? $mode;
+	}
+
+	private function licenseExpiration( string $date ): string {
+		if ( '' === $date || 'lifetime' === strtolower( $date ) ) {
+			return __( 'Lifetime or not limited', 'gt-performance' );
+		}
+
+		$timestamp = strtotime( $date . ' UTC' );
+
+		return false !== $timestamp
+			? wp_date( get_option( 'date_format' ), $timestamp )
+			: __( 'Not reported', 'gt-performance' );
+	}
+
+	private function licenseLastChecked( string $date ): string {
+		if ( '' === $date ) {
+			return __( 'Not checked yet', 'gt-performance' );
+		}
+
+		$timestamp = strtotime( $date . ' UTC' );
+		if ( false === $timestamp ) {
+			return __( 'Not checked yet', 'gt-performance' );
+		}
+
+		return sprintf(
+			/* translators: %s: human-readable time difference. */
+			__( '%s ago', 'gt-performance' ),
+			human_time_diff( $timestamp, time() )
+		);
 	}
 
 	private function statusTone( string $status ): string {

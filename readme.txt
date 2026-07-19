@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.7
+Stable tag: 0.1.0-alpha.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,7 @@ This is an alpha. Origin caching uses the maximum-impact lifetime profile by def
 3. Install the page-cache drop-in.
 4. Enable only the modules you have tested for your theme and plugins.
 5. Optionally connect a scoped Cloudflare API token or a legacy Global API Key with account email, then synchronize the managed cache rule.
+6. Activate your FluentCart license on the License tab to receive protected updates in WordPress.
 
 == Frequently Asked Questions ==
 
@@ -52,7 +53,19 @@ GT Performance compiles dynamic paths, session cookies, and query parameters fro
 
 Yes. GTP_REDIS_ENABLED, GTP_REDIS_HOST, GTP_REDIS_PORT, GTP_REDIS_DATABASE, GTP_REDIS_USERNAME, GTP_REDIS_PASSWORD, GTP_REDIS_TLS, GTP_REDIS_PERSISTENT, GTP_REDIS_PREFIX, GTP_REDIS_TIMEOUT, and GTP_REDIS_READ_TIMEOUT override saved settings. The Integrations screen provides a copy-ready example.
 
+= How are plugin updates delivered? =
+
+Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
+
 == Changelog ==
+
+= 0.1.0-alpha.8 =
+
+* Added encrypted FluentCart license activation, verification, deactivation, and protected WordPress updates.
+* Added a dedicated License tab with masked credentials, plan and expiration details, on-demand checks, and friendly notices.
+* Fixed activation-time registration of the queue and weekly license-verification schedules.
+* Added a FluentCart product identity and update contract for GT Performance.
+* Added a Magnific-led marketing asset system with real WordPress Studio screenshots for directory and storefront listings.
 
 = 0.1.0-alpha.7 =
 

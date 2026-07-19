@@ -43,6 +43,7 @@ final class Plugin {
 			new \GTPerformance\Optimization\OptimizationModule( $logger ),
 			new \GTPerformance\Database\DatabaseModule(),
 			new \GTPerformance\Redis\RedisModule(),
+			new \GTPerformance\Licensing\LicenseModule(),
 			new \GTPerformance\Admin\AdminModule(),
 			new \GTPerformance\Admin\AdminBarModule(),
 			new \GTPerformance\CLI\CliModule(),
@@ -50,7 +51,7 @@ final class Plugin {
 	}
 
 	private function register(): void {
-		add_filter( 'cron_schedules', array( $this, 'cronSchedules' ) );
+		add_filter( 'cron_schedules', array( self::class, 'cronSchedules' ) );
 
 		foreach ( $this->modules as $module ) {
 			$module->register();
@@ -63,7 +64,7 @@ final class Plugin {
 	 * @param array<string, array<string, int|string>> $schedules Cron schedules.
 	 * @return array<string, array<string, int|string>>
 	 */
-	public function cronSchedules( array $schedules ): array {
+	public static function cronSchedules( array $schedules ): array {
 		$schedules['gtp_every_minute'] = array(
 			'interval' => MINUTE_IN_SECONDS,
 			'display'  => __( 'Every minute (GT Performance)', 'gt-performance' ),

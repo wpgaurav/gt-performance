@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.8 - 2026-07-19
+
+- Added encrypted FluentCart license activation, weekly verification, deactivation, version checks, protected package delivery, and native WordPress update metadata.
+- Added a dedicated License tab with masked credentials, plan and expiration details, on-demand update checks, wp-config.php license support, and administrator-friendly errors.
+- Added response normalization and tests for FluentCart's live top-level updater response, malformed versions, unsafe package URLs, and the no-update path.
+- Fixed activation-time registration of the plugin's custom queue and weekly cron schedules.
+- Added the GT Performance FluentCart product identity plus reproducible WordPress directory, storefront, and social assets that embed real WordPress Studio screenshots.
+
 ## 0.1.0-alpha.7 - 2026-07-19
 
 - Added partial and validated regular-expression matching to the unused-CSS selector safelist.
