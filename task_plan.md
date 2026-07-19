@@ -33,7 +33,7 @@ Create a production-ready visual asset kit for WordPress and FluentCart listings
 - Preserve the existing GT Performance visual language: blue accent, neutral surfaces, thin boundaries, restrained radii, and no thick rounded borders.
 - Use Magnific GPT 2 for the original raster mark and background field, then compose all text and real Studio screenshots deterministically.
 - The FluentCart product is published at $199 with a one-site lifetime license and verified direct checkout.
-- Release the Tools/Redis/storefront follow-up as `0.1.0-alpha.9`; the GitHub release ZIP and FluentCart download must be byte-for-byte identical.
+- Release the Tools/Redis/storefront follow-up as `0.1.0-alpha.10`; alpha.10 adds the port-safe Studio updater fix found during the final protected-package test. The GitHub release ZIP and FluentCart download must be byte-for-byte identical.
 
 ## Errors Encountered
 
@@ -42,4 +42,4 @@ Create a production-ready visual asset kit for WordPress and FluentCart listings
 
 ## Status
 
-**In progress** - Alpha.8 and its updater are live. Alpha.9 moves manual database optimization to Tools, reuses Till Krüss Redis constants, and publishes the $199 storefront purchase flow.
+**In progress** - Alpha.9 is published and synchronized. Alpha.10 adds the port-safe Studio license identity required for a clean final protected-package download test.

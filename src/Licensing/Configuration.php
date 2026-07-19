@@ -23,6 +23,36 @@ final class Configuration {
 		return trailingslashit( esc_url_raw( $url ) );
 	}
 
+	public function siteUrl(): string {
+		$homeUrl = home_url( '/' );
+		$siteUrl = self::portSafeSiteUrl( $homeUrl );
+		$siteUrl = (string) apply_filters( 'gt_performance_license_site_url', $siteUrl, $homeUrl );
+
+		return esc_url_raw( $siteUrl );
+	}
+
+	public static function portSafeSiteUrl( string $url ): string {
+		$parts = parse_url( $url );
+		if ( ! is_array( $parts ) || ! isset( $parts['host'], $parts['port'] ) ) {
+			return $url;
+		}
+
+		$host = strtolower( (string) $parts['host'] );
+		$host = preg_replace( '/[^a-z0-9]+/', '-', $host );
+		$host = is_string( $host ) ? trim( $host, '-' ) : '';
+		$host = '' !== $host ? substr( $host, 0, 30 ) : 'local';
+
+		$scheme = isset( $parts['scheme'] ) && 'http' === strtolower( (string) $parts['scheme'] ) ? 'http' : 'https';
+
+		return sprintf(
+			'%s://%s-p%d-%s.invalid/',
+			$scheme,
+			$host,
+			(int) $parts['port'],
+			substr( hash( 'sha256', $url ), 0, 10 )
+		);
+	}
+
 	public function productUrl(): string {
 		return (string) apply_filters(
 			'gt_performance_product_url',

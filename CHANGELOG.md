@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-alpha.10 - 2026-07-19
+
+- Added stable, port-safe license identities for Studio and other local WordPress sites so FluentCart protected-package signatures are not corrupted by `localhost:PORT` values.
+- Kept ordinary production site URLs unchanged and added a `gt_performance_license_site_url` filter for deliberate identity overrides.
+
 ## 0.1.0-alpha.9 - 2026-07-19
 
 - Moved the live manual database scan and selectable cleanup interface from Optimization to Tools while keeping scheduled database maintenance in Optimization.

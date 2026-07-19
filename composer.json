@@ -1,7 +1,7 @@
 {
   "name": "gauravtiwari/gt-performance",
   "description": "WordPress page caching, server-side optimization, Cloudflare orchestration, and commerce-aware performance controls.",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {

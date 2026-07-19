@@ -48,6 +48,7 @@ Primary source: https://developer.wordpress.org/plugins/wordpress-org/plugin-ass
 - The WordPress-ready product page is generated as a `marketers-delight/inline-page-block` so its scoped CSS follows the established shop-page contract.
 - FluentCart direct checkout for variation `68` uses `?fluent-cart=instant_checkout&item_id=68&quantity=1`; a fresh guest request redirected to Checkout with GT Performance at exactly $199.
 - The published page shows price and direct checkout in the hero, alpha section, and final offer, with cache-busted desktop and 390px phone verification.
+- FluentCart's protected-package token is colon-delimited, so a raw local identity such as `localhost:8887` is parsed incorrectly during download. GT Performance alpha.10 uses a stable `.invalid` identity only when the WordPress home URL contains a port; ordinary production URLs are unchanged.
 
 ## Scope
 

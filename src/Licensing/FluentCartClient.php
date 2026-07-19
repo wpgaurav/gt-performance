@@ -29,7 +29,7 @@ final class FluentCartClient {
 			array(
 				'item_id'          => (string) $this->configuration->itemId(),
 				'current_version'  => GTP_VERSION,
-				'site_url'         => home_url( '/' ),
+				'site_url'         => $this->configuration->siteUrl(),
 				'platform_version' => get_bloginfo( 'version' ),
 				'server_version'   => PHP_VERSION,
 			),
