@@ -50,6 +50,8 @@ GT Performance compiles dynamic paths, session cookies, and query parameters fro
 * Exposed the full cache, optimization, Cloudflare, commerce, RUM, cleanup, and exception configuration.
 * Added live server-side unused CSS generation reports with processing, ready, stale, skipped, and failed states.
 * Added generated output size, savings, delivery mode, error, and refresh indicators for unused CSS.
+* Added friendly action notices so internal error codes are never shown to administrators.
+* Refined desktop and mobile spacing with thin card boundaries.
 
 = 0.1.0-alpha.3 =
 

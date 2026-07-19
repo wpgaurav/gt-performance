@@ -7,6 +7,8 @@
 - Exposed cache query/path/cookie exceptions, CSS safelists and stylesheet exclusions, JavaScript exclusions and delay patterns, and media selector exceptions.
 - Exposed the remaining cache, CSS, JavaScript, media, font, database, WordPress cleanup, RUM, Cloudflare, and commerce settings.
 - Added persistent unused CSS generation reports with live processing, ready, stale, skipped, and failed indicators plus delivery, size, savings, duration, and errors.
+- Replaced internal action codes with friendly success, warning, and error notices, including safe fallback copy for unknown codes.
+- Refined desktop and mobile spacing and replaced thick status-card borders with thin boundaries and soft status contrast.
 
 ## 0.1.0-alpha.3 - 2026-07-18
 

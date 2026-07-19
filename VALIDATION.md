@@ -2,13 +2,39 @@
 
 ## Automated gates
 
-Validated on 2026-07-18:
+Validated on 2026-07-19:
 
-- WordPress Coding Standards: 58 production PHP files passed.
+- WordPress Coding Standards: 59 production PHP files passed.
 - PHPStan: level 6 passed with WordPress and WP-CLI stubs.
 - PHPUnit: 21 tests and 39 assertions passed.
 - Composer security audit: no known vulnerable packages.
 - Release package: production dependencies installed, ZIP integrity passed, and no development dependencies included.
+
+## WordPress Studio CLI admin and unused CSS run
+
+Runtime:
+
+- WordPress Studio CLI 1.11.0
+- WordPress 7.0.2
+- PHP 8.3.32
+- Dedicated local Studio site
+- Packaged GT Performance `0.1.0-alpha.4`
+
+Verified:
+
+- GT Performance appears as a top-level WordPress admin menu and opens at `admin.php?page=gt-performance`.
+- The legacy `options-general.php?page=gt-performance` route redirects to the matching standalone tab.
+- Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools render without browser console errors.
+- Optimization exposes 30 controls; Exceptions exposes cache, CSS, JavaScript, and media exception lists; Cloudflare exposes token and Global API Key authentication fields.
+- Desktop and 390px mobile layouts have no page-level horizontal overflow. Tabs and the CSS report table use intentional local horizontal scrolling.
+- Mobile gutters, panel padding, and control heights resolve to 20px, 20px, and 44px respectively.
+- Rounded status cards use only 1px borders; state is communicated with text color and soft background contrast.
+- Known and unknown operation failures render friendly notices without exposing internal codes such as `gtp_cloudflare_token`.
+- A settings save persisted the CSS safelist without resetting settings on other tabs and correctly marked older CSS reports stale.
+- File, inline, and hybrid unused-CSS delivery all returned HTTP 200 with `X-GT-Cache: MISS`.
+- A known unused selector was removed in every mode; used, hover-state, below-fold, and safelisted selectors were preserved.
+- Hybrid mode wrote critical CSS inline and the below-fold rule to a separate immutable file.
+- CSS Reports showed all three regenerated modes as ready, refreshed every three seconds, and reported no browser console errors.
 
 ## WordPress Playground smoke run
 
