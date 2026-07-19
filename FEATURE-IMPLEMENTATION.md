@@ -1,6 +1,6 @@
 # GT Performance Differentiation Suite
 
-This report records the implementation and verification status of the seven-feature roadmap delivered in `0.1.0-alpha.11`.
+This report records the implementation and verification status of the seven-feature roadmap delivered in `0.1.0-alpha.12`.
 
 ## Implemented foundations
 

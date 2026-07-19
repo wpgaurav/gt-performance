@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.11
+Stable tag: 0.1.0-alpha.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,14 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 0.1.0-alpha.12 =
+* Added Explain This Page and verified purge receipts for deterministic cache diagnostics.
+* Added the Cloudflare Free rule compiler and Commerce Safety Lab.
+* Added unused-CSS training, staged rollout, review, publishing, and rollback controls.
+* Added signed Private Islands for dynamic commerce fragments.
+* Added the secure 25-site Fleet policy-console foundation.
+* Made release publication compatible with private GitHub repositories.
 
 = 0.1.0-alpha.11 =
 

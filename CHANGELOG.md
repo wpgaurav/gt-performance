@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-alpha.12 - 2026-07-19
+
+- Added Explain This Page and verified purge receipts for deterministic cache diagnostics.
+- Added the Cloudflare Free rule compiler and Commerce Safety Lab.
+- Added unused-CSS training, staged rollout, review, publishing, and rollback controls.
+- Added signed Private Islands for dynamic commerce fragments.
+- Added the secure 25-site Fleet policy-console foundation.
+- Made release publication compatible with private GitHub repositories by retaining checksums and workflow artifacts while conditionally skipping unavailable provenance attestations.
+
 ## 0.1.0-alpha.11 - 2026-07-19
 
 - Added Explain This Page diagnostics backed by the production cache policy, deterministic cache keys, local artifact metadata, and compiled edge expectations.
