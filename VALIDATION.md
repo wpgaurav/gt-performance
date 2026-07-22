@@ -9,6 +9,19 @@ Validated on 2026-07-22:
 - The production ZIP passed integrity checks with one `gt-performance/` root, 292 entries, embedded version `1.0.0-beta-3`, and local SHA-256 `89a6ccf04ec4e4ebac99879c9e7b2fe9f018ceb58c3549404579337f8270cab0`.
 - A disposable native WordPress Studio site on WordPress 7.0.2 and PHP 8.2 installed and activated the production ZIP, reported version `1.0.0-beta-3`, returned HTTP 200, and detected the Independent Analytics Pro and Site Kit compatibility exclusions.
 
+## 1.0.0-beta-3 distribution validation
+
+Validated on 2026-07-22:
+
+- Commit `90af5b1` passed GitHub CI run `29914570605` on PHP 8.1, 8.3, and 8.5; release workflow `29914572076` published tag `v1.0.0-beta-3` as a prerelease.
+- The canonical GitHub ZIP is 367,034 bytes with SHA-256 `4853acb853098004cb7270c47b27455201f305d92e6660979f848739e5463894`; its checksum, ZIP integrity, package root, and embedded plugin version agree.
+- FluentCart product `1170147` points to download row `110`, version `1.0.0-beta-3`, containing the exact canonical GitHub ZIP. Beta-2 row `109` and its file remain available for rollback.
+- An unauthenticated updater request returned beta-3 metadata without a package URL. A disposable non-customer license activated successfully, returned protected beta-3 metadata, downloaded the exact 367,034-byte canonical package, deactivated, and left no temporary license, activation, or site rows.
+- Both `gauravtiwari.org` and `gatilab.com` run GT Performance `1.0.0-beta-3` as an active plugin. Their installed 238-file trees share aggregate SHA-256 `40a530942b743cd49614c2392dba397b8028fd6bd862f2d51f8db5bfbeae4722`, matching the extracted canonical ZIP.
+- PHP, WordPress, cache-directory writability, the owned page-cache drop-in, `WP_CACHE`, the owned Redis drop-in, and Cloudflare passed `wp gt-performance doctor` on both sites. Plugin-owned cache purges succeeded, and public requests reached HTTP 200 plus Cloudflare cache hits on both sites.
+- `gauravtiwari.org` now has an active xCloud site cron running every five minutes under a non-overlapping lock with the verified LiteSpeed PHP 8.3 binary. The day-old WordPress cron backlog was replayed, and all 11 Independent Analytics overview datasets, including Site Traffic, Site Metrics, and Devices, were rebuilt and readable through WordPress.
+- Follow-up: the Redis drop-in's full-cache scan does not match prefixes containing Redis glob characters. The xCloud runner safely deletes the exact `alloptions` and `notoptions` keys before cron as an operational workaround; the scan escaping itself requires a later plugin release rather than rewriting the immutable beta-3 artifact.
+
 ## 1.0.0-beta-2 local release validation
 
 Validated on 2026-07-22:
