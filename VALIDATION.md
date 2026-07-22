@@ -10,6 +10,18 @@ Validated on 2026-07-22:
 - Playwright checked the CDN and Cloudflare settings screens at 1440px and 390px. Both widths had no horizontal overflow or browser-console errors; the Cloudflare token, Global API Key, and Zone ID help links used the intended official documentation URLs.
 - A real front-end response rewrote only selected `.woff2` files to the configured HTTPS CDN base while leaving unselected JavaScript URLs on the origin, including when the cache-bypass query prevented origin page caching.
 
+## 1.0.0-beta-2 distribution validation
+
+Validated on 2026-07-22:
+
+- Commit `06efe64` passed GitHub release workflow `29884675415`; tag `v1.0.0-beta-2` was published as a prerelease.
+- The canonical GitHub ZIP is 365,961 bytes with SHA-256 `8ad11d1d565305a1b3334f885d4ca43562756068c23da4419ea6013abd491fa0`; its checksum, ZIP integrity, plugin header, runtime constant, and stable tag agree.
+- FluentCart product `1170147` points to download row `109`, version `1.0.0-beta-2`, containing the exact canonical GitHub ZIP. Beta-1 row `108` and its file remain available for rollback.
+- An unauthenticated update request returned beta-2 metadata without a package URL. A disposable non-customer license activated successfully, returned protected beta-2 metadata, downloaded the exact 365,961-byte canonical package, deactivated, and left zero temporary license, activation, and site rows.
+- Both `gauravtiwari.org` and `gatilab.com` run GT Performance `1.0.0-beta-2` as an active plugin. Their installed 238-file trees share aggregate SHA-256 `03c25b76e417d294b1db693d1e6b663201b724f5388822cbb7dbc1fe96209e7e`, matching the extracted canonical ZIP.
+- PHP, WordPress, cache-directory writability, the owned page-cache drop-in, `WP_CACHE`, the owned Redis drop-in, and Cloudflare passed `wp gt-performance doctor` on both sites; plugin-owned cache purges succeeded.
+- Direct-origin homepage requests on both sites progressed from `X-GT-Cache: MISS` to `HIT`. This confirms the empty `HTTP_AUTHORIZATION` server variable on `gauravtiwari.org` no longer forces an authorization bypass. Public requests also reached Cloudflare cache hits on both sites.
+
 ## 1.0.0-beta-1 local release validation
 
 Validated on 2026-07-22:
