@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTP_PACKAGE_VERSION:-0.1.0-alpha.12}"
+VERSION="${GTP_PACKAGE_VERSION:-1.0.0-beta-1}"
 BUILD_ROOT="${ROOT}/build/package"
 PLUGIN_DIR="${BUILD_ROOT}/gt-performance"
 ARCHIVE="${ROOT}/dist/gt-performance-${VERSION}.zip"

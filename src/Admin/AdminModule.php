@@ -592,16 +592,20 @@ final class AdminModule implements Module {
 		$this->settingsFormOpen();
 		$this->panelOpen( __( 'Origin cache', 'gt-performance' ), __( 'Keep safe public HTML ready on disk so WordPress does less work.', 'gt-performance' ) );
 		$this->checkbox( 'cache', 'enabled', __( 'Enable origin page cache', 'gt-performance' ), __( 'Cache eligible public GET requests after WordPress renders them once.', 'gt-performance' ), $settings );
-		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate mobile cache', 'gt-performance' ), __( 'Create a separate cache variant for mobile user agents. Use only when the HTML differs by device.', 'gt-performance' ), $settings );
-		$this->checkbox( 'cache', 'cache_logged_in', __( 'Cache logged-in users', 'gt-performance' ), __( 'Advanced and normally unsafe. Personalized pages can leak or become stale.', 'gt-performance' ), $settings );
+		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Create a second cache variant only when the server sends different HTML to mobile devices.', 'gt-performance' ), $settings, __( 'Leave this off for responsive sites. Turning it on doubles the HTML variants that must be stored, purged, and warmed.', 'gt-performance' ) );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Cache lifetime', 'gt-performance' ), __( 'Use shorter fresh lifetimes for frequently changing sites and longer stale retention for resilience.', 'gt-performance' ) );
 		$this->renderCachePresets();
-		$this->number( 'cache', 'fresh_ttl', __( 'Fresh TTL', 'gt-performance' ), __( 'Seconds before a cached page needs regeneration.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ) );
-		$this->number( 'cache', 'stale_ttl', __( 'Stale retention', 'gt-performance' ), __( 'How long an expired page remains available for safe stale delivery.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ) );
-		$this->number( 'cache', 'stale_if_error', __( 'Stale if error', 'gt-performance' ), __( 'How long stale HTML may be used when regeneration fails.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ) );
-		$this->number( 'cache', 'browser_ttl', __( 'Browser TTL', 'gt-performance' ), __( 'Client-side HTML cache duration. Five minutes keeps visitor browsers conservative.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ) );
+		$this->number( 'cache', 'fresh_ttl', __( 'Fresh cache lifetime', 'gt-performance' ), __( 'Seconds before a cached page needs regeneration.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'During this period, shared caches may serve the stored page without asking WordPress to rebuild it.', 'gt-performance' ) );
+		$this->number( 'cache', 'stale_ttl', __( 'Stale cache retention', 'gt-performance' ), __( 'How long an expired page remains available for background refresh.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ), '1', __( 'The stale copy is retained after freshness expires so one request can refresh it while other visitors still receive a response.', 'gt-performance' ) );
+		$this->number( 'cache', 'stale_if_error', __( 'Stale-on-error window', 'gt-performance' ), __( 'How long stale HTML may be used when regeneration fails.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ), '1', __( 'This protects visitors during temporary PHP, database, or origin failures. Set to 0 to disable it.', 'gt-performance' ) );
+		$this->number( 'cache', 'browser_ttl', __( 'Browser cache lifetime', 'gt-performance' ), __( 'How long a visitor browser may reuse HTML without checking again.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'Keep this shorter than the shared-cache lifetime so browsers receive page updates promptly.', 'gt-performance' ) );
+		$this->panelClose();
+
+		$this->panelOpen( __( 'Cache warming', 'gt-performance' ), __( 'Rebuild the cache in the background after a full purge so visitors keep hitting warm pages.', 'gt-performance' ) );
+		$this->checkbox( 'cache', 'preload', __( 'Warm cache after a full purge', 'gt-performance' ), __( 'Discover URLs from the WordPress sitemap and queue them for background preloading whenever the whole cache is cleared.', 'gt-performance' ), $settings );
+		$this->number( 'cache', 'preload_max_urls', __( 'Maximum URLs per warm run', 'gt-performance' ), __( 'Upper bound on sitemap URLs queued after a full purge.', 'gt-performance' ), $settings, 0, 2000, __( 'URLs', 'gt-performance' ), '1', __( 'Use 0 to disable warm jobs without turning off the page cache. Large sites should increase this gradually to avoid traffic spikes.', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
 	}
@@ -616,7 +620,7 @@ final class AdminModule implements Module {
 		$this->panelOpen( __( 'Unused CSS', 'gt-performance' ), __( 'Analyze rendered HTML on this server and deliver only matching selectors.', 'gt-performance' ) );
 		$this->checkbox( 'css', 'enabled', __( 'Remove unused CSS', 'gt-performance' ), __( 'Generate page-specific CSS when an eligible page is rendered.', 'gt-performance' ), $settings );
 		$this->cssDeliveryOptions( $settings );
-		$this->number( 'css', 'critical_budget', __( 'Hybrid inline budget', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode. If the segment exceeds this limit, all used CSS is delivered as a generated file.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ) );
+		$this->number( 'css', 'critical_budget', __( 'Hybrid inline CSS limit', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ), '1', __( 'If the critical segment exceeds this limit, the plugin delivers all used CSS as a generated file instead of enlarging the HTML.', 'gt-performance' ) );
 		$this->checkbox( 'css', 'keep_dynamic_states', __( 'Preserve dynamic states', 'gt-performance' ), __( 'Keep selectors used for hover, focus, open, checked, and other interactive states.', 'gt-performance' ), $settings );
 		$this->select(
 			'css',
@@ -630,7 +634,8 @@ final class AdminModule implements Module {
 				'25'  => '25%',
 				'50'  => '50%',
 				'100' => __( '100% - all eligible URLs', 'gt-performance' ),
-			)
+			),
+			__( 'The same URL always stays in the same rollout group. Choose 0% to stop serving generated CSS immediately without deleting reports.', 'gt-performance' )
 		);
 		$this->inlineLink( __( 'See generated CSS files and processing status', 'gt-performance' ), $this->tabUrl( 'css-reports' ) );
 		$this->panelClose();
@@ -638,15 +643,15 @@ final class AdminModule implements Module {
 		$this->panelOpen( __( 'JavaScript', 'gt-performance' ), __( 'Apply transformations only to scripts that are not excluded and do not appear transactional.', 'gt-performance' ) );
 		$this->checkbox( 'javascript', 'minify', __( 'Minify local JavaScript', 'gt-performance' ), __( 'Create immutable minified copies of eligible local scripts.', 'gt-performance' ), $settings );
 		$this->checkbox( 'javascript', 'defer', __( 'Defer safe JavaScript', 'gt-performance' ), __( 'Add defer to eligible external scripts.', 'gt-performance' ), $settings );
-		$this->checkbox( 'javascript', 'delay', __( 'Delay third-party JavaScript', 'gt-performance' ), __( 'Wait for interaction or five seconds before loading matching third-party scripts.', 'gt-performance' ), $settings );
+		$this->checkbox( 'javascript', 'delay', __( 'Delay selected third-party scripts', 'gt-performance' ), __( 'Wait for interaction or five seconds before loading scripts listed under Exceptions.', 'gt-performance' ), $settings, __( 'Use this for analytics and marketing scripts, not consent, checkout, forms, or other code required before interaction.', 'gt-performance' ) );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Images and embeds', 'gt-performance' ), __( 'Reduce offscreen work and generate modern image variants on this server.', 'gt-performance' ) );
 		$this->checkbox( 'media', 'lazy_load', __( 'Lazy-load non-critical images', 'gt-performance' ), __( 'Keep the first critical images eager and lazy-load later images.', 'gt-performance' ), $settings );
 		$this->checkbox( 'media', 'add_dimensions', __( 'Add missing image dimensions', 'gt-performance' ), __( 'Reduce layout shifts when attachment dimensions are known.', 'gt-performance' ), $settings );
-		$this->number( 'media', 'critical_images', __( 'Critical image count', 'gt-performance' ), __( 'Number of early images excluded from lazy loading.', 'gt-performance' ), $settings, 0, 10, __( 'images', 'gt-performance' ) );
+		$this->number( 'media', 'critical_images', __( 'Images to load immediately', 'gt-performance' ), __( 'Number of early images excluded from lazy loading.', 'gt-performance' ), $settings, 0, 10, __( 'images', 'gt-performance' ), '1', __( 'Count from the start of the page. Include the likely above-the-fold or Largest Contentful Paint image.', 'gt-performance' ) );
 		$this->checkbox( 'media', 'optimize_uploads', __( 'Generate optimized variants', 'gt-performance' ), __( 'Create the selected modern format when attachments are generated.', 'gt-performance' ), $settings );
-		$this->checkbox( 'media', 'rewrite_variants', __( 'Serve generated variants', 'gt-performance' ), __( 'Rewrite eligible image URLs to generated variants.', 'gt-performance' ), $settings );
+		$this->checkbox( 'media', 'rewrite_variants', __( 'Serve optimized image variants', 'gt-performance' ), __( 'Rewrite eligible attachment URLs to the generated WebP or AVIF files.', 'gt-performance' ), $settings, __( 'Enable variant generation first. Existing attachments need regenerated metadata before a modern variant can be served.', 'gt-performance' ) );
 		$this->select(
 			'media',
 			'format',
@@ -660,12 +665,10 @@ final class AdminModule implements Module {
 		);
 		$this->number( 'media', 'compression', __( 'Image quality', 'gt-performance' ), __( 'Higher values retain more detail and create larger files.', 'gt-performance' ), $settings, 30, 100, '%' );
 		$this->checkbox( 'media', 'youtube_previews', __( 'Lightweight YouTube previews', 'gt-performance' ), __( 'Replace eligible embeds with a click-to-load preview.', 'gt-performance' ), $settings );
-		$this->checkbox( 'media', 'self_host_gravatar', __( 'Self-host Gravatar images', 'gt-performance' ), __( 'Reserve local delivery for supported Gravatar responses.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Fonts', 'gt-performance' ), __( 'Keep font requests predictable and reduce render blocking.', 'gt-performance' ) );
 		$this->checkbox( 'fonts', 'self_host_google', __( 'Self-host Google Fonts', 'gt-performance' ), __( 'Download eligible Google Fonts stylesheets and font files to this site.', 'gt-performance' ), $settings );
-		$this->checkbox( 'fonts', 'preload', __( 'Preload local fonts', 'gt-performance' ), __( 'Preload detected local font resources when supported.', 'gt-performance' ), $settings );
 		$this->select(
 			'fonts',
 			'font_display',
@@ -677,7 +680,8 @@ final class AdminModule implements Module {
 				'fallback' => 'fallback',
 				'optional' => 'optional',
 				'block'    => 'block',
-			)
+			),
+			__( 'Swap shows fallback text immediately; optional may skip the web font on slow connections; block can briefly hide text.', 'gt-performance' )
 		);
 		$this->panelClose();
 
@@ -688,7 +692,7 @@ final class AdminModule implements Module {
 		$this->checkbox( 'bloat', 'disable_embeds', __( 'Disable WordPress embeds', 'gt-performance' ), __( 'Remove oEmbed discovery and the frontend embed script.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_xmlrpc', __( 'Disable XML-RPC', 'gt-performance' ), __( 'Disable legacy XML-RPC requests while leaving the REST API available.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_rsd_link', __( 'Remove RSD link', 'gt-performance' ), __( 'Remove the Really Simple Discovery link from the document head.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_jquery_migrate', __( 'Remove jQuery Migrate', 'gt-performance' ), __( 'Reduce a legacy dependency. Test older themes and plugins after enabling.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_jquery_migrate', __( 'Remove jQuery Migrate for visitors', 'gt-performance' ), __( 'Reduce a legacy dependency on public pages.', 'gt-performance' ), $settings, __( 'Older themes and plugins may still use removed jQuery APIs. Test menus, forms, sliders, and checkout after enabling.', 'gt-performance' ) );
 		$this->checkbox( 'bloat', 'hide_wp_version', __( 'Remove WordPress version', 'gt-performance' ), __( 'Remove the generator value and WordPress core version query strings.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_shortlink', __( 'Remove shortlink', 'gt-performance' ), __( 'Remove shortlink output from the document head and response headers.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_rss_feeds', __( 'Disable RSS feeds', 'gt-performance' ), __( 'Return a 404 for feed requests. Leave disabled when readers use feeds.', 'gt-performance' ), $settings );
@@ -715,7 +719,8 @@ final class AdminModule implements Module {
 				'reduce'            => __( 'Reduce frequency (recommended)', 'gt-performance' ),
 				'disable_dashboard' => __( 'Disable outside the editor', 'gt-performance' ),
 				'disabled'          => __( 'Disable everywhere', 'gt-performance' ),
-			)
+			),
+			__( 'Disabling Heartbeat everywhere can break post locks, autosaves, and plugins that depend on periodic admin requests.', 'gt-performance' )
 		);
 		$this->number( 'bloat', 'heartbeat_seconds', __( 'Heartbeat interval', 'gt-performance' ), __( 'Slow the admin Heartbeat API without disabling autosave locks.', 'gt-performance' ), $settings, 15, 120, __( 'seconds', 'gt-performance' ) );
 		$this->number( 'bloat', 'limit_revisions', __( 'WordPress revision limit', 'gt-performance' ), __( 'Filter the number of revisions WordPress retains for each post.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
@@ -730,7 +735,8 @@ final class AdminModule implements Module {
 				'default'   => __( 'Keep enabled', 'gt-performance' ),
 				'non_admin' => __( 'Administrators only', 'gt-performance' ),
 				'disabled'  => __( 'Disable all requests', 'gt-performance' ),
-			)
+			),
+			__( 'Restricted modes can break the block editor, mobile apps, headless clients, and plugin integrations.', 'gt-performance' )
 		);
 		$this->checkbox( 'bloat', 'disable_comments', __( 'Disable comments', 'gt-performance' ), __( 'Close comments and pingbacks across all public post types.', 'gt-performance' ), $settings );
 		$this->panelClose();
@@ -767,11 +773,11 @@ final class AdminModule implements Module {
 		$this->pageIntro( __( 'Exceptions', 'gt-performance' ), __( 'Protect dynamic URLs and scripts, and preserve selectors that server-side analysis cannot discover from the initial HTML.', 'gt-performance' ) );
 		$this->settingsFormOpen();
 
-		$this->panelOpen( __( 'Cache exceptions', 'gt-performance' ), __( 'Enter one path, cookie prefix, or parameter per line. Partial cookie matches and exact query parameter names are supported.', 'gt-performance' ) );
-		$this->textarea( 'cache', 'bypass_paths', __( 'Never cache paths', 'gt-performance' ), __( 'Examples: /account/ or /members/. Core WordPress paths are included by default.', 'gt-performance' ), $settings, '/account/' );
-		$this->textarea( 'cache', 'bypass_cookies', __( 'Never cache cookies', 'gt-performance' ), __( 'Bypass when a request contains one of these cookie-name fragments.', 'gt-performance' ), $settings, 'membership_session_' );
+		$this->panelOpen( __( 'Cache exceptions', 'gt-performance' ), __( 'Enter one path, cookie-name prefix, or parameter per line. Paths match complete URL segments and parameter names match exactly.', 'gt-performance' ) );
+		$this->textarea( 'cache', 'bypass_paths', __( 'Paths that must stay dynamic', 'gt-performance' ), __( 'Examples: /account/ or /members/. Core WordPress paths are included by default.', 'gt-performance' ), $settings, '/account/', __( '/account/ matches /account and its child paths, but does not match /accounting. Add only paths whose HTML varies by visitor or request.', 'gt-performance' ) );
+		$this->textarea( 'cache', 'bypass_cookies', __( 'Cookie prefixes that bypass cache', 'gt-performance' ), __( 'Bypass when a request contains a cookie name beginning with one of these values.', 'gt-performance' ), $settings, 'membership_session_', __( 'Enter cookie names or stable prefixes, without cookie values. Example: membership_session_ matches every cookie whose name starts that way.', 'gt-performance' ) );
 		$this->textarea( 'cache', 'bypass_query_params', __( 'Never cache query parameters', 'gt-performance' ), __( 'Bypass the cache whenever one of these parameters is present.', 'gt-performance' ), $settings, 'preview' );
-		$this->textarea( 'cache', 'ignored_query_params', __( 'Ignore marketing parameters', 'gt-performance' ), __( 'Remove these parameters from the origin cache key so campaign URLs share public HTML.', 'gt-performance' ), $settings, 'utm_source' );
+		$this->textarea( 'cache', 'ignored_query_params', __( 'Parameters that do not change content', 'gt-performance' ), __( 'Remove these parameters from the cache key so equivalent URLs share public HTML.', 'gt-performance' ), $settings, 'utm_source', __( 'Only list tracking parameters that never alter the page. Ignoring a parameter that changes price, language, personalization, or content can serve the wrong HTML.', 'gt-performance' ) );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Unused CSS exceptions', 'gt-performance' ), __( 'Use partial selector matches, regular expressions, or stylesheet URLs. Add the smallest stable pattern that protects the dynamic component.', 'gt-performance' ) );
@@ -819,7 +825,7 @@ final class AdminModule implements Module {
 		$this->text( 'cloudflare', 'email', __( 'Cloudflare account email', 'gt-performance' ), __( 'Required only for Global API Key authentication.', 'gt-performance' ), $settings, 'email' );
 		$this->text( 'cloudflare', 'domain', __( 'Domain', 'gt-performance' ), __( 'Used to discover the zone automatically when Zone ID is blank.', 'gt-performance' ), $settings, 'text', 'example.com' );
 		$this->text( 'cloudflare', 'zone_id', __( 'Zone ID', 'gt-performance' ), __( 'Optional. Direct Zone ID avoids the discovery request.', 'gt-performance' ), $settings );
-		$this->number( 'cloudflare', 'edge_ttl', __( 'Edge TTL', 'gt-performance' ), __( 'How long eligible public HTML may remain fresh at Cloudflare.', 'gt-performance' ), $settings, 0, 31536000, __( 'seconds', 'gt-performance' ) );
+		$this->number( 'cloudflare', 'edge_ttl', __( 'Cloudflare edge cache lifetime', 'gt-performance' ), __( 'How long eligible public HTML remains fresh at Cloudflare.', 'gt-performance' ), $settings, 0, 31536000, __( 'seconds', 'gt-performance' ), '1', __( 'A positive value overrides the origin freshness value in the managed Cache Rule. Use 0 to respect the origin Cache-Control header instead.', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
 		?>
@@ -889,13 +895,13 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Private Islands', 'gt-performance' ), __( 'Keep the public page shell cacheable while explicitly registered cart and account fragments render through a private no-store request.', 'gt-performance' ) );
-		$this->checkbox( 'private_fragments', 'enabled', __( 'Enable Private Islands', 'gt-performance' ), __( 'Activate the signed private-fragment endpoint and [gtp_private_island] shortcode. Disabled by default until the theme placement is tested.', 'gt-performance' ), $settings );
+		$this->checkbox( 'private_fragments', 'enabled', __( 'Enable Private Islands', 'gt-performance' ), __( 'Load registered cart and account fragments through a signed private request.', 'gt-performance' ), $settings, __( 'The public page stays cacheable, but each fragment adds a separate no-store request. Test its theme placement and signed endpoint before enabling sitewide.', 'gt-performance' ) );
 		$this->checkbox( 'private_fragments', 'cart_count', __( 'Commerce cart count fragment', 'gt-performance' ), __( 'Register commerce_cart_count for WooCommerce, EDD, and extension-provided FluentCart counts.', 'gt-performance' ), $settings );
 		$this->checkbox( 'private_fragments', 'account_link', __( 'Account link fragment', 'gt-performance' ), __( 'Register commerce_account_link so sign-in and account links never need to be stored in public HTML.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Service safeguards', 'gt-performance' ), __( 'These protections activate only when the matching plugin is active.', 'gt-performance' ) );
-		$this->checkbox( 'integrations', 'akismet', __( 'Akismet compatibility', 'gt-performance' ), __( 'Keep the privacy notice and anti-spam front-end assets when unused CSS or JavaScript optimization runs.', 'gt-performance' ), $settings );
+		$this->checkbox( 'integrations', 'akismet', __( 'Protect Akismet assets', 'gt-performance' ), __( 'Keep the privacy notice and anti-spam front-end assets during CSS and JavaScript optimization.', 'gt-performance' ), $settings, __( 'This compatibility switch does not classify comments itself. Akismet remains responsible for spam checks; this option prevents optimizations from removing its required front-end output.', 'gt-performance' ) );
 		$this->checkbox( 'integrations', 'jetpack', __( 'Jetpack compatibility', 'gt-performance' ), __( 'Protect forms, comments, subscriptions, search, VideoPress, and visitor-state cookies from unsafe optimization or public caching.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
@@ -909,12 +915,12 @@ final class AdminModule implements Module {
 		$this->checkbox( 'redis', 'enabled', __( 'Enable Redis object cache', 'gt-performance' ), __( 'Connect the GT Performance object-cache.php drop-in to Redis. Disable this before migrating to another object-cache owner.', 'gt-performance' ), $settings );
 		$this->text( 'redis', 'host', __( 'Redis host or socket', 'gt-performance' ), __( 'Hostname, IP address, or Unix socket path.', 'gt-performance' ), $settings, 'text', '127.0.0.1' );
 		$this->number( 'redis', 'port', __( 'Redis port', 'gt-performance' ), __( 'Use 6379 normally, or 0 with a Unix socket.', 'gt-performance' ), $settings, 0, 65535 );
-		$this->number( 'redis', 'database', __( 'Redis database', 'gt-performance' ), __( 'Logical Redis database number reserved for this site.', 'gt-performance' ), $settings, 0, 255 );
+		$this->number( 'redis', 'database', __( 'Redis database number', 'gt-performance' ), __( 'Logical Redis database reserved for this site.', 'gt-performance' ), $settings, 0, 255, '', '1', __( 'Do not share this database with another site unless each installation uses a unique cache key prefix.', 'gt-performance' ) );
 		$this->text( 'redis', 'username', __( 'Redis username', 'gt-performance' ), __( 'Optional ACL username. Leave blank for password-only authentication.', 'gt-performance' ), $settings );
 		$this->password( 'redis', 'password', __( 'Redis password', 'gt-performance' ), __( 'Encrypted in WordPress. Leave blank to keep the saved password.', 'gt-performance' ), ! empty( $settings['redis']['password'] ) );
 		$this->checkbox( 'redis', 'tls', __( 'Use TLS', 'gt-performance' ), __( 'Connect with tls:// when the Redis provider requires encrypted transport.', 'gt-performance' ), $settings );
-		$this->checkbox( 'redis', 'persistent', __( 'Persistent connection', 'gt-performance' ), __( 'Reuse the PhpRedis connection between requests when the host supports it.', 'gt-performance' ), $settings );
-		$this->text( 'redis', 'prefix', __( 'Cache key prefix', 'gt-performance' ), __( 'Optional. Leave blank for an automatic site-specific prefix.', 'gt-performance' ), $settings, 'text', 'gtp:site:' );
+		$this->checkbox( 'redis', 'persistent', __( 'Reuse Redis connections', 'gt-performance' ), __( 'Keep a PhpRedis connection open between PHP requests when the host supports it.', 'gt-performance' ), $settings, __( 'Persistent connections reduce connection overhead but may be unsuitable on hosts that tightly limit Redis clients.', 'gt-performance' ) );
+		$this->text( 'redis', 'prefix', __( 'Cache key prefix', 'gt-performance' ), __( 'Optional. Leave blank for an automatic site-specific prefix.', 'gt-performance' ), $settings, 'text', 'gtp:site:', __( 'Use a unique prefix whenever multiple WordPress installations share the same Redis database.', 'gt-performance' ) );
 		$this->number( 'redis', 'connection_timeout', __( 'Connection timeout', 'gt-performance' ), __( 'Fail back to request-local cache quickly when Redis is unavailable.', 'gt-performance' ), $settings, 0.1, 10, __( 'seconds', 'gt-performance' ), '0.1' );
 		$this->number( 'redis', 'read_timeout', __( 'Read timeout', 'gt-performance' ), __( 'Maximum time to wait for a Redis response.', 'gt-performance' ), $settings, 0.1, 10, __( 'seconds', 'gt-performance' ), '0.1' );
 		$this->panelClose();
@@ -1693,13 +1699,13 @@ PHP;
 	/**
 	 * @param array<string, mixed> $settings Settings.
 	 */
-	private function checkbox( string $section, string $key, string $label, string $description, array $settings ): void {
+	private function checkbox( string $section, string $key, string $label, string $description, array $settings, string $tooltip = '' ): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
 		?>
 		<div class="gtp-field gtp-field--toggle">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control">
@@ -1713,13 +1719,13 @@ PHP;
 	/**
 	 * @param array<string, mixed> $settings Settings.
 	 */
-	private function checkboxRoot( string $key, string $label, string $description, array $settings ): void {
+	private function checkboxRoot( string $key, string $label, string $description, array $settings, string $tooltip = '' ): void {
 		$name = Settings::OPTION . '[' . $key . ']';
 		$id   = 'gtp-' . $key;
 		?>
 		<div class="gtp-field gtp-field--toggle">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control">
@@ -1742,14 +1748,15 @@ PHP;
 		float|int $min,
 		float|int $max,
 		string $suffix = '',
-		string $step = '1'
+		string $step = '1',
+		string $tooltip = ''
 	): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
 		?>
 		<div class="gtp-field">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control gtp-field__number">
@@ -1767,13 +1774,13 @@ PHP;
 	 * @param array<string, mixed>    $settings Settings.
 	 * @param array<array-key, string> $options Options.
 	 */
-	private function select( string $section, string $key, string $label, string $description, array $settings, array $options ): void {
+	private function select( string $section, string $key, string $label, string $description, array $settings, array $options, string $tooltip = '' ): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
 		?>
 		<div class="gtp-field">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control">
@@ -1797,14 +1804,15 @@ PHP;
 		string $description,
 		array $settings,
 		string $type = 'text',
-		string $placeholder = ''
+		string $placeholder = '',
+		string $tooltip = ''
 	): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
 		?>
 		<div class="gtp-field">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control">
@@ -1814,13 +1822,13 @@ PHP;
 		<?php
 	}
 
-	private function password( string $section, string $key, string $label, string $description, bool $saved ): void {
+	private function password( string $section, string $key, string $label, string $description, bool $saved, string $tooltip = '' ): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
 		?>
 		<div class="gtp-field">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control">
@@ -1833,19 +1841,38 @@ PHP;
 	/**
 	 * @param array<string, mixed> $settings Settings.
 	 */
-	private function textarea( string $section, string $key, string $label, string $description, array $settings, string $placeholder ): void {
+	private function textarea( string $section, string $key, string $label, string $description, array $settings, string $placeholder, string $tooltip = '' ): void {
 		$name  = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id    = 'gtp-' . $section . '-' . $key;
 		$value = implode( "\n", array_map( 'strval', (array) $settings[ $section ][ $key ] ) );
 		?>
 		<div class="gtp-field gtp-field--textarea">
 			<div>
-				<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
 				<p><?php echo esc_html( $description ); ?></p>
 			</div>
 			<div class="gtp-field__control">
 				<textarea id="<?php echo esc_attr( $id ); ?>" rows="6" name="<?php echo esc_attr( $name ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
 			</div>
+		</div>
+		<?php
+	}
+
+	private function fieldLabel( string $id, string $label, string $tooltip = '' ): void {
+		?>
+		<div class="gtp-field__title">
+			<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+			<?php if ( '' !== $tooltip ) : ?>
+				<span class="gtp-tooltip">
+					<button
+						type="button"
+						class="gtp-tooltip__trigger"
+						<?php // translators: 1: setting label, 2: brief help text. ?>
+						aria-label="<?php echo esc_attr( sprintf( __( 'More information about %1$s: %2$s', 'gt-performance' ), $label, $tooltip ) ); ?>"
+					>?</button>
+					<span class="gtp-tooltip__content" aria-hidden="true"><?php echo esc_html( $tooltip ); ?></span>
+				</span>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

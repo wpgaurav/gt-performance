@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha.12
+Stable tag: 1.0.0-beta-1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ Perfmatters ownership coordination, Akismet and Jetpack safeguards, Redis creden
 
 Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a 25-site policy console add deterministic diagnostics and safer deployment controls.
 
-This is an alpha. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
+This is a beta. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
 == Installation ==
 
@@ -68,6 +68,19 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-1 =
+* Fixed a cache-safety gap where the public Cache-Control header was sent before the response was validated; private responses (Set-Cookie, non-200, or DONOTCACHEPAGE) can no longer be stored by a shared or edge cache.
+* Fixed scheduled database-cleanup task selections so deselected destructive tasks are no longer silently restored on save.
+* Fixed commerce bypass paths so checkout, cart, and account stay uncacheable on no-trailing-slash permalink sites, at the origin and the Cloudflare edge.
+* Fixed inline script, JSON-LD, and stray XML-node corruption in the server-side CSS, font, and embed optimizers.
+* Fixed CSS Training Mode to keep escaped utility-class selectors, root-relative url() rebasing, and Cloudflare drift detection and query-parameter matching.
+* Fixed comment lifecycle invalidation, batched related URL purges, and cleared both desktop and mobile origin variants.
+* Fixed deferred response validation so eligible pages can progress from MISS to HIT, and renamed the WP-CLI target option to --page-url.
+* Wired the Cloudflare edge lifetime control into the managed Cache Rule.
+* Added Vary: User-Agent for mobile cache variants, honored the stale-on-error setting, bounded queue growth, hardened cache directories, and auto-refreshed the drop-in after updates.
+* Added same-origin sitemap-driven cache warming after a full purge, with a wp gt-performance cache warm command.
+* Clarified technical labels, added accessible brief tooltips for risky settings, and removed unsupported placeholder controls.
 
 = 0.1.0-alpha.12 =
 * Added Explain This Page and verified purge receipts for deterministic cache diagnostics.

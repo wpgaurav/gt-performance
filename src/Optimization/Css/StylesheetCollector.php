@@ -154,16 +154,40 @@ final class StylesheetCollector {
 	}
 
 	private function rebaseUrls( string $css, string $sourceUrl ): string {
-		$base = trailingslashit( dirname( $sourceUrl ) );
+		$base   = trailingslashit( dirname( $sourceUrl ) );
+		$origin = $this->origin( $sourceUrl );
 
 		return preg_replace_callback(
 			"/url\\(\\s*([\"']?)(?!data:|https?:|\\/\\/|#)([^\"')]+)\\1\\s*\\)/i",
-			static function ( array $matches ) use ( $base ): string {
-				$absolute = $base . ltrim( trim( $matches[2] ), '/' );
+			static function ( array $matches ) use ( $base, $origin ): string {
+				$reference = trim( $matches[2] );
+				if ( '' === $reference ) {
+					return $matches[0];
+				}
+
+				// A root-relative reference resolves against the site origin; only a
+				// document-relative reference is joined to the stylesheet's directory.
+				$absolute = str_starts_with( $reference, '/' )
+					? $origin . $reference
+					: $base . ltrim( $reference, '/' );
 
 				return 'url("' . esc_url_raw( $absolute ) . '")';
 			},
 			$css
 		) ?? $css;
+	}
+
+	private function origin( string $url ): string {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+
+		$origin = $parts['scheme'] . '://' . $parts['host'];
+		if ( isset( $parts['port'] ) ) {
+			$origin .= ':' . (int) $parts['port'];
+		}
+
+		return $origin;
 	}
 }

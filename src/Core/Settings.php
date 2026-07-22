@@ -60,7 +60,8 @@ final class Settings {
 					'wp-postpass_',
 				),
 				'separate_mobile'      => false,
-				'cache_logged_in'      => false,
+				'preload'              => true,
+				'preload_max_urls'     => 200,
 			),
 			'cloudflare' => array(
 				'enabled'            => false,
@@ -71,8 +72,6 @@ final class Settings {
 				'global_api_key'     => '',
 				'email'              => '',
 				'edge_ttl'           => 86400,
-				'managed_rule_id'    => '',
-				'managed_ruleset_id' => '',
 				'drift_hash'         => '',
 			),
 			'css'        => array(
@@ -107,12 +106,10 @@ final class Settings {
 				'format'                => 'webp',
 				'compression'           => 82,
 				'youtube_previews'      => false,
-				'self_host_gravatar'    => false,
 				'lazy_render_selectors' => array(),
 			),
 			'fonts'      => array(
 				'self_host_google' => false,
-				'preload'          => true,
 				'font_display'     => 'swap',
 			),
 			'database'   => array(
@@ -200,8 +197,6 @@ final class Settings {
 	public static function all(): array {
 		$saved = get_option( self::OPTION, array() );
 		$all   = self::merge( self::defaults(), is_array( $saved ) ? $saved : array() );
-		unset( $all['rum'] );
-
 		return $all;
 	}
 
@@ -235,9 +230,10 @@ final class Settings {
 			$merged['cache'][ $key ] = max( 0, (int) ( $merged['cache'][ $key ] ?? $defaults['cache'][ $key ] ) );
 		}
 
-		$merged['cache']['enabled']         = (bool) ( $merged['cache']['enabled'] ?? false );
-		$merged['cache']['separate_mobile'] = (bool) ( $merged['cache']['separate_mobile'] ?? false );
-		$merged['cache']['cache_logged_in'] = (bool) ( $merged['cache']['cache_logged_in'] ?? false );
+		$merged['cache']['enabled']          = (bool) ( $merged['cache']['enabled'] ?? false );
+		$merged['cache']['separate_mobile']  = (bool) ( $merged['cache']['separate_mobile'] ?? false );
+		$merged['cache']['preload']          = (bool) ( $merged['cache']['preload'] ?? true );
+		$merged['cache']['preload_max_urls'] = max( 0, min( 2000, (int) ( $merged['cache']['preload_max_urls'] ?? 200 ) ) );
 
 		$authMode                         = (string) ( $merged['cloudflare']['auth_mode'] ?? 'token' );
 		$merged['cloudflare']['auth_mode'] = in_array( $authMode, array( 'token', 'global' ), true ) ? $authMode : 'token';
@@ -301,9 +297,7 @@ final class Settings {
 			array( 'media', 'optimize_uploads' ),
 			array( 'media', 'rewrite_variants' ),
 			array( 'media', 'youtube_previews' ),
-			array( 'media', 'self_host_gravatar' ),
 			array( 'fonts', 'self_host_google' ),
-			array( 'fonts', 'preload' ),
 			array( 'database', 'enabled' ),
 			array( 'bloat', 'disable_emojis' ),
 			array( 'bloat', 'disable_dashicons' ),
@@ -373,8 +367,6 @@ final class Settings {
 				array_keys( $defaults )
 			)
 		);
-		unset( $merged['rum'] );
-
 		return self::merge( $defaults, $merged );
 	}
 
@@ -407,6 +399,8 @@ final class Settings {
 			}
 		}
 
+		Paths::harden();
+
 		if ( ! self::writeConfig( Paths::config(), $config ) ) {
 			return false;
 		}
@@ -423,7 +417,23 @@ final class Settings {
 	 */
 	private static function merge( array $defaults, array $values ): array {
 		foreach ( $values as $key => $value ) {
-			if ( isset( $defaults[ $key ] ) && is_array( $defaults[ $key ] ) && is_array( $value ) ) {
+			// Ignore obsolete or foreign keys. Keeping only the declared schema stops
+			// removed controls from surviving forever in the saved option and prevents
+			// unsupported settings from being imported through fleet policy bundles.
+			if ( ! array_key_exists( $key, $defaults ) ) {
+				continue;
+			}
+
+			// Deep-merge associative maps (settings sections). List arrays such as
+			// bypass lists and database.tasks are replaced wholesale: index-by-index
+			// merging would resurrect the tail of a longer saved list whenever a
+			// shorter selection is submitted, silently re-enabling deselected items.
+			if (
+				is_array( $defaults[ $key ] )
+				&& is_array( $value )
+				&& ! array_is_list( $defaults[ $key ] )
+				&& ! array_is_list( $value )
+			) {
 				$defaults[ $key ] = self::merge( $defaults[ $key ], $value );
 				continue;
 			}

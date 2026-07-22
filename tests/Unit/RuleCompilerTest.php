@@ -62,6 +62,35 @@ final class RuleCompilerTest extends TestCase {
 		self::assertFalse( $plan['drift'] );
 	}
 
+	public function testPlanIgnoresCloudflareKeyOrderingWhenDetectingDrift(): void {
+		$compiler = new RuleCompiler();
+		$managed  = $compiler->rule( 'example.com', $this->cachePolicy() );
+
+		// Cloudflare echoes the stored rule with its own key ordering; a re-ordered
+		// but otherwise identical rule must not be misread as drift.
+		$managed['action_parameters'] = self::reverseKeysRecursive( $managed['action_parameters'] );
+
+		$plan = $compiler->plan( 'example.com', $this->cachePolicy(), array( $managed ) );
+
+		self::assertSame( 'none', $plan['operation'] );
+		self::assertFalse( $plan['drift'] );
+	}
+
+	/**
+	 * @param array<string, mixed> $value Rule fragment.
+	 * @return array<string, mixed>
+	 */
+	private static function reverseKeysRecursive( array $value ): array {
+		$reversed = array_reverse( $value, true );
+		foreach ( $reversed as $key => $item ) {
+			if ( is_array( $item ) ) {
+				$reversed[ $key ] = self::reverseKeysRecursive( $item );
+			}
+		}
+
+		return $reversed;
+	}
+
 	public function testPlanReportsAnOverlappingCacheRule(): void {
 		$plan = ( new RuleCompiler() )->plan(
 			'example.com',
@@ -79,5 +108,21 @@ final class RuleCompilerTest extends TestCase {
 
 		self::assertCount( 1, $plan['conflicts'] );
 		self::assertSame( 'other-rule', $plan['conflicts'][0]['id'] );
+	}
+
+	public function testPositiveEdgeTtlOverridesOriginWhileZeroRespectsIt(): void {
+		$compiler = new RuleCompiler();
+
+		$override = $compiler->rule( 'example.com', $this->cachePolicy(), 86400 );
+		$respect  = $compiler->rule( 'example.com', $this->cachePolicy(), 0 );
+
+		self::assertSame(
+			array(
+				'mode'    => 'override_origin',
+				'default' => 86400,
+			),
+			$override['action_parameters']['edge_ttl']
+		);
+		self::assertSame( array( 'mode' => 'respect_origin' ), $respect['action_parameters']['edge_ttl'] );
 	}
 }

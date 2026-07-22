@@ -35,12 +35,12 @@ final class RuleManager {
 				return $entrypoint;
 			}
 
-			return $this->compiler->plan( $host, $cache, array() );
+			return $this->compiler->plan( $host, $cache, array(), RuleCompiler::FREE_RULE_LIMIT, $this->edgeTtl() );
 		}
 
 		$ruleset = (array) ( $entrypoint['result'] ?? array() );
 		$rules   = array_values( array_filter( (array) ( $ruleset['rules'] ?? array() ), 'is_array' ) );
-		$plan    = $this->compiler->plan( $host, $cache, $rules );
+		$plan    = $this->compiler->plan( $host, $cache, $rules, RuleCompiler::FREE_RULE_LIMIT, $this->edgeTtl() );
 		$plan['ruleset_id'] = (string) ( $ruleset['id'] ?? '' );
 
 		return $plan;
@@ -56,7 +56,7 @@ final class RuleManager {
 			'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint'
 		);
 
-		$rule = $this->compiler->rule( $host, $cache );
+		$rule = $this->compiler->rule( $host, $cache, $this->edgeTtl() );
 
 		if ( is_wp_error( $entrypoint ) ) {
 			$errorData = $entrypoint->get_error_data();
@@ -86,7 +86,7 @@ final class RuleManager {
 
 		update_option( 'gt_performance_cloudflare_backup', $ruleset, false );
 		$rules = array_values( array_filter( (array) ( $ruleset['rules'] ?? array() ), 'is_array' ) );
-		$plan  = $this->compiler->plan( $host, $cache, $rules );
+		$plan  = $this->compiler->plan( $host, $cache, $rules, RuleCompiler::FREE_RULE_LIMIT, $this->edgeTtl() );
 		if ( ! (bool) $plan['within_budget'] ) {
 			return new \WP_Error(
 				'gtp_cloudflare_rule_budget',
@@ -144,5 +144,9 @@ final class RuleManager {
 		}
 
 		return $retried;
+	}
+
+	private function edgeTtl(): int {
+		return max( 0, min( 31536000, (int) Settings::get( 'cloudflare.edge_ttl', 0 ) ) );
 	}
 }

@@ -81,12 +81,18 @@ final class DropinRuntime {
 
 		$browserTtl = max( 0, (int) ( $cacheConfig['browser_ttl'] ?? 300 ) );
 		$staleTtl   = max( 0, (int) ( $cacheConfig['stale_ttl'] ?? 0 ) );
+		$ifErrorTtl = max( 0, (int) ( $cacheConfig['stale_if_error'] ?? 0 ) );
+
+		$cacheControl = 'public, max-age=' . $browserTtl . ', s-maxage=' . max( 0, $fresh - $stored ) . ', stale-while-revalidate=' . $staleTtl;
+		if ( $ifErrorTtl > 0 ) {
+			$cacheControl .= ', stale-if-error=' . $ifErrorTtl;
+		}
 
 		header( 'Content-Type: text/html; charset=UTF-8' );
-		header( 'Cache-Control: public, max-age=' . $browserTtl . ', s-maxage=' . max( 0, $fresh - $stored ) . ', stale-while-revalidate=' . $staleTtl );
+		header( 'Cache-Control: ' . $cacheControl );
 		header( 'Age: ' . max( 0, $now - $stored ) );
 		header( 'ETag: ' . $etag );
-		header( 'Vary: Accept-Encoding' );
+		header( 'Vary: ' . ( (bool) ( $cacheConfig['separate_mobile'] ?? false ) ? 'Accept-Encoding, User-Agent' : 'Accept-Encoding' ) );
 		header( 'X-GT-Cache: ' . ( $isStale ? 'STALE' : 'HIT' ) );
 		header( 'X-GT-Cache-Key: ' . substr( $hash, 0, 12 ) );
 

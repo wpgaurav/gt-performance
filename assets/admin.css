@@ -203,6 +203,66 @@
 	font-weight: 600;
 }
 
+.gtp-field__title {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.gtp-tooltip {
+	position: relative;
+	display: inline-flex;
+}
+
+.gtp-tooltip__trigger {
+	display: inline-grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid #a7aaad;
+	border-radius: 50%;
+	background: #fff;
+	color: var(--gtp-muted);
+	font: 600 11px/1 sans-serif;
+	cursor: help;
+}
+
+.gtp-tooltip__trigger:hover,
+.gtp-tooltip__trigger:focus-visible {
+	border-color: var(--gtp-blue);
+	box-shadow: 0 0 0 1px var(--gtp-blue);
+	color: var(--gtp-blue);
+	outline: 0;
+}
+
+.gtp-tooltip__content {
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 8px);
+	left: 50%;
+	width: max-content;
+	max-width: min(300px, 75vw);
+	padding: 9px 11px;
+	transform: translateX(-50%);
+	border-radius: 4px;
+	background: #1d2327;
+	box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 1.45;
+	opacity: 0;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.gtp-tooltip:hover .gtp-tooltip__content,
+.gtp-tooltip:focus-within .gtp-tooltip__content {
+	opacity: 1;
+	visibility: visible;
+}
+
 .gtp-field p {
 	margin: 5px 0 0;
 	font-size: 13px;

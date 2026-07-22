@@ -17,11 +17,17 @@ final class RuleCompiler {
 	 * @param array<string, mixed> $cache Cache policy.
 	 * @return array<string, mixed>
 	 */
-	public function rule( string $host, array $cache ): array {
+	public function rule( string $host, array $cache, int $edgeTtl = 0 ): array {
 		$ignored = array_values( array_filter( array_map( 'strval', (array) ( $cache['ignored_query_params'] ?? array() ) ) ) );
+		$edgeTtl = max( 0, min( 31536000, $edgeTtl ) );
 		$action  = array(
 			'cache'       => true,
-			'edge_ttl'    => array( 'mode' => 'respect_origin' ),
+			'edge_ttl'    => $edgeTtl > 0
+				? array(
+					'mode'    => 'override_origin',
+					'default' => $edgeTtl,
+				)
+				: array( 'mode' => 'respect_origin' ),
 			'browser_ttl' => array( 'mode' => 'respect_origin' ),
 			'serve_stale' => array( 'disable_stale_while_updating' => false ),
 			'cache_key'   => array(
@@ -54,8 +60,8 @@ final class RuleCompiler {
 	 * @param list<array<string, mixed>> $existingRules Existing entrypoint rules.
 	 * @return array<string, mixed>
 	 */
-	public function plan( string $host, array $cache, array $existingRules, int $limit = self::FREE_RULE_LIMIT ): array {
-		$expected    = $this->rule( $host, $cache );
+	public function plan( string $host, array $cache, array $existingRules, int $limit = self::FREE_RULE_LIMIT, int $edgeTtl = 0 ): array {
+		$expected    = $this->rule( $host, $cache, $edgeTtl );
 		$managed     = null;
 		$conflicts   = array();
 		$normalizedHost = preg_replace( '/:\d+$/', '', strtolower( $host ) );
@@ -109,11 +115,31 @@ final class RuleCompiler {
 			'description'       => (string) ( $rule['description'] ?? '' ),
 			'expression'        => (string) ( $rule['expression'] ?? '' ),
 			'action'            => (string) ( $rule['action'] ?? '' ),
-			'action_parameters' => (array) ( $rule['action_parameters'] ?? array() ),
+			'action_parameters' => self::canonicalize( (array) ( $rule['action_parameters'] ?? array() ) ),
 			'enabled'           => (bool) ( $rule['enabled'] ?? false ),
 		);
 
 		return hash( 'sha256', (string) json_encode( $portable, JSON_UNESCAPED_SLASHES ) );
+	}
+
+	/**
+	 * Recursively sort array keys so the fingerprint is independent of the key
+	 * order Cloudflare uses when it echoes the stored rule. Without this, any
+	 * reordering in the API response is misread as configuration drift, causing an
+	 * endless redundant PATCH on every sync.
+	 *
+	 * @param array<string, mixed> $value Rule fragment.
+	 * @return array<string, mixed>
+	 */
+	private static function canonicalize( array $value ): array {
+		ksort( $value );
+		foreach ( $value as $key => $item ) {
+			if ( is_array( $item ) ) {
+				$value[ $key ] = self::canonicalize( $item );
+			}
+		}
+
+		return $value;
 	}
 
 	private function plainText( string $value, int $limit ): string {

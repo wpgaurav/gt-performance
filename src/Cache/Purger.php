@@ -18,17 +18,43 @@ final class Purger {
 	}
 
 	public function purgeUrl( string $url ): bool {
-		$request = $this->fromUrl( $url );
-		if ( null === $request ) {
-			return false;
-		}
+		return $this->purgeUrls( array( $url ) ) > 0;
+	}
 
+	/**
+	 * Purge public origin variants and notify edge integrations once per batch.
+	 *
+	 * @param list<string> $urls URLs to purge.
+	 */
+	public function purgeUrls( array $urls ): int {
 		$config               = (array) Settings::get( 'cache', array() );
 		$config['generation'] = (int) Settings::get( 'generation', 1 );
-		$hash                 = ( new CacheKey() )->hash( ( new CacheKey() )->make( $request, $config ) );
-		$deleted              = $this->store->delete( $hash );
+		$cacheKey             = new CacheKey();
+		$valid                = array();
+		$deleted              = 0;
 
-		do_action( 'gt_performance_purged_urls', array( $url ), 'origin' );
+		foreach ( array_unique( array_filter( $urls, 'is_string' ) ) as $url ) {
+			$request = $this->fromUrl( $url );
+			if ( null === $request ) {
+				continue;
+			}
+
+			$valid[] = $url;
+			$hash    = $cacheKey->hash( $cacheKey->make( $request, $config ) );
+			$deleted += $this->store->delete( $hash ) ? 1 : 0;
+
+			if ( (bool) ( $config['separate_mobile'] ?? false ) ) {
+				$mobile = RequestContext::fromUrl( $url, array(), array(), 'GT Performance Mobile' );
+				if ( null !== $mobile ) {
+					$mobileHash = $cacheKey->hash( $cacheKey->make( $mobile, $config ) );
+					$deleted   += $this->store->delete( $mobileHash ) ? 1 : 0;
+				}
+			}
+		}
+
+		if ( $valid ) {
+			do_action( 'gt_performance_purged_urls', $valid, 'origin' );
+		}
 
 		return $deleted;
 	}

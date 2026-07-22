@@ -1,5 +1,18 @@
 # GT Performance validation
 
+## 1.0.0-beta-1 local release validation
+
+Validated on 2026-07-21:
+
+- Composer metadata validation passed, and the release metadata tool confirmed `1.0.0-beta-1` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, and README.
+- WordPress Coding Standards passed for 95 PHP files; PHPStan level 6 passed; PHPUnit passed 82 tests with 209 assertions.
+- The production ZIP is 360,046 bytes with SHA-256 `616ded98d35e4b64af7a003ac1f3096f4b434890e44c6875dc35a571f14926f6`. ZIP integrity, package root, plugin header, runtime constant, stable tag, bundled production dependencies, and development-file exclusions passed.
+- A fresh native WordPress Studio site on WordPress 7.0.2 and PHP 8.2.32 installed and activated the exact ZIP as `1.0.0-beta-1`; the page-cache drop-in was owned and `WP_CACHE` was enabled.
+- An exact URL purge produced `MISS` then `HIT`. Inserting an approved comment invalidated that cached post and again produced `MISS` then `HIT`; changing the comment to spam repeated the same invalidation sequence.
+- WP-CLI `cache explain --page-url=...` found the port-aware local artifact, while targeted purge no longer emitted unrelated status output after success.
+- The packaged Cache and Integrations admin screens rendered through WordPress with the revised labels, six and five tooltip triggers respectively, and the explicit `Protect Akismet assets` label.
+- The disposable Studio site and its files were moved to Trash after validation.
+
 ## Alpha.12 distribution validation
 
 Validated on 2026-07-19:

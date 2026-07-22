@@ -25,6 +25,7 @@ final class Plugin {
 		}
 
 		Database::maybeUpgrade();
+		\GTPerformance\Cache\DropinInstaller::syncVersion();
 
 		self::$instance = new self();
 		self::$instance->register();

@@ -36,7 +36,7 @@ final class Eligibility {
 
 		foreach ( (array) ( $config['bypass_paths'] ?? array() ) as $path ) {
 			$path = (string) $path;
-			if ( '' !== $path && str_starts_with( $request->path, $path ) ) {
+			if ( '' !== $path && self::pathMatches( $request->path, $path ) ) {
 				return Decision::deny( 'path:' . $path );
 			}
 		}
@@ -64,5 +64,24 @@ final class Eligibility {
 		}
 
 		return Decision::allow();
+	}
+
+	/**
+	 * Match a bypass path against a request path on segment boundaries.
+	 *
+	 * A configured bypass such as `/checkout/` must protect the canonical
+	 * `/checkout` served on no-trailing-slash permalink structures, as well as
+	 * `/checkout/` and everything below it, without also matching unrelated
+	 * siblings like `/checkout-summary`.
+	 */
+	private static function pathMatches( string $requestPath, string $bypassPath ): bool {
+		$prefix = rtrim( $bypassPath, '/' );
+
+		if ( '' === $prefix ) {
+			// The bypass was configured for the site root only.
+			return '/' === $requestPath;
+		}
+
+		return $requestPath === $prefix || str_starts_with( $requestPath, $prefix . '/' );
 	}
 }

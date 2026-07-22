@@ -25,6 +25,8 @@ final class Activator {
 			wp_mkdir_p( $directory );
 		}
 
+		Paths::harden();
+
 		if ( false === get_option( Settings::OPTION, false ) ) {
 			add_option( Settings::OPTION, Settings::defaults(), '', false );
 		}

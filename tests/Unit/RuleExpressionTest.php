@@ -24,8 +24,29 @@ final class RuleExpressionTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'http.host eq "www.example.com"', $expression );
-		self::assertStringContainsString( 'starts_with(http.request.uri.path, "/checkout/")', $expression );
 		self::assertStringContainsString( 'http.cookie contains "fct_cart_hash"', $expression );
-		self::assertStringContainsString( 'http.request.uri.query contains "wc-ajax="', $expression );
+	}
+
+	public function test_path_bypass_matches_the_canonical_slashless_variant(): void {
+		$expression = ( new RuleExpression() )->compile(
+			'www.example.com',
+			array( 'bypass_paths' => array( '/checkout/' ) )
+		);
+
+		// Both the canonical `/checkout` and everything under `/checkout/` must be excluded.
+		self::assertStringContainsString( 'http.request.uri.path eq "/checkout"', $expression );
+		self::assertStringContainsString( 'starts_with(http.request.uri.path, "/checkout/")', $expression );
+	}
+
+	public function test_query_param_bypass_is_anchored_to_a_parameter_boundary(): void {
+		$expression = ( new RuleExpression() )->compile(
+			'www.example.com',
+			array( 'bypass_query_params' => array( 's' ) )
+		);
+
+		// The boundary-anchored form must not degrade to the substring `contains "s="`,
+		// which would also exclude unrelated params such as `utms=`.
+		self::assertStringContainsString( 'concat("&", http.request.uri.query) contains "&s="', $expression );
+		self::assertStringNotContainsString( 'query contains "s="', $expression );
 	}
 }

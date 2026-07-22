@@ -11,6 +11,7 @@ namespace GTPerformance\Optimization\Css;
 
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Settings;
+use GTPerformance\Optimization\HtmlDocument;
 
 final class UnusedCssOptimizer {
 	public function __construct(
@@ -41,9 +42,9 @@ final class UnusedCssOptimizer {
 		$previous = libxml_use_internal_errors( true );
 
 		try {
-			$document = new \DOMDocument( '1.0', 'UTF-8' );
-			$loaded   = $document->loadHTML( '<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
-			if ( ! $loaded ) {
+			$htmlDocument = new HtmlDocument();
+			$document     = $htmlDocument->load( $html );
+			if ( null === $document ) {
 				throw new \RuntimeException( 'The HTML document could not be parsed.' );
 			}
 
@@ -113,8 +114,8 @@ final class UnusedCssOptimizer {
 				$outputs[] = $this->appendFile( $document, $head, $used, 'used' );
 			}
 
-			$output = $document->saveHTML();
-			if ( ! is_string( $output ) || '' === trim( $output ) ) {
+			$output = $htmlDocument->save( $document );
+			if ( null === $output ) {
 				throw new \RuntimeException( 'The optimized HTML result was empty.' );
 			}
 
@@ -140,7 +141,7 @@ final class UnusedCssOptimizer {
 				)
 			);
 
-			return preg_replace( '/^<\\?xml[^>]+>\\s*/', '', $output ) ?? $output;
+			return $output;
 		} catch ( \Throwable $throwable ) {
 			$this->reports->fail( $fingerprint, $mode, $url, $throwable->getMessage() );
 			$this->logger->log( 'error', 'Unused CSS optimization failed; original HTML returned', array( 'error' => $throwable->getMessage() ) );

@@ -20,4 +20,23 @@ final class SelectorObservationTest extends TestCase {
 
 		self::assertSame( array( '#cart-drawer', 'button.is-open.primary', '.modal' ), $selectors );
 	}
+
+	public function testCssEscapedUtilityClassSelectorsAreKept(): void {
+		$selectors = ( new SelectorObservation() )->sanitizeMany(
+			array( 'div.md\\:flex.w-1\\/2', 'button.hover\\:bg-red-500', 'div.\\32 xl\\:hidden' )
+		);
+
+		self::assertSame(
+			array( 'div.md\\:flex.w-1\\/2', 'button.hover\\:bg-red-500', 'div.\\32 xl\\:hidden' ),
+			$selectors
+		);
+	}
+
+	public function testInjectionAttemptsAreStillRejected(): void {
+		$selectors = ( new SelectorObservation() )->sanitizeMany(
+			array( 'div.foo;background:red', 'a.b{color:red}', '.a,.b' )
+		);
+
+		self::assertSame( array(), $selectors );
+	}
 }

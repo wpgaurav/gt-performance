@@ -26,8 +26,9 @@ final class FontOptimizer {
 
 		$previous = libxml_use_internal_errors( true );
 		try {
-			$document = new \DOMDocument( '1.0', 'UTF-8' );
-			if ( ! $document->loadHTML( '<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD ) ) {
+			$htmlDocument = new HtmlDocument();
+			$document     = $htmlDocument->load( $html );
+			if ( null === $document ) {
 				return $html;
 			}
 			$xpath = new \DOMXPath( $document );
@@ -49,9 +50,9 @@ final class FontOptimizer {
 				}
 			}
 
-			$output = $document->saveHTML();
+			$output = $htmlDocument->save( $document );
 
-			return is_string( $output ) ? ( preg_replace( '/^<\\?xml[^>]+>\\s*/', '', $output ) ?? $output ) : $html;
+			return null === $output ? $html : $output;
 		} finally {
 			libxml_clear_errors();
 			libxml_use_internal_errors( $previous );

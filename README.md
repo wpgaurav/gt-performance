@@ -2,11 +2,11 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `0.1.0-alpha.12`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.0-beta-1`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
-- Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, related-page invalidation, and preload queue.
+- Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, related-page invalidation, a preload queue, and sitemap-driven cache warming after a full purge.
 - Reversible `WP_CACHE` management and drop-in ownership checks, including exact restoration of existing single-line declarations.
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule backup, and automatic fallback when a Free zone rejects custom query-string cache keys.
 - A Cloudflare Free rule compiler that previews the exact expression, managed-rule drift, competing rules, operation, and remaining ten-rule budget before synchronization.
@@ -147,6 +147,6 @@ composer check
 
 ## Status
 
-This is an alpha for disposable-site and controlled staging validation. Cloudflare mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, and host-cache combinations still need a growing compatibility matrix before a stable release.
+This is a beta for controlled staging and production validation. Cloudflare mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, and host-cache combinations still need a growing compatibility matrix before a stable release.
 
 GT Performance is an independent implementation. It does not include or copy FlyingPress code, branding, or private protocols.

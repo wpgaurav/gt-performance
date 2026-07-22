@@ -20,10 +20,18 @@ final class RuleExpression {
 		);
 
 		foreach ( (array) ( $cache['bypass_paths'] ?? array() ) as $path ) {
-			$path = (string) $path;
-			if ( '' !== $path ) {
-				$parts[] = '(not starts_with(http.request.uri.path, "' . $this->escape( $path ) . '"))';
+			$prefix = rtrim( (string) $path, '/' );
+			if ( '' === $prefix ) {
+				if ( '' !== (string) $path ) {
+					$parts[] = '(not http.request.uri.path eq "/")';
+				}
+				continue;
 			}
+
+			// Match the bypass on segment boundaries so `/checkout/` also protects the
+			// canonical `/checkout` without matching siblings like `/checkout-summary`.
+			$escaped = $this->escape( $prefix );
+			$parts[] = '(not (http.request.uri.path eq "' . $escaped . '" or starts_with(http.request.uri.path, "' . $escaped . '/")))';
 		}
 
 		foreach ( (array) ( $cache['bypass_cookies'] ?? array() ) as $cookie ) {
@@ -36,7 +44,10 @@ final class RuleExpression {
 		foreach ( (array) ( $cache['bypass_query_params'] ?? array() ) as $parameter ) {
 			$parameter = (string) $parameter;
 			if ( '' !== $parameter ) {
-				$parts[] = '(not http.request.uri.query contains "' . $this->escape( rawurlencode( $parameter ) . '=' ) . '")';
+				// Prefixing a separator anchors the match to a parameter boundary, so
+				// bypass `s` no longer also excludes `?utms=` or `?forms=`.
+				$needle  = $this->escape( '&' . rawurlencode( $parameter ) . '=' );
+				$parts[] = '(not concat("&", http.request.uri.query) contains "' . $needle . '")';
 			}
 		}
 

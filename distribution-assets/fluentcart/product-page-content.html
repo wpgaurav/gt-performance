@@ -37,7 +37,7 @@
 						<p class="gtp-demo-title">Performance control center</p>
 						<p class="gtp-demo-lede">Origin caching, server-side optimization, Cloudflare Free, and commerce-safe delivery in one place.</p>
 					</div>
-					<span class="gtp-demo-version">0.1 alpha</span>
+					<span class="gtp-demo-version">1.0 beta</span>
 				</header>
 
 				<div class="gtp-demo-tabs" role="tablist" aria-label="GT Performance settings">
@@ -144,11 +144,7 @@
 									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch="cache"><span aria-hidden="true"></span><b>On</b></button>
 								</div>
 								<div class="gtp-demo-field">
-									<div><strong>Separate mobile cache</strong><span>Create a mobile variant only when the HTML differs by device.</span></div>
-									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button>
-								</div>
-								<div class="gtp-demo-field">
-									<div><strong>Cache logged-in users</strong><span>Advanced and normally unsafe for personalized pages.</span></div>
+									<div><strong>Separate cache for mobile HTML</strong><span>Create a second variant only when HTML differs by device.</span></div>
 									<button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button>
 								</div>
 							</div>
@@ -162,19 +158,19 @@
 							</div>
 							<div class="gtp-demo-fields">
 								<div class="gtp-demo-field">
-									<div><strong>Fresh TTL</strong><span>Before a cached page needs regeneration.</span></div>
+									<div><strong>Fresh cache lifetime</strong><span>Before a cached page needs regeneration.</span></div>
 									<output data-demo-value="fresh">1 hour</output>
 								</div>
 								<div class="gtp-demo-field">
-									<div><strong>User and bot retention</strong><span>Safe stale delivery and cache resilience.</span></div>
+									<div><strong>Stale cache retention</strong><span>Safe background refresh and cache resilience.</span></div>
 									<output data-demo-value="retention">24 hours</output>
 								</div>
 								<div class="gtp-demo-field">
-									<div><strong>Stale if error</strong><span>How long stale HTML may be used when regeneration fails.</span></div>
+									<div><strong>Stale-on-error window</strong><span>How long stale HTML may be used when regeneration fails.</span></div>
 									<output data-demo-value="error">24 hours</output>
 								</div>
 								<div class="gtp-demo-field">
-									<div><strong>Browser max-age</strong><span>Conservative client-side HTML lifetime.</span></div>
+									<div><strong>Browser cache lifetime</strong><span>Conservative client-side HTML lifetime.</span></div>
 									<output data-demo-value="browser">5 minutes</output>
 								</div>
 							</div>
@@ -210,7 +206,7 @@
 									</div>
 								</div>
 								<div class="gtp-demo-field">
-									<div><strong>Hybrid inline budget</strong><span>Maximum early-page CSS to inline in Hybrid mode.</span></div>
+									<div><strong>Hybrid inline CSS limit</strong><span>Maximum early-page CSS to inline in Hybrid mode.</span></div>
 									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Hybrid inline budget in bytes</span><input type="number" value="14336" min="2048" max="51200"><em>bytes</em></label>
 								</div>
 								<div class="gtp-demo-field">
@@ -225,7 +221,7 @@
 							<div class="gtp-demo-fields">
 								<div class="gtp-demo-field"><div><strong>Minify local JavaScript</strong><span>Create immutable minified copies of eligible local scripts.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
 								<div class="gtp-demo-field"><div><strong>Defer safe JavaScript</strong><span>Add defer to eligible external scripts.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
-								<div class="gtp-demo-field"><div><strong>Delay third-party JavaScript</strong><span>Wait for interaction or five seconds before loading matches.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Delay selected third-party scripts</strong><span>Wait for interaction or five seconds before loading matches.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
 							</div>
 						</article>
 
@@ -234,13 +230,12 @@
 							<div class="gtp-demo-fields">
 								<div class="gtp-demo-field"><div><strong>Lazy-load non-critical images</strong><span>Keep early images eager and lazy-load later images.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
 								<div class="gtp-demo-field"><div><strong>Add missing image dimensions</strong><span>Reduce layout shifts when attachment dimensions are known.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
-								<div class="gtp-demo-field"><div><strong>Critical image count</strong><span>Early images excluded from lazy loading.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Critical image count</span><input type="number" value="2" min="0" max="10"><em>images</em></label></div>
+								<div class="gtp-demo-field"><div><strong>Images to load immediately</strong><span>Early images excluded from lazy loading.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Images to load immediately</span><input type="number" value="2" min="0" max="10"><em>images</em></label></div>
 								<div class="gtp-demo-field"><div><strong>Generate optimized variants</strong><span>Create the selected modern format for attachments.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
-								<div class="gtp-demo-field"><div><strong>Serve generated variants</strong><span>Rewrite eligible image URLs to generated variants.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Serve optimized image variants</strong><span>Rewrite eligible image URLs to generated variants.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
 								<div class="gtp-demo-field"><div><strong>Generated format</strong><span>AVIF requires server image-editor support.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Generated image format</span><select><option>WebP</option><option>AVIF</option></select></label></div>
 								<div class="gtp-demo-field"><div><strong>Image quality</strong><span>Higher values retain more detail and create larger files.</span></div><label class="gtp-demo-input"><span class="gtd-visuallyhidden">Image quality percentage</span><input type="number" value="82" min="30" max="100"><em>%</em></label></div>
 								<div class="gtp-demo-field"><div><strong>Lightweight YouTube previews</strong><span>Replace eligible embeds with a click-to-load preview.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
-								<div class="gtp-demo-field"><div><strong>Self-host Gravatar images</strong><span>Reserve local delivery for supported Gravatar responses.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
 							</div>
 						</article>
 
@@ -248,7 +243,6 @@
 							<div class="gtp-demo-card__header"><div><h3>Fonts</h3><p>Keep font requests predictable and reduce render blocking.</p></div></div>
 							<div class="gtp-demo-fields">
 								<div class="gtp-demo-field"><div><strong>Self-host Google Fonts</strong><span>Download eligible stylesheets and font files to this site.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="false" data-demo-switch><span aria-hidden="true"></span><b>Off</b></button></div>
-								<div class="gtp-demo-field"><div><strong>Preload local fonts</strong><span>Preload detected local font resources when supported.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
 								<div class="gtp-demo-field"><div><strong>Font display</strong><span>Swap is the safest default for readable text during loading.</span></div><label class="gtp-demo-select"><span class="gtd-visuallyhidden">Font display</span><select><option>swap</option><option>fallback</option><option>optional</option><option>block</option></select></label></div>
 							</div>
 						</article>
@@ -409,7 +403,7 @@ clarity.ms</textarea></label></div>
 									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Cloudflare Zone ID</span><input type="text" value="" placeholder="Discover automatically"></label>
 								</div>
 								<div class="gtp-demo-field">
-									<div><strong>Edge TTL</strong><span>How long eligible public HTML may remain fresh at Cloudflare.</span></div>
+									<div><strong>Cloudflare edge cache lifetime</strong><span>How long eligible public HTML remains fresh at Cloudflare.</span></div>
 									<label class="gtp-demo-input"><span class="gtd-visuallyhidden">Cloudflare edge TTL in seconds</span><input type="number" value="86400" min="0" max="31536000"><em>seconds</em></label>
 								</div>
 								<div class="gtp-demo-field">
@@ -442,7 +436,7 @@ clarity.ms</textarea></label></div>
 						<article class="gtp-demo-card">
 							<div class="gtp-demo-card__header"><div><h3>Service safeguards</h3><p>Protections activate only when the matching plugin is active.</p></div></div>
 							<div class="gtp-demo-fields">
-								<div class="gtp-demo-field"><div><strong>Akismet compatibility</strong><span>Keep privacy and anti-spam assets during CSS or JavaScript optimization.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
+								<div class="gtp-demo-field"><div><strong>Protect Akismet assets</strong><span>Keep privacy and anti-spam output during CSS or JavaScript optimization.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
 								<div class="gtp-demo-field"><div><strong>Jetpack compatibility</strong><span>Protect forms, comments, subscriptions, search, VideoPress, and visitor state.</span></div><button class="gtp-demo-switch" type="button" role="switch" aria-checked="true" data-demo-switch><span aria-hidden="true"></span><b>On</b></button></div>
 							</div>
 						</article>
@@ -567,7 +561,7 @@ define( 'WP_REDIS_TIMEOUT', 0.5 );</code></pre>
 							<div class="gtp-demo-fields">
 								<div class="gtp-demo-field"><div><strong>Product</strong><span>Licensed FluentCart product.</span></div><strong>GT Performance</strong></div>
 								<div class="gtp-demo-field"><div><strong>FluentCart product ID</strong><span>Used for protected release metadata.</span></div><code>1170147</code></div>
-								<div class="gtp-demo-field"><div><strong>Installed version</strong><span>Current plugin package.</span></div><code>0.1.0-alpha.10</code></div>
+								<div class="gtp-demo-field"><div><strong>Installed version</strong><span>Current plugin package.</span></div><code>1.0.0-beta-1</code></div>
 								<div class="gtp-demo-field"><div><strong>Automatic checks</strong><span>Normal WordPress update workflow.</span></div><strong>Every 3 hours</strong></div>
 								<div class="gtp-demo-field"><div><strong>License verification</strong><span>Also available on demand.</span></div><strong>Weekly</strong></div>
 							</div>

@@ -20,6 +20,19 @@ final class RequestContextTest extends TestCase {
 		self::assertSame( 'https', $request->scheme );
 		self::assertSame( 'example.com', $request->host );
 		self::assertSame( '/shop/item/', $request->path );
-		self::assertSame( array( 'utm_source' => 'test', 'view' => 'grid' ), $request->query );
+		self::assertSame(
+			array(
+				'utm_source' => 'test',
+				'view'       => 'grid',
+			),
+			$request->query
+		);
+	}
+
+	public function testFromUrlPreservesExplicitPortsForCacheKeyParity(): void {
+		$request = RequestContext::fromUrl( 'http://localhost:8888/article/' );
+
+		self::assertNotNull( $request );
+		self::assertSame( 'localhost:8888', $request->host );
 	}
 }

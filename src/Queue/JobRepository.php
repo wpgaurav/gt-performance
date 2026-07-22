@@ -122,6 +122,37 @@ final class JobRepository {
 		);
 	}
 
+	/**
+	 * Delete terminal (complete/failed) jobs older than the retention window.
+	 *
+	 * Every post save, comment action, and product change enqueues jobs; without
+	 * pruning, terminal rows accumulate in the queue table indefinitely. The
+	 * bounded LIMIT keeps each sweep cheap enough to run inline on the queue cron.
+	 */
+	public function purgeTerminal( int $olderThanSeconds = 3 * DAY_IN_SECONDS, int $limit = 500 ): int {
+		global $wpdb;
+
+		$table  = $wpdb->prefix . 'gtp_jobs';
+		$cutoff = gmdate( 'Y-m-d H:i:s', time() - max( 0, $olderThanSeconds ) );
+
+		// The table name is built from the trusted WordPress prefix.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$table}
+				WHERE status IN ('complete', 'failed')
+				AND updated_at < %s
+				ORDER BY updated_at ASC
+				LIMIT %d",
+				$cutoff,
+				max( 1, $limit )
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return is_int( $deleted ) ? $deleted : 0;
+	}
+
 	public function fail( int $id, string $token, string $error, int $attempts ): void {
 		global $wpdb;
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.0.0-beta-1 - 2026-07-22
+
+### Fixed
+
+- Deferred the public `Cache-Control` header until after response validation, so a `Set-Cookie`, a non-200 status, or `DONOTCACHEPAGE` introduced during rendering can no longer instruct a shared or edge cache to store a private page.
+- Stopped deselected scheduled database-cleanup tasks (and other list settings such as bypass paths) from being silently restored on save; list settings are now replaced wholesale instead of merged index by index.
+- Fixed commerce bypass-path matching so the canonical `/checkout` on no-trailing-slash permalink sites is protected exactly like `/checkout/`, at both the origin and in the compiled Cloudflare edge rule.
+- Preserved inline `<script>` and JSON-LD content and removed the stray `<?xml>` node that the DOM-based CSS, font, and embed optimizers could ship — and cache — on every optimized page.
+- Corrected root-relative `url(/…)` rebasing in collected stylesheets so background and font references resolve against the site origin.
+- Accepted `CSS.escape()`d utility-class selectors (for example Tailwind `md:flex`, `w-1/2`) in CSS Training Mode so utility-class themes no longer publish empty safelists.
+- Canonicalized the Cloudflare managed-rule fingerprint so key-order differences in Cloudflare's response are no longer misread as drift and no longer trigger a redundant sync on every run.
+- Anchored the Cloudflare bypass query-parameter rule to a parameter boundary so a short parameter such as `s` no longer excludes unrelated parameters like `utms`.
+- Sent `Vary: User-Agent` when a separate mobile cache variant is active, and honored the "stale if error" duration in the emitted `Cache-Control`.
+- Bounded queue-table growth by pruning terminal jobs on the queue cron, and web-hardened the cache and log directories.
+- Stamped the advanced-cache drop-in with the plugin version and regenerated it automatically after an update.
+- Removed the non-functional "Cache logged-in users" control.
+- Invalidated affected post, homepage, and archive caches when comments are inserted through the front end, REST API, WP-CLI, or lower-level WordPress APIs, and when they are edited, moderated, or deleted.
+- Batched related URL purges into one edge notification and removed both desktop and mobile origin variants.
+- Prevented the deferred cache-safety header from rejecting the plugin's own otherwise cacheable response.
+- Renamed the WP-CLI target option to `--page-url` so it no longer collides with WP-CLI's reserved `--url` site selector.
+- Preserved explicit URL ports in diagnostic and purge cache keys so local Studio sites target the same artifact as live requests.
+- Applied the configured Cloudflare edge lifetime to the managed Cache Rule instead of always respecting the origin value.
+- Restricted sitemap warming to same-origin, cache-eligible URLs and bounded sitemap response sizes.
+- Discarded obsolete and foreign settings keys during merges, and removed non-functional Gravatar self-hosting and font-preload controls.
+
+### Added
+
+- Sitemap-driven cache warming: after a full purge, eligible URLs discovered from the WordPress sitemap are queued for background preloading (controlled by the new `cache.preload` toggle and bounded by `cache.preload_max_urls`), with a matching `wp gt-performance cache warm` command.
+- Accessible brief tooltips and clearer labels for cache lifetimes, exceptions, Cloudflare, optimization, Akismet, and Redis controls.
+
 ## 0.1.0-alpha.12 - 2026-07-19
 
 - Added Explain This Page and verified purge receipts for deterministic cache diagnostics.

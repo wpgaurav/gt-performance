@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\CLI;
 
+use GTPerformance\Cache\CacheWarmer;
 use GTPerformance\Cache\DropinInstaller;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\WpCacheConstant;
@@ -76,10 +77,10 @@ final class Command {
 	 * ## OPTIONS
 	 *
 	 * <action>
-	 * : status, purge, install-dropin, explain, or verify.
+	 * : status, purge, warm, install-dropin, explain, or verify.
 	 *
-	 * [--url=<url>]
-	 * : Purge one exact URL.
+	 * [--page-url=<url>]
+	 * : Target URL for purge, explain, or verify. Defaults to the home page for explain and verify.
 	 *
 	 * @param list<string>          $args Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.
@@ -89,18 +90,26 @@ final class Command {
 		if ( 'install-dropin' === $action ) {
 			$result = ( new DropinInstaller() )->install();
 			is_wp_error( $result ) ? \WP_CLI::error( $result->get_error_message() ) : \WP_CLI::success( 'Page-cache drop-in installed.' );
+			return;
+		}
+		if ( 'warm' === $action ) {
+			$queued = ( new CacheWarmer( new \GTPerformance\Core\Logger() ) )->warm( (int) Settings::get( 'cache.preload_max_urls', 200 ) );
+			\WP_CLI::success( "Queued {$queued} URL(s) for preloading." );
+			return;
 		}
 		if ( 'purge' === $action ) {
-			$url = isset( $assocArgs['url'] ) ? esc_url_raw( (string) $assocArgs['url'] ) : '';
+			$url = $this->pageUrl( $assocArgs );
 			if ( '' !== $url ) {
 				( new Purger() )->purgeUrl( $url );
 			} else {
 				( new Purger() )->purgeAll();
 			}
 			\WP_CLI::success( 'Cache purge completed.' );
+			return;
 		}
 		if ( 'explain' === $action || 'verify' === $action ) {
-			$url = isset( $assocArgs['url'] ) ? esc_url_raw( (string) $assocArgs['url'] ) : home_url( '/' );
+			$url = $this->pageUrl( $assocArgs );
+			$url = '' !== $url ? $url : home_url( '/' );
 			$result = 'verify' === $action
 				? ( new PurgeVerifier() )->verify( $url )
 				: ( new CacheInspector() )->inspect( $url );
@@ -111,8 +120,25 @@ final class Command {
 			return;
 		}
 
-		\WP_CLI::log( 'enabled=' . ( Settings::get( 'cache.enabled', false ) ? 'yes' : 'no' ) );
-		\WP_CLI::log( 'dropin=' . ( new DropinInstaller() )->status() );
+		if ( 'status' === $action ) {
+			\WP_CLI::log( 'enabled=' . ( Settings::get( 'cache.enabled', false ) ? 'yes' : 'no' ) );
+			\WP_CLI::log( 'dropin=' . ( new DropinInstaller() )->status() );
+			return;
+		}
+
+		\WP_CLI::error( 'Unknown cache action. Use status, purge, warm, install-dropin, explain, or verify.' );
+	}
+
+	/**
+	 * Use page-url because WP-CLI reserves --url for multisite context selection.
+	 * Keep the old key as a programmatic fallback for callers invoking the method.
+	 *
+	 * @param array<string, string> $assocArgs Named arguments.
+	 */
+	private function pageUrl( array $assocArgs ): string {
+		$value = (string) ( $assocArgs['page-url'] ?? $assocArgs['url'] ?? '' );
+
+		return esc_url_raw( $value );
 	}
 
 	/**

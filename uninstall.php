@@ -17,6 +17,7 @@ if ( ! (bool) get_option( 'gt_performance_remove_data_on_uninstall', false ) ) {
 
 delete_option( 'gt_performance_settings' );
 delete_option( 'gt_performance_schema_version' );
+delete_option( 'gt_performance_dropin_version' );
 delete_option( 'gt_performance_cloudflare_backup' );
 delete_option( 'gt_performance_cloudflare_state' );
 delete_option( 'gt_performance_cloudflare_query_key_fallback' );

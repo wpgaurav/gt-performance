@@ -16,6 +16,8 @@ use GTPerformance\Core\Settings;
 final class PageCacheModule implements Module {
 	private ?RequestContext $request = null;
 	private ?Decision $decision      = null;
+	/** @var array<int, true> */
+	private array $purgedCommentPosts = array();
 
 	public function __construct(
 		private readonly Logger $logger,
@@ -27,9 +29,13 @@ final class PageCacheModule implements Module {
 
 	public function register(): void {
 		add_action( 'template_redirect', array( $this, 'startCapture' ), -9999 );
-		add_action( 'send_headers', array( $this, 'sendCacheHeaders' ), 9999 );
 		add_action( 'save_post', array( $this, 'purgePost' ), 20, 2 );
 		add_action( 'deleted_post', array( $this, 'purgePostById' ), 20 );
+		add_action( 'wp_insert_comment', array( $this, 'purgeInsertedComment' ), 20, 2 );
+		add_action( 'comment_post', array( $this, 'purgeCommentById' ), 20 );
+		add_action( 'edit_comment', array( $this, 'purgeCommentById' ), 20 );
+		add_action( 'deleted_comment', array( $this, 'purgeDeletedComment' ), 20, 2 );
+		add_action( 'transition_comment_status', array( $this, 'purgeCommentTransition' ), 20, 3 );
 		add_action( 'wp_update_nav_menu', array( $this, 'purgeAll' ), 20 );
 		add_action( 'switch_theme', array( $this, 'purgeAll' ), 20 );
 		add_action( 'customize_save_after', array( $this, 'purgeAll' ), 20 );
@@ -60,8 +66,10 @@ final class PageCacheModule implements Module {
 			return;
 		}
 
+		// Do not advertise shared caching until the generated response passes body and
+		// header safety validation in capture(). Unsafe responses receive an explicit
+		// private directive there; safe responses are upgraded to the public policy.
 		header( 'X-GT-Cache: MISS' );
-		$this->sendCacheHeaders();
 		ob_start( array( $this, 'capture' ) );
 	}
 
@@ -71,7 +79,18 @@ final class PageCacheModule implements Module {
 		}
 
 		$decision = $this->validator->validate( $html, http_response_code(), headers_list() );
+		if ( $decision->cacheable && defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) {
+			$decision = Decision::deny( 'donotcachepage' );
+		}
+
 		if ( ! $decision->cacheable ) {
+			if ( ! headers_sent() ) {
+				header( 'Cache-Control: no-store, private, max-age=0' );
+				if ( (bool) Settings::get( 'debug', false ) ) {
+					header( 'X-GT-Cache: DYNAMIC' );
+					header( 'X-GT-Cache-Reason: ' . sanitize_key( $decision->reason ) );
+				}
+			}
 			$this->logger->log( 'debug', 'Response not cached', array( 'reason' => $decision->reason ) );
 			return $html;
 		}
@@ -100,19 +119,38 @@ final class PageCacheModule implements Module {
 			do_action( 'gt_performance_cache_stored', $this->request, $hash );
 		}
 
+		$this->sendCacheHeaders();
+
 		return $optimized;
 	}
 
 	public function sendCacheHeaders(): void {
-		if ( null === $this->decision || ! $this->decision->cacheable ) {
+		if ( null === $this->decision || ! $this->decision->cacheable || headers_sent() ) {
 			return;
 		}
 
 		$fresh   = max( 0, (int) Settings::get( 'cache.fresh_ttl', 3600 ) );
 		$stale   = max( 0, (int) Settings::get( 'cache.stale_ttl', 86400 ) );
 		$browser = max( 0, (int) Settings::get( 'cache.browser_ttl', 300 ) );
-		header( "Cache-Control: public, max-age={$browser}, s-maxage={$fresh}, stale-while-revalidate={$stale}" );
-		header( 'Vary: Accept-Encoding' );
+		$ifError = max( 0, (int) Settings::get( 'cache.stale_if_error', 0 ) );
+
+		$directives = array(
+			'public',
+			'max-age=' . $browser,
+			's-maxage=' . $fresh,
+			'stale-while-revalidate=' . $stale,
+		);
+		if ( $ifError > 0 ) {
+			$directives[] = 'stale-if-error=' . $ifError;
+		}
+		header( 'Cache-Control: ' . implode( ', ', $directives ) );
+
+		// A mobile cache variant makes the HTML vary by User-Agent, so any shared
+		// cache in front of the origin must key on it too.
+		$vary = (bool) Settings::get( 'cache.separate_mobile', false )
+			? 'Accept-Encoding, User-Agent'
+			: 'Accept-Encoding';
+		header( 'Vary: ' . $vary );
 	}
 
 	public function purgePost( int $postId, \WP_Post $post ): void {
@@ -133,12 +171,35 @@ final class PageCacheModule implements Module {
 			'is_string'
 		);
 
-		$purger = new Purger( $this->store );
-		foreach ( array_unique( $urls ) as $url ) {
-			$purger->purgeUrl( $url );
-		}
+		$urls = array_values( array_unique( $urls ) );
+		( new Purger( $this->store ) )->purgeUrls( $urls );
 
 		do_action( 'gt_performance_enqueue_preload', $urls );
+	}
+
+	public function purgeCommentById( int $commentId ): void {
+		$comment = get_comment( $commentId );
+		if ( $comment instanceof \WP_Comment ) {
+			$this->purgeCommentPost( (int) $comment->comment_post_ID );
+		}
+	}
+
+	public function purgeInsertedComment( int $commentId, \WP_Comment $comment ): void {
+		unset( $commentId );
+		$this->purgeCommentPost( (int) $comment->comment_post_ID );
+	}
+
+	public function purgeDeletedComment( int $commentId, \WP_Comment $comment ): void {
+		unset( $commentId );
+		$this->purgeCommentPost( (int) $comment->comment_post_ID );
+	}
+
+	public function purgeCommentTransition( string $newStatus, string $oldStatus, \WP_Comment $comment ): void {
+		if ( $newStatus === $oldStatus ) {
+			return;
+		}
+
+		$this->purgeCommentPost( (int) $comment->comment_post_ID );
 	}
 
 	public function purgeAll(): void {
@@ -153,5 +214,14 @@ final class PageCacheModule implements Module {
 		$config['generation'] = (int) Settings::get( 'generation', 1 );
 
 		return apply_filters( 'gt_performance_cache_policy', $config );
+	}
+
+	private function purgeCommentPost( int $postId ): void {
+		if ( $postId <= 0 || isset( $this->purgedCommentPosts[ $postId ] ) ) {
+			return;
+		}
+
+		$this->purgedCommentPosts[ $postId ] = true;
+		$this->purgePostById( $postId );
 	}
 }

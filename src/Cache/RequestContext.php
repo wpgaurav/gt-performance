@@ -80,11 +80,18 @@ final class RequestContext {
 
 		$query = array();
 		parse_str( (string) ( $parts['query'] ?? '' ), $query );
+		$host = strtolower( (string) $parts['host'] );
+		if ( str_contains( $host, ':' ) && ! str_starts_with( $host, '[' ) ) {
+			$host = '[' . $host . ']';
+		}
+		if ( isset( $parts['port'] ) ) {
+			$host .= ':' . (int) $parts['port'];
+		}
 
 		return new self(
 			'GET',
 			'https' === strtolower( (string) ( $parts['scheme'] ?? 'https' ) ) ? 'https' : 'http',
-			strtolower( (string) $parts['host'] ),
+			$host,
 			self::normalizePath( (string) ( $parts['path'] ?? '/' ) ),
 			self::scalarMap( $query ),
 			$cookies,
