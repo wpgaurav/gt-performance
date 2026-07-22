@@ -2,16 +2,27 @@
 
 ## 1.0.0-beta-1 local release validation
 
-Validated on 2026-07-21:
+Validated on 2026-07-22:
 
 - Composer metadata validation passed, and the release metadata tool confirmed `1.0.0-beta-1` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, and README.
 - WordPress Coding Standards passed for 95 PHP files; PHPStan level 6 passed; PHPUnit passed 82 tests with 209 assertions.
-- The production ZIP is 360,046 bytes with SHA-256 `616ded98d35e4b64af7a003ac1f3096f4b434890e44c6875dc35a571f14926f6`. ZIP integrity, package root, plugin header, runtime constant, stable tag, bundled production dependencies, and development-file exclusions passed.
+- The canonical GitHub ZIP is 360,046 bytes with SHA-256 `7ccbc16f0f4bc2bdfd80466b32c46385a6f104e6395845f23efbc50edbf68034`. ZIP integrity, package root, plugin header, runtime constant, stable tag, bundled production dependencies, and development-file exclusions passed.
 - A fresh native WordPress Studio site on WordPress 7.0.2 and PHP 8.2.32 installed and activated the exact ZIP as `1.0.0-beta-1`; the page-cache drop-in was owned and `WP_CACHE` was enabled.
 - An exact URL purge produced `MISS` then `HIT`. Inserting an approved comment invalidated that cached post and again produced `MISS` then `HIT`; changing the comment to spam repeated the same invalidation sequence.
 - WP-CLI `cache explain --page-url=...` found the port-aware local artifact, while targeted purge no longer emitted unrelated status output after success.
 - The packaged Cache and Integrations admin screens rendered through WordPress with the revised labels, six and five tooltip triggers respectively, and the explicit `Protect Akismet assets` label.
 - The disposable Studio site and its files were moved to Trash after validation.
+
+## 1.0.0-beta-1 distribution validation
+
+Validated on 2026-07-22:
+
+- Commit `860bc9b` passed GitHub CI on PHP 8.1, 8.3, and 8.5, including the release-package job. Tag `v1.0.0-beta-1` was published as a GitHub prerelease.
+- FluentCart product `1170147` points to download row `108`, version `1.0.0-beta-1`, containing the exact canonical GitHub ZIP. Alpha.12 row `107` and its file remain available for rollback.
+- An unauthenticated update request returned beta-1 metadata without a package URL. A temporary non-customer license then activated successfully, returned valid protected metadata, downloaded 360,046 bytes with the canonical GitHub checksum, and left zero temporary license, activation, or site rows after cleanup.
+- Both `gauravtiwari.org` and `gatilab.com` run GT Performance `1.0.0-beta-1` as an active plugin. Their installed 236-file trees share aggregate SHA-256 `79a1c18c4f4e3c03fa64e449e2b9a43a9060336447e9bec07e967c23a12ef65c`, matching the extracted canonical ZIP.
+- On both sites, PHP, WordPress, cache-directory writability, the owned page-cache drop-in, `WP_CACHE`, the owned Redis drop-in, and Cloudflare pass `wp gt-performance doctor`; plugin-owned cache purges also succeed.
+- Gatilab's origin returned `X-GT-Cache: MISS` followed by `HIT`, and Cloudflare returned HTTP 200 followed by an edge hit. On `gauravtiwari.org`, Cloudflare returned HTTP 200 and an edge hit, but the origin exposes an empty `HTTP_AUTHORIZATION` server variable that beta-1 currently treats as an authenticated request; origin requests therefore report `BYPASS authorization`. This is a follow-up compatibility bug rather than a package or deployment mismatch.
 
 ## Alpha.12 distribution validation
 
