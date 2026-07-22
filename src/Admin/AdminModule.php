@@ -48,6 +48,7 @@ final class AdminModule implements Module {
 		'optimization',
 		'exceptions',
 		'cloudflare',
+		'cdn',
 		'integrations',
 		'safety',
 		'css-reports',
@@ -211,9 +212,15 @@ final class AdminModule implements Module {
 	 * @param mixed $new New settings.
 	 */
 	public function afterSettingsUpdate( mixed $old, mixed $new ): void {
-		unset( $old );
 		if ( is_array( $new ) ) {
 			Settings::compile( $new );
+		}
+		if (
+			is_array( $old )
+			&& is_array( $new )
+			&& ( $old['cdn'] ?? array() ) !== ( $new['cdn'] ?? array() )
+		) {
+			( new Purger() )->purgeAll();
 		}
 	}
 
@@ -243,6 +250,9 @@ final class AdminModule implements Module {
 						break;
 					case 'cloudflare':
 						$this->renderCloudflare( $settings );
+						break;
+					case 'cdn':
+						$this->renderCdn( $settings );
 						break;
 					case 'integrations':
 						$this->renderIntegrations( $settings );
@@ -482,6 +492,7 @@ final class AdminModule implements Module {
 			'optimization' => __( 'Optimization', 'gt-performance' ),
 			'exceptions'   => __( 'Exceptions', 'gt-performance' ),
 			'cloudflare'   => __( 'Cloudflare', 'gt-performance' ),
+			'cdn'          => __( 'CDN', 'gt-performance' ),
 			'integrations' => __( 'Integrations', 'gt-performance' ),
 			'safety'       => __( 'Safety Lab', 'gt-performance' ),
 			'css-reports'  => __( 'CSS Reports', 'gt-performance' ),
@@ -494,7 +505,7 @@ final class AdminModule implements Module {
 			<div>
 				<p class="gtp-admin__eyebrow"><?php esc_html_e( 'GT Performance', 'gt-performance' ); ?></p>
 				<h1><?php esc_html_e( 'Performance control center', 'gt-performance' ); ?></h1>
-				<p class="gtp-admin__lede"><?php esc_html_e( 'Origin caching, server-side optimization, Cloudflare Free, and commerce-safe delivery in one place.', 'gt-performance' ); ?></p>
+				<p class="gtp-admin__lede"><?php esc_html_e( 'Origin caching, server-side optimization, Cloudflare and custom CDN delivery, and commerce-safe controls in one place.', 'gt-performance' ); ?></p>
 			</div>
 			<span class="gtp-version"><?php echo esc_html( 'Version ' . GTP_VERSION ); ?></span>
 		</header>
@@ -820,11 +831,40 @@ final class AdminModule implements Module {
 				'global' => __( 'Global API Key (legacy)', 'gt-performance' ),
 			)
 		);
-		$this->password( 'cloudflare', 'api_token', __( 'Scoped API token', 'gt-performance' ), __( 'Leave blank to keep the encrypted token already saved.', 'gt-performance' ), ! empty( $settings['cloudflare']['api_token'] ) );
-		$this->password( 'cloudflare', 'global_api_key', __( 'Global API Key', 'gt-performance' ), __( 'Requires the Cloudflare account email below. Leave blank to keep the saved key.', 'gt-performance' ), ! empty( $settings['cloudflare']['global_api_key'] ) );
+		$this->password(
+			'cloudflare',
+			'api_token',
+			__( 'Scoped API token', 'gt-performance' ),
+			__( 'Leave blank to keep the encrypted token already saved.', 'gt-performance' ),
+			! empty( $settings['cloudflare']['api_token'] ),
+			'',
+			'https://developers.cloudflare.com/fundamentals/api/get-started/create-token/',
+			__( 'Create a Cloudflare API token', 'gt-performance' )
+		);
+		$this->password(
+			'cloudflare',
+			'global_api_key',
+			__( 'Global API Key', 'gt-performance' ),
+			__( 'Requires the Cloudflare account email below. Leave blank to keep the saved key.', 'gt-performance' ),
+			! empty( $settings['cloudflare']['global_api_key'] ),
+			'',
+			'https://developers.cloudflare.com/fundamentals/api/get-started/keys/',
+			__( 'Find your Global API Key', 'gt-performance' )
+		);
 		$this->text( 'cloudflare', 'email', __( 'Cloudflare account email', 'gt-performance' ), __( 'Required only for Global API Key authentication.', 'gt-performance' ), $settings, 'email' );
 		$this->text( 'cloudflare', 'domain', __( 'Domain', 'gt-performance' ), __( 'Used to discover the zone automatically when Zone ID is blank.', 'gt-performance' ), $settings, 'text', 'example.com' );
-		$this->text( 'cloudflare', 'zone_id', __( 'Zone ID', 'gt-performance' ), __( 'Optional. Direct Zone ID avoids the discovery request.', 'gt-performance' ), $settings );
+		$this->text(
+			'cloudflare',
+			'zone_id',
+			__( 'Zone ID', 'gt-performance' ),
+			__( 'Optional. Direct Zone ID avoids the discovery request.', 'gt-performance' ),
+			$settings,
+			'text',
+			'',
+			'',
+			'https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/',
+			__( 'Find your Zone ID', 'gt-performance' )
+		);
 		$this->number( 'cloudflare', 'edge_ttl', __( 'Cloudflare edge cache lifetime', 'gt-performance' ), __( 'How long eligible public HTML remains fresh at Cloudflare.', 'gt-performance' ), $settings, 0, 31536000, __( 'seconds', 'gt-performance' ), '1', __( 'A positive value overrides the origin freshness value in the managed Cache Rule. Use 0 to respect the origin Cache-Control header instead.', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
@@ -837,6 +877,95 @@ final class AdminModule implements Module {
 			<?php $this->actionButton( 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
 		</section>
 		<?php $this->renderCloudflarePlan(); ?>
+		<?php
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderCdn( array $settings ): void {
+		$this->pageIntro(
+			__( 'Content delivery network', 'gt-performance' ),
+			__( 'Serve selected static files from an origin-pull CDN URL while Cloudflare continues to cache public HTML independently.', 'gt-performance' )
+		);
+		$this->settingsFormOpen();
+		$this->panelOpen(
+			__( 'Asset CDN', 'gt-performance' ),
+			__( 'GT Performance changes same-site asset URLs only. Configure the CDN provider to pull from this WordPress site.', 'gt-performance' )
+		);
+		$this->checkbox(
+			'cdn',
+			'enabled',
+			__( 'Enable CDN URL rewriting', 'gt-performance' ),
+			__( 'Rewrite eligible public asset URLs to the CDN address below.', 'gt-performance' ),
+			$settings,
+			__( 'This does not upload files or configure a provider account. The CDN must be able to fetch the original WordPress paths.', 'gt-performance' )
+		);
+		$this->text(
+			'cdn',
+			'url',
+			__( 'CDN URL', 'gt-performance' ),
+			__( 'Use the HTTPS hostname or hostname plus path supplied by your CDN provider.', 'gt-performance' ),
+			$settings,
+			'url',
+			'https://cdn.example.com',
+			__( 'GT Performance preserves each original asset path, query string, and fragment after this base URL.', 'gt-performance' )
+		);
+		$this->cdnFileTypes( $settings );
+		$this->panelClose();
+		$this->settingsFormClose();
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'How this works with Cloudflare', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Cloudflare may cache the HTML page while the browser requests selected static files from the separate CDN hostname.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<div class="gtp-panel-note gtp-panel-note--stacked">
+				<p><?php esc_html_e( 'Only URLs hosted by this WordPress site are rewritten. Third-party files, HTML routes, API requests, data URLs, and unselected extensions remain unchanged.', 'gt-performance' ); ?></p>
+				<p><?php esc_html_e( 'GT Performance purges its origin page cache and Cloudflare when these settings change. Purge the separate CDN through its provider when replacing a file without changing its URL.', 'gt-performance' ); ?></p>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function cdnFileTypes( array $settings ): void {
+		$selected = array_map( 'strval', (array) $settings['cdn']['file_types'] );
+		$groups   = array(
+			__( 'Images', 'gt-performance' ) => array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'ico' ),
+			__( 'Styles and scripts', 'gt-performance' ) => array( 'css', 'js', 'mjs' ),
+			__( 'Fonts', 'gt-performance' ) => array( 'woff', 'woff2', 'ttf', 'otf', 'eot' ),
+			__( 'Video and audio', 'gt-performance' ) => array( 'mp4', 'webm', 'mp3', 'ogg', 'wav' ),
+			__( 'Downloads', 'gt-performance' ) => array( 'pdf', 'zip' ),
+		);
+		$name = Settings::OPTION . '[cdn][file_types][]';
+		?>
+		<div class="gtp-field gtp-field--stacked">
+			<div>
+				<div class="gtp-field__label" id="gtp-cdn-file-types-label"><?php esc_html_e( 'Files served by the CDN', 'gt-performance' ); ?></div>
+				<p><?php esc_html_e( 'Select exact extensions. Unselected file types keep their original WordPress URLs.', 'gt-performance' ); ?></p>
+			</div>
+			<div class="gtp-field__control gtp-cdn-type-groups" role="group" aria-labelledby="gtp-cdn-file-types-label">
+				<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="">
+				<?php foreach ( $groups as $groupLabel => $types ) : ?>
+					<fieldset class="gtp-cdn-type-group">
+						<legend><?php echo esc_html( $groupLabel ); ?></legend>
+						<div class="gtp-extension-grid">
+							<?php foreach ( $types as $type ) : ?>
+								<label>
+									<input type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $type ); ?>" <?php checked( in_array( $type, $selected, true ) ); ?>>
+									<code>.<?php echo esc_html( $type ); ?></code>
+								</label>
+							<?php endforeach; ?>
+						</div>
+					</fieldset>
+				<?php endforeach; ?>
+			</div>
+		</div>
 		<?php
 	}
 
@@ -1805,7 +1934,9 @@ PHP;
 		array $settings,
 		string $type = 'text',
 		string $placeholder = '',
-		string $tooltip = ''
+		string $tooltip = '',
+		string $helpUrl = '',
+		string $helpLabel = ''
 	): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
@@ -1813,7 +1944,10 @@ PHP;
 		<div class="gtp-field">
 			<div>
 				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
-				<p><?php echo esc_html( $description ); ?></p>
+				<p>
+					<?php echo esc_html( $description ); ?>
+					<?php $this->fieldHelpLink( $helpUrl, $helpLabel ); ?>
+				</p>
 			</div>
 			<div class="gtp-field__control">
 				<input id="<?php echo esc_attr( $id ); ?>" class="regular-text" type="<?php echo esc_attr( $type ); ?>" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( (string) $settings[ $section ][ $key ] ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>">
@@ -1822,14 +1956,26 @@ PHP;
 		<?php
 	}
 
-	private function password( string $section, string $key, string $label, string $description, bool $saved, string $tooltip = '' ): void {
+	private function password(
+		string $section,
+		string $key,
+		string $label,
+		string $description,
+		bool $saved,
+		string $tooltip = '',
+		string $helpUrl = '',
+		string $helpLabel = ''
+	): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
 		?>
 		<div class="gtp-field">
 			<div>
 				<?php $this->fieldLabel( $id, $label, $tooltip ); ?>
-				<p><?php echo esc_html( $description ); ?></p>
+				<p>
+					<?php echo esc_html( $description ); ?>
+					<?php $this->fieldHelpLink( $helpUrl, $helpLabel ); ?>
+				</p>
 			</div>
 			<div class="gtp-field__control">
 				<input id="<?php echo esc_attr( $id ); ?>" class="regular-text" type="password" autocomplete="new-password" name="<?php echo esc_attr( $name ); ?>" value="" placeholder="<?php echo esc_attr( $saved ? __( 'Saved; leave blank to keep', 'gt-performance' ) : '' ); ?>">
@@ -1874,6 +2020,15 @@ PHP;
 				</span>
 			<?php endif; ?>
 		</div>
+		<?php
+	}
+
+	private function fieldHelpLink( string $url, string $label ): void {
+		if ( '' === $url || '' === $label ) {
+			return;
+		}
+		?>
+		<a class="gtp-field__help-link" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $label ); ?> <span aria-hidden="true">&nearr;</span></a>
 		<?php
 	}
 

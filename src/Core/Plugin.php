@@ -36,6 +36,7 @@ final class Plugin {
 
 		$this->modules = array(
 			new \GTPerformance\Cache\PageCacheModule( $logger ),
+			new \GTPerformance\CDN\CdnModule(),
 			new \GTPerformance\Queue\QueueModule( $logger ),
 			new \GTPerformance\Commerce\CommerceModule(),
 			new \GTPerformance\PrivateFragments\PrivateFragmentsModule(),

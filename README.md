@@ -2,13 +2,14 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.0-beta-1`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.0-beta-2`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
 - Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, related-page invalidation, a preload queue, and sitemap-driven cache warming after a full purge.
 - Reversible `WP_CACHE` management and drop-in ownership checks, including exact restoration of existing single-line declarations.
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule backup, and automatic fallback when a Free zone rejects custom query-string cache keys.
+- Optional origin-pull CDN URL rewriting for an HTTPS hostname or hostname plus path, restricted to selected static-file extensions and same-site source URLs.
 - A Cloudflare Free rule compiler that previews the exact expression, managed-rule drift, competing rules, operation, and remaining ten-rule budget before synchronization.
 - First-class bypass policies and product invalidation for FluentCart, Easy Digital Downloads, and WooCommerce.
 - Core Forms poll compatibility: the global voter cookie is suppressed only on pages without polls, while real poll pages remain uncached.
@@ -75,6 +76,7 @@ The receiver applies only sanitized GT Performance settings. It does not install
 - Composer dependencies bundled in the release ZIP
 - A writable `wp-content` directory for origin caching
 - Optional: Cloudflare proxied DNS and a scoped API token or legacy Global API Key
+- Optional: an origin-pull CDN hostname configured to fetch static files from the WordPress site
 - Optional: PhpRedis for the object-cache drop-in
 
 ## Redis object cache
@@ -122,6 +124,12 @@ Credentials may instead be supplied in `wp-config.php` through `GTP_CLOUDFLARE_A
 GT Performance uses the normal Cloudflare CDN fetch path and Cache Rules; it does not require APO, Workers, Cache Reserve, Argo, or an Enterprise plan.
 
 If Cloudflare Free does not expose custom cache-key controls on the zone, GT Performance retries with a portable rule. Marketing query parameters will still be normalized by the origin cache, while Cloudflare may keep separate edge entries for those URLs.
+
+## Custom asset CDN
+
+Open **GT Performance → CDN** to rewrite selected same-site static asset URLs to a separate HTTPS CDN hostname. The provider must support origin pull and retain the original WordPress path. Cloudflare remains independent: it can continue caching eligible HTML while browsers request selected CSS, JavaScript, image, font, media, or download files from the custom CDN.
+
+Only explicitly selected extensions are rewritten. Third-party URLs, extensionless routes, HTML, API responses, data URLs, and other unselected file types stay on their original URLs. Changing CDN settings purges GT Performance's origin page cache and the connected Cloudflare cache; purge the separate CDN through its provider when replacing an asset at the same URL.
 
 ## License and protected updates
 

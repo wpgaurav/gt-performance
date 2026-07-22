@@ -26,11 +26,11 @@ final class Eligibility {
 			return Decision::deny( 'host_missing' );
 		}
 
-		if ( isset( $request->headers['authorization'] ) ) {
+		if ( '' !== trim( (string) ( $request->headers['authorization'] ?? '' ) ) ) {
 			return Decision::deny( 'authorization' );
 		}
 
-		if ( isset( $request->headers['x-gt-performance-bypass'] ) ) {
+		if ( '' !== trim( (string) ( $request->headers['x-gt-performance-bypass'] ?? '' ) ) ) {
 			return Decision::deny( 'signed_bypass' );
 		}
 

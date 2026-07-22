@@ -4,15 +4,17 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-1
+Stable tag: 1.0.0-beta-2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Safe page caching, server-side CSS optimization, Cloudflare Free orchestration, and commerce-aware performance controls.
+Safe page caching, server-side CSS optimization, Cloudflare and custom CDN delivery, and commerce-aware performance controls.
 
 == Description ==
 
 GT Performance combines an atomic origin page cache with server-side CSS and frontend optimization. It can synchronize a narrowly scoped Cloudflare Cache Rule and purge exact URLs on Cloudflare Free.
+
+An optional origin-pull CDN can rewrite selected same-site static-file URLs to a separate HTTPS hostname while Cloudflare continues to cache eligible HTML independently.
 
 FluentCart, Easy Digital Downloads, and WooCommerce adapters protect cart, checkout, account, receipt, session-cookie, and transactional query state from public caching.
 
@@ -31,7 +33,8 @@ This is a beta. Origin caching uses the maximum-impact lifetime profile by defau
 3. Install the page-cache drop-in.
 4. Enable only the modules you have tested for your theme and plugins.
 5. Optionally connect a scoped Cloudflare API token or a legacy Global API Key with account email, then synchronize the managed cache rule.
-6. Activate your FluentCart license on the License tab to receive protected updates in WordPress.
+6. Optionally configure an origin-pull asset CDN and choose the exact file extensions it should serve.
+7. Activate your FluentCart license on the License tab to receive protected updates in WordPress.
 
 == Frequently Asked Questions ==
 
@@ -42,6 +45,10 @@ No. The baseline uses Cache Rules and targeted purge available on Cloudflare Fre
 = Is unused CSS processed by an external service? =
 
 No. Stylesheet collection, selector analysis, pruning, and artifact creation run on the WordPress server.
+
+= Can I use another CDN alongside Cloudflare? =
+
+Yes. Configure its HTTPS origin-pull URL on the CDN tab and select the static-file extensions it should serve. GT Performance rewrites only same-site assets with those extensions; third-party URLs, HTML routes, API responses, and unselected file types remain unchanged.
 
 = Can used CSS be inlined? =
 
@@ -68,6 +75,12 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-2 =
+* Fixed cache eligibility when a server exposes an empty Authorization header, while preserving the bypass for real authorization credentials.
+* Added an optional origin-pull CDN URL with exact static-file extension controls, same-site URL safeguards, and cache invalidation when CDN settings change.
+* Added official Cloudflare links for creating a scoped token, finding a Global API Key, and locating a Zone ID.
+* Improved settings spacing, field grouping, labels, help text, and mobile layout consistency.
 
 = 1.0.0-beta-1 =
 * Fixed a cache-safety gap where the public Cache-Control header was sent before the response was validated; private responses (Set-Cookie, non-200, or DONOTCACHEPAGE) can no longer be stored by a shared or edge cache.

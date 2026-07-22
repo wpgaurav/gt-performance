@@ -1,5 +1,15 @@
 # GT Performance validation
 
+## 1.0.0-beta-2 local release validation
+
+Validated on 2026-07-22:
+
+- `composer check` passed WordPress Coding Standards, PHPStan, and PHPUnit: 92 tests with 234 assertions.
+- Release metadata validation confirmed `1.0.0-beta-2` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP installed and remained active as `1.0.0-beta-2` on a native WordPress Studio site running WordPress 7.0.2 and PHP 8.3.
+- Playwright checked the CDN and Cloudflare settings screens at 1440px and 390px. Both widths had no horizontal overflow or browser-console errors; the Cloudflare token, Global API Key, and Zone ID help links used the intended official documentation URLs.
+- A real front-end response rewrote only selected `.woff2` files to the configured HTTPS CDN base while leaving unselected JavaScript URLs on the origin, including when the cache-bypass query prevented origin page caching.
+
 ## 1.0.0-beta-1 local release validation
 
 Validated on 2026-07-22:

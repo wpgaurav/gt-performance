@@ -56,6 +56,18 @@ final class SettingsDefaultsTest extends TestCase {
 		self::assertTrue( $redis['persistent'] );
 	}
 
+	public function testCdnDefaultsAreDisabledAndLimitedToStaticAssets(): void {
+		$cdn = Settings::defaults()['cdn'];
+
+		self::assertFalse( $cdn['enabled'] );
+		self::assertSame( '', $cdn['url'] );
+		self::assertContains( 'css', $cdn['file_types'] );
+		self::assertContains( 'webp', $cdn['file_types'] );
+		self::assertContains( 'woff2', $cdn['file_types'] );
+		self::assertNotContains( 'html', Settings::allowedCdnFileTypes() );
+		self::assertNotContains( 'php', Settings::allowedCdnFileTypes() );
+	}
+
 	public function testDifferentiationFeaturesFailClosedByDefault(): void {
 		$defaults = Settings::defaults();
 
@@ -65,5 +77,6 @@ final class SettingsDefaultsTest extends TestCase {
 		self::assertFalse( $defaults['fleet']['enabled'] );
 		self::assertTrue( $defaults['fleet']['allow_imports'] );
 		self::assertContains( 'commerce', $defaults['fleet']['policy_modules'] );
+		self::assertContains( 'cdn', $defaults['fleet']['policy_modules'] );
 	}
 }

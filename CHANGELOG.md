@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-beta-2 - 2026-07-22
+
+### Fixed
+
+- Treated an empty or whitespace-only `Authorization` server variable as absent so compatible hosts can still cache anonymous requests, while preserving the cache bypass for real credentials.
+- Normalized panel, field, action, report, and responsive spacing across the settings interface and removed typographic shifts from active navigation states.
+
+### Added
+
+- Added a separate origin-pull CDN module that rewrites same-site static URLs to an HTTPS CDN base only for explicitly selected file extensions; third-party URLs, HTML/API routes, data URLs, and unselected types remain untouched.
+- Added cache invalidation when CDN settings change, plus controls for images, styles, scripts, fonts, media, and downloadable files.
+- Added direct links to Cloudflare's official scoped-token, Global API Key, and Zone ID documentation next to the relevant fields.
+
 ## 1.0.0-beta-1 - 2026-07-22
 
 ### Fixed

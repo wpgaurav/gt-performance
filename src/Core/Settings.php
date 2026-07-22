@@ -74,6 +74,28 @@ final class Settings {
 				'edge_ttl'           => 86400,
 				'drift_hash'         => '',
 			),
+			'cdn'        => array(
+				'enabled'    => false,
+				'url'        => '',
+				'file_types' => array(
+					'css',
+					'js',
+					'mjs',
+					'jpg',
+					'jpeg',
+					'png',
+					'gif',
+					'webp',
+					'avif',
+					'svg',
+					'ico',
+					'woff',
+					'woff2',
+					'ttf',
+					'otf',
+					'eot',
+				),
+			),
 			'css'        => array(
 				'enabled'              => false,
 				'mode'                 => 'file',
@@ -179,7 +201,7 @@ final class Settings {
 			'fleet'      => array(
 				'enabled'        => false,
 				'allow_imports'  => true,
-				'policy_modules' => array( 'cache', 'css', 'javascript', 'media', 'fonts', 'database', 'bloat', 'commerce', 'integrations', 'private_fragments' ),
+				'policy_modules' => array( 'cache', 'cloudflare', 'cdn', 'css', 'javascript', 'media', 'fonts', 'database', 'bloat', 'commerce', 'integrations', 'private_fragments' ),
 			),
 			'integrations' => array(
 				'auto_protection'   => true,
@@ -241,6 +263,16 @@ final class Settings {
 		$merged['cloudflare']['domain']    = self::sanitizeDomain( (string) ( $merged['cloudflare']['domain'] ?? '' ) );
 		$merged['cloudflare']['zone_id']   = sanitize_text_field( (string) ( $merged['cloudflare']['zone_id'] ?? '' ) );
 		$merged['cloudflare']['edge_ttl']  = max( 0, min( 31536000, (int) ( $merged['cloudflare']['edge_ttl'] ?? 86400 ) ) );
+		$merged['cdn']['url']               = self::sanitizeCdnUrl( (string) ( $merged['cdn']['url'] ?? '' ) );
+		$merged['cdn']['file_types']        = array_values(
+			array_intersect(
+				array_map(
+					static fn( string $type ): string => strtolower( ltrim( $type, '.' ) ),
+					self::sanitizeList( $merged['cdn']['file_types'] ?? array() )
+				),
+				self::allowedCdnFileTypes()
+			)
+		);
 
 		foreach ( array( 'ignored_query_params', 'bypass_query_params', 'bypass_paths', 'bypass_cookies' ) as $key ) {
 			$merged['cache'][ $key ] = self::sanitizeList( $merged['cache'][ $key ] ?? array() );
@@ -287,6 +319,7 @@ final class Settings {
 
 		$booleanPaths = array(
 			array( 'cloudflare', 'enabled' ),
+			array( 'cdn', 'enabled' ),
 			array( 'css', 'enabled' ),
 			array( 'css', 'keep_dynamic_states' ),
 			array( 'javascript', 'minify' ),
@@ -490,6 +523,53 @@ final class Settings {
 		$value = preg_replace( '#^(?:redis|tls)://#i', '', $value ) ?? $value;
 
 		return preg_replace( '/[^a-zA-Z0-9._:-]/', '', $value ) ?? '127.0.0.1';
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	public static function allowedCdnFileTypes(): array {
+		return array(
+			'css',
+			'js',
+			'mjs',
+			'jpg',
+			'jpeg',
+			'png',
+			'gif',
+			'webp',
+			'avif',
+			'svg',
+			'ico',
+			'woff',
+			'woff2',
+			'ttf',
+			'otf',
+			'eot',
+			'mp4',
+			'webm',
+			'mp3',
+			'ogg',
+			'wav',
+			'pdf',
+			'zip',
+		);
+	}
+
+	private static function sanitizeCdnUrl( string $value ): string {
+		$value = trim( esc_url_raw( $value, array( 'https' ) ) );
+		$parts = wp_parse_url( $value );
+		if ( ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+
+		$url = 'https://' . strtolower( (string) $parts['host'] );
+		if ( isset( $parts['port'] ) ) {
+			$url .= ':' . (int) $parts['port'];
+		}
+		$path = trim( (string) ( $parts['path'] ?? '' ), '/' );
+
+		return $url . ( '' !== $path ? '/' . $path : '' );
 	}
 
 	/**

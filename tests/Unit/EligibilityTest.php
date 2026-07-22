@@ -33,6 +33,26 @@ final class EligibilityTest extends TestCase {
 		self::assertTrue( ( new Eligibility() )->decide( $request, $this->config() )->cacheable );
 	}
 
+	public function test_empty_authorization_server_value_is_cacheable(): void {
+		$request = new RequestContext( 'GET', 'https', 'example.com', '/', array(), array(), array( 'authorization' => '' ), '' );
+
+		self::assertTrue( ( new Eligibility() )->decide( $request, $this->config() )->cacheable );
+	}
+
+	public function test_real_authorization_header_bypasses_cache(): void {
+		$request  = new RequestContext( 'GET', 'https', 'example.com', '/', array(), array(), array( 'authorization' => 'Bearer private-token' ), '' );
+		$decision = ( new Eligibility() )->decide( $request, $this->config() );
+
+		self::assertFalse( $decision->cacheable );
+		self::assertSame( 'authorization', $decision->reason );
+	}
+
+	public function test_empty_signed_bypass_header_is_cacheable(): void {
+		$request = new RequestContext( 'GET', 'https', 'example.com', '/', array(), array(), array( 'x-gt-performance-bypass' => '  ' ), '' );
+
+		self::assertTrue( ( new Eligibility() )->decide( $request, $this->config() )->cacheable );
+	}
+
 	public function test_tracking_query_is_ignored(): void {
 		$request = new RequestContext( 'GET', 'https', 'example.com', '/', array( 'utm_source' => 'newsletter' ), array(), array(), '' );
 
