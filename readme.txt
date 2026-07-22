@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-2
+Stable tag: 1.0.0-beta-3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,7 @@ FluentCart, Easy Digital Downloads, and WooCommerce adapters protect cart, check
 
 Unused CSS can be delivered as an immutable file, fully inline, or as critical CSS inline with the remaining CSS in a file.
 
-Perfmatters ownership coordination, Akismet and Jetpack safeguards, Redis credentials, and administrator-bar cache actions are built in.
+Perfmatters ownership coordination, Akismet and Jetpack safeguards, automatic analytics-plugin script protection, Redis credentials, and administrator-bar cache actions are built in.
 
 Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a 25-site policy console add deterministic diagnostics and safer deployment controls.
 
@@ -75,6 +75,9 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-3 =
+* Added automatic compatibility detection and JavaScript exclusions for Independent Analytics, Burst Statistics, Koko Analytics, Matomo Analytics, WP Statistics, Site Kit by Google, MonsterInsights, ExactMetrics, and PixelYourSite.
 
 = 1.0.0-beta-2 =
 * Fixed cache eligibility when a server exposes an empty Authorization header, while preserving the bypass for real authorization credentials.

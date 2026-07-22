@@ -1,5 +1,14 @@
 # GT Performance validation
 
+## 1.0.0-beta-3 local release validation
+
+Validated on 2026-07-22:
+
+- Composer validation, WordPress Coding Standards, PHPStan, and PHPUnit passed with 96 tests and 252 assertions.
+- Release metadata agreed on `1.0.0-beta-3` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 292 entries, embedded version `1.0.0-beta-3`, and local SHA-256 `89a6ccf04ec4e4ebac99879c9e7b2fe9f018ceb58c3549404579337f8270cab0`.
+- A disposable native WordPress Studio site on WordPress 7.0.2 and PHP 8.2 installed and activated the production ZIP, reported version `1.0.0-beta-3`, returned HTTP 200, and detected the Independent Analytics Pro and Site Kit compatibility exclusions.
+
 ## 1.0.0-beta-2 local release validation
 
 Validated on 2026-07-22:

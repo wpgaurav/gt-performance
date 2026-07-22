@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0-beta-3 - 2026-07-22
+
+### Added
+
+- Added automatic compatibility detection and JavaScript exclusions for Independent Analytics, Burst Statistics, Koko Analytics, Matomo Analytics, WP Statistics, Site Kit by Google, MonsterInsights, ExactMetrics, and PixelYourSite.
+
 ## 1.0.0-beta-2 - 2026-07-22
 
 ### Fixed

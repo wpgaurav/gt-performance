@@ -81,6 +81,8 @@ final class CompatibilityModule implements Module {
 			return $exclusions;
 		}
 
+		$exclusions = array_merge( $exclusions, $this->plugins->activeJavascriptExclusions() );
+
 		if ( (bool) Settings::get( 'integrations.akismet', true ) && $this->plugins->active( 'akismet' ) ) {
 			$exclusions[] = '/plugins/akismet/';
 		}
