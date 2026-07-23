@@ -10,6 +10,18 @@ Validated on 2026-07-23:
 - A disposable native WordPress Studio site on WordPress 7.0.2 and PHP 8.2 installed and activated the production ZIP, owned the page-cache drop-in, and passed its PHP, WordPress, cache-directory, drop-in, and `WP_CACHE` doctor checks.
 - The packaged Cache screen rendered the automatic-clearing setting, all four policies, and its explanatory tooltip. Its recommended `related` default was stored, and updating a published post changed both a fresh post artifact and a fresh homepage artifact to missing.
 
+## 1.0.0-beta-4 distribution validation
+
+Validated on 2026-07-23:
+
+- Commit `1255b46` passed GitHub CI run `29971859144` on PHP 8.1, 8.3, and 8.5, including the release-package job; release workflow `29971914677` published tag `v1.0.0-beta-4` as a prerelease.
+- The canonical GitHub ZIP is 368,736 bytes with SHA-256 `568a5a77edd536054a88d853afce43cc29cc09bf7a8205077c2938ae91ba29f6`; its checksum, ZIP integrity, package root, plugin header, runtime constant, and stable tag agree.
+- FluentCart product `1170147` points to download row `118`, version `1.0.0-beta-4`, containing the exact canonical GitHub ZIP. Beta-3 row `110` and its file remain available for rollback.
+- An unauthenticated updater request returned beta-4 metadata without a package URL. A disposable non-customer license activated successfully, returned protected beta-4 metadata, downloaded the exact canonical package, deactivated, and left zero temporary license and site rows.
+- Both `gauravtiwari.org` and `gatilab.com` run GT Performance `1.0.0-beta-4` as an active plugin. Their installed 239-file trees share aggregate SHA-256 `5d2731234709226c3dea55af867c8f84d4c5ed0673e1f745ba3ea0e3f20a9447`, matching the extracted canonical ZIP.
+- PHP, WordPress, cache-directory writability, the owned page-cache drop-in, `WP_CACHE`, the owned Redis drop-in, and Cloudflare passed `wp gt-performance doctor` on both sites. The automatic post-publish policy resolved to the recommended `related` mode and plugin-owned full purges succeeded.
+- Direct-origin requests returned `X-GT-Cache: HIT` on both sites. Public requests returned HTTP 200 and reached Cloudflare edge hits after the release purge.
+
 ## 1.0.0-beta-3 local release validation
 
 Validated on 2026-07-22:
