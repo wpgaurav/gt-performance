@@ -1,5 +1,15 @@
 # GT Performance validation
 
+## 1.0.0-beta-4 local release validation
+
+Validated on 2026-07-23:
+
+- Composer validation, WordPress Coding Standards, PHPStan, and PHPUnit passed with 101 tests and 262 assertions.
+- Release metadata agreed on `1.0.0-beta-4` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 293 entries, embedded version `1.0.0-beta-4`, 368,736 bytes, and local SHA-256 `cf59e9aa5956c75a40cd4ca41038d5577fb3121caa4b42ab5eb25a56d5eef003`.
+- A disposable native WordPress Studio site on WordPress 7.0.2 and PHP 8.2 installed and activated the production ZIP, owned the page-cache drop-in, and passed its PHP, WordPress, cache-directory, drop-in, and `WP_CACHE` doctor checks.
+- The packaged Cache screen rendered the automatic-clearing setting, all four policies, and its explanatory tooltip. Its recommended `related` default was stored, and updating a published post changed both a fresh post artifact and a fresh homepage artifact to missing.
+
 ## 1.0.0-beta-3 local release validation
 
 Validated on 2026-07-22:

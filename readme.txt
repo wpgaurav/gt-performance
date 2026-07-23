@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-3
+Stable tag: 1.0.0-beta-4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,10 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-4 =
+* Added configurable automatic cache clearing after public content is published or updated, with related-page, post-only, entire-cache, and disabled modes.
+* Expanded related-page clearing to author and public taxonomy archives, and stopped revision cleanup from triggering unintended homepage purges.
 
 = 1.0.0-beta-3 =
 * Added automatic compatibility detection and JavaScript exclusions for Independent Analytics, Burst Statistics, Koko Analytics, Matomo Analytics, WP Statistics, Site Kit by Google, MonsterInsights, ExactMetrics, and PixelYourSite.
