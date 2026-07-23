@@ -21,6 +21,7 @@ final class SettingsDefaultsTest extends TestCase {
 		self::assertSame( 86400, $defaults['cache']['stale_ttl'] );
 		self::assertSame( 86400, $defaults['cache']['stale_if_error'] );
 		self::assertSame( 300, $defaults['cache']['browser_ttl'] );
+		self::assertSame( 'related', $defaults['cache']['post_publish_purge'] );
 	}
 
 	public function testDatabaseDefaultsIncludeEverySafeScheduledTask(): void {

@@ -18,19 +18,22 @@ final class PageCacheModule implements Module {
 	private ?Decision $decision      = null;
 	/** @var array<int, true> */
 	private array $purgedCommentPosts = array();
+	/** @var array<int, true> */
+	private array $purgedPublishedPosts = array();
 
 	public function __construct(
 		private readonly Logger $logger,
 		private readonly FileStore $store = new FileStore(),
 		private readonly Eligibility $eligibility = new Eligibility(),
 		private readonly ResponseValidator $validator = new ResponseValidator(),
+		private readonly PostPublishPurgePolicy $postPublishPurgePolicy = new PostPublishPurgePolicy(),
 	) {
 	}
 
 	public function register(): void {
 		add_action( 'template_redirect', array( $this, 'startCapture' ), -9999 );
 		add_action( 'save_post', array( $this, 'purgePost' ), 20, 2 );
-		add_action( 'deleted_post', array( $this, 'purgePostById' ), 20 );
+		add_action( 'before_delete_post', array( $this, 'purgeDeletedPost' ), 20, 2 );
 		add_action( 'wp_insert_comment', array( $this, 'purgeInsertedComment' ), 20, 2 );
 		add_action( 'comment_post', array( $this, 'purgeCommentById' ), 20 );
 		add_action( 'edit_comment', array( $this, 'purgeCommentById' ), 20 );
@@ -154,11 +157,17 @@ final class PageCacheModule implements Module {
 	}
 
 	public function purgePost( int $postId, \WP_Post $post ): void {
-		if ( wp_is_post_revision( $postId ) || 'auto-draft' === $post->post_status ) {
+		if (
+			wp_is_post_revision( $postId )
+			|| 'auto-draft' === $post->post_status
+			|| ! is_post_publicly_viewable( $post )
+			|| isset( $this->purgedPublishedPosts[ $postId ] )
+		) {
 			return;
 		}
 
-		$this->purgePostById( $postId );
+		$this->purgedPublishedPosts[ $postId ] = true;
+		$this->purgePublishedPost( $postId, $post );
 	}
 
 	public function purgePostById( int $postId ): void {
@@ -175,6 +184,14 @@ final class PageCacheModule implements Module {
 		( new Purger( $this->store ) )->purgeUrls( $urls );
 
 		do_action( 'gt_performance_enqueue_preload', $urls );
+	}
+
+	public function purgeDeletedPost( int $postId, \WP_Post $post ): void {
+		if ( 'revision' === $post->post_type || 'auto-draft' === $post->post_status ) {
+			return;
+		}
+
+		$this->purgePostById( $postId );
 	}
 
 	public function purgeCommentById( int $commentId ): void {
@@ -223,5 +240,58 @@ final class PageCacheModule implements Module {
 
 		$this->purgedCommentPosts[ $postId ] = true;
 		$this->purgePostById( $postId );
+	}
+
+	private function purgePublishedPost( int $postId, \WP_Post $post ): void {
+		$mode = (string) Settings::get( 'cache.post_publish_purge', PostPublishPurgePolicy::RELATED );
+		$plan = $this->postPublishPurgePolicy->plan( $mode, $this->publishedPostUrls( $postId, $post ) );
+
+		if ( $plan['all'] ) {
+			( new Purger( $this->store ) )->purgeAll();
+			return;
+		}
+
+		if ( ! $plan['urls'] ) {
+			return;
+		}
+
+		( new Purger( $this->store ) )->purgeUrls( $plan['urls'] );
+		do_action( 'gt_performance_enqueue_preload', $plan['urls'] );
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private function publishedPostUrls( int $postId, \WP_Post $post ): array {
+		$urls = array_filter(
+			array(
+				get_permalink( $postId ),
+				home_url( '/' ),
+				get_post_type_archive_link( $post->post_type ),
+				$post->post_author > 0 ? get_author_posts_url( (int) $post->post_author ) : false,
+			),
+			'is_string'
+		);
+
+		$taxonomies = get_object_taxonomies( $post->post_type, 'objects' );
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( ! $taxonomy instanceof \WP_Taxonomy || ! $taxonomy->public ) {
+				continue;
+			}
+
+			$terms = get_the_terms( $postId, $taxonomy->name );
+			if ( ! is_array( $terms ) ) {
+				continue;
+			}
+
+			foreach ( $terms as $term ) {
+				$link = get_term_link( $term );
+				if ( is_string( $link ) ) {
+					$urls[] = $link;
+				}
+			}
+		}
+
+		return array_values( array_unique( $urls ) );
 	}
 }

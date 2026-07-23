@@ -6,7 +6,7 @@ The current release is `1.0.0-beta-3`. Origin caching uses a maximum-impact shar
 
 ## What is implemented
 
-- Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, related-page invalidation, a preload queue, and sitemap-driven cache warming after a full purge.
+- Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, configurable automatic invalidation after publishing, a preload queue, and sitemap-driven cache warming after a full purge.
 - Reversible `WP_CACHE` management and drop-in ownership checks, including exact restoration of existing single-line declarations.
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule backup, and automatic fallback when a Free zone rejects custom query-string cache keys.
 - Optional origin-pull CDN URL rewriting for an HTTPS hostname or hostname plus path, restricted to selected static-file extensions and same-site source URLs.

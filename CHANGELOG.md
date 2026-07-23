@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added configurable automatic cache clearing when public posts, pages, products, and custom post types are published or updated, with related-page, post-only, full page-and-edge cache, and disabled modes.
+- Expanded the recommended related-page purge to cover author and public taxonomy archives in addition to the post, homepage, and post-type archive.
+
+### Fixed
+
+- Stopped WordPress revision cleanup from purging the homepage through the real-content deletion hook, so post-only and disabled publishing policies retain their intended scope.
+
 ## 1.0.0-beta-3 - 2026-07-22
 
 ### Added

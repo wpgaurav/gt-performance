@@ -614,6 +614,23 @@ final class AdminModule implements Module {
 		$this->number( 'cache', 'browser_ttl', __( 'Browser cache lifetime', 'gt-performance' ), __( 'How long a visitor browser may reuse HTML without checking again.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'Keep this shorter than the shared-cache lifetime so browsers receive page updates promptly.', 'gt-performance' ) );
 		$this->panelClose();
 
+		$this->panelOpen( __( 'Automatic cache clearing', 'gt-performance' ), __( 'Keep published content current without clearing more cached pages than necessary.', 'gt-performance' ) );
+		$this->select(
+			'cache',
+			'post_publish_purge',
+			__( 'Cache clearing after publishing', 'gt-performance' ),
+			__( 'Choose what GT Performance clears when a public post, page, product, or custom post type is published or updated.', 'gt-performance' ),
+			$settings,
+			array(
+				'related' => __( 'Post and related pages (recommended)', 'gt-performance' ),
+				'post'    => __( 'Post URL only', 'gt-performance' ),
+				'all'     => __( 'Entire page and edge cache', 'gt-performance' ),
+				'none'    => __( 'Do not clear automatically', 'gt-performance' ),
+			),
+			__( 'Related pages include the post URL, homepage, post type archive, author archive, and public category, tag, or custom taxonomy archives. Entire-cache clearing also triggers configured cache warming.', 'gt-performance' )
+		);
+		$this->panelClose();
+
 		$this->panelOpen( __( 'Cache warming', 'gt-performance' ), __( 'Rebuild the cache in the background after a full purge so visitors keep hitting warm pages.', 'gt-performance' ) );
 		$this->checkbox( 'cache', 'preload', __( 'Warm cache after a full purge', 'gt-performance' ), __( 'Discover URLs from the WordPress sitemap and queue them for background preloading whenever the whole cache is cleared.', 'gt-performance' ), $settings );
 		$this->number( 'cache', 'preload_max_urls', __( 'Maximum URLs per warm run', 'gt-performance' ), __( 'Upper bound on sitemap URLs queued after a full purge.', 'gt-performance' ), $settings, 0, 2000, __( 'URLs', 'gt-performance' ), '1', __( 'Use 0 to disable warm jobs without turning off the page cache. Large sites should increase this gradually to avoid traffic spikes.', 'gt-performance' ) );

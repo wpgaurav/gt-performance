@@ -20,6 +20,7 @@ final class Settings {
 			'generation' => 1,
 			'cache'      => array(
 				'enabled'              => true,
+				'post_publish_purge'   => 'related',
 				'fresh_ttl'            => 3600,
 				'stale_ttl'            => 86400,
 				'browser_ttl'          => 300,
@@ -256,6 +257,9 @@ final class Settings {
 		$merged['cache']['separate_mobile']  = (bool) ( $merged['cache']['separate_mobile'] ?? false );
 		$merged['cache']['preload']          = (bool) ( $merged['cache']['preload'] ?? true );
 		$merged['cache']['preload_max_urls'] = max( 0, min( 2000, (int) ( $merged['cache']['preload_max_urls'] ?? 200 ) ) );
+		$merged['cache']['post_publish_purge'] = ( new \GTPerformance\Cache\PostPublishPurgePolicy() )->sanitize(
+			(string) ( $merged['cache']['post_publish_purge'] ?? 'related' )
+		);
 
 		$authMode                         = (string) ( $merged['cloudflare']['auth_mode'] ?? 'token' );
 		$merged['cloudflare']['auth_mode'] = in_array( $authMode, array( 'token', 'global' ), true ) ? $authMode : 'token';
