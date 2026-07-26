@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-4
+Stable tag: 1.0.0-beta-5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,14 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-5 =
+* Fixed cached pages never being rebuilt once they went stale. Between the fresh and stale lifetimes nothing regenerated an entry, so a page could keep serving content as old as both lifetimes combined. Stale pages are now swept and rebuilt in the background.
+* Fixed the Redis object cache clearing nothing when the cache key prefix contained a pattern character such as [, ? or *. WordPress security salts routinely contain these, so "Purge GT cache" and wp cache flush could report success while leaving every entry in place.
+* Fixed a Redis disconnect during a group flush taking the page down with a fatal error instead of degrading to a cache miss.
+* Fixed the background queue stopping permanently and silently if its scheduled event was ever lost. It is now restored automatically.
+* Fixed a just-rebuilt page briefly reporting as stale because its metadata was still held by the PHP opcode cache.
+* Moved purge, Cloudflare sync, and the drop-in installers from Tools onto the dashboard, and each now returns to the screen it was run from.
 
 = 1.0.0-beta-4 =
 * Added configurable automatic cache clearing after public content is published or updated, with related-page, post-only, entire-cache, and disabled modes.
