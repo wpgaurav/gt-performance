@@ -72,8 +72,26 @@ final class PageCacheModule implements Module {
 		// Do not advertise shared caching until the generated response passes body and
 		// header safety validation in capture(). Unsafe responses receive an explicit
 		// private directive there; safe responses are upgraded to the public policy.
-		header( 'X-GT-Cache: MISS' );
+		//
+		// The drop-in already labelled deliberate stale rebuilds as REVALIDATE;
+		// overwriting that with MISS would make the two indistinguishable in logs.
+		if ( ! self::hasCacheStatus( 'REVALIDATE' ) ) {
+			header( 'X-GT-Cache: MISS' );
+		}
 		ob_start( array( $this, 'capture' ) );
+	}
+
+	/**
+	 * Whether the early drop-in already queued a given X-GT-Cache status.
+	 */
+	private static function hasCacheStatus( string $status ): bool {
+		foreach ( headers_list() as $header ) {
+			if ( 0 === strcasecmp( trim( $header ), 'X-GT-Cache: ' . $status ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public function capture( string $html ): string {
