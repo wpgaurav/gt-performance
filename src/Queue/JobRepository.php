@@ -123,6 +123,31 @@ final class JobRepository {
 	}
 
 	/**
+	 * Count jobs of a type that are still waiting to run.
+	 *
+	 * Producers that enqueue on a timer need this: the queue drains a handful of
+	 * jobs per run, so a sweep that keeps adding work regardless of what is
+	 * already pending grows the table without bound.
+	 */
+	public function pendingCount( string $type ): int {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'gtp_jobs';
+
+		// The table name is built from the trusted WordPress prefix.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE type = %s AND status = 'pending'",
+				sanitize_key( $type )
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return max( 0, (int) $count );
+	}
+
+	/**
 	 * Delete terminal (complete/failed) jobs older than the retention window.
 	 *
 	 * Every post save, comment action, and product change enqueues jobs; without

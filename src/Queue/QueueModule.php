@@ -85,9 +85,17 @@ final class QueueModule implements Module {
 		 *
 		 * @param int $batch Maximum URLs per sweep.
 		 */
-		$batch = (int) apply_filters( 'gt_performance_revalidate_batch', 25 );
+		$batch = (int) apply_filters( 'gt_performance_revalidate_batch', 5 );
 		$batch = max( 0, min( 200, $batch ) );
 		if ( 0 === $batch ) {
+			return;
+		}
+
+		// run() drains a handful of jobs per tick and enqueue() does not
+		// deduplicate, so a sweep that ignores the existing backlog would add
+		// work faster than the queue clears it and re-add the same URLs on the
+		// next tick. Only top up once the previous batch has been worked off.
+		if ( $this->jobs->pendingCount( 'preload_url' ) >= $batch ) {
 			return;
 		}
 

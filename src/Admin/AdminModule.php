@@ -578,8 +578,8 @@ final class AdminModule implements Module {
 					</div>
 				</div>
 				<?php if ( ! $cacheReady ) : ?>
-					<p><?php esc_html_e( 'Install the page-cache drop-in, enable origin caching, then verify a public page before adding more optimizations.', 'gt-performance' ); ?></p>
-					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'tools' ) ); ?>"><?php esc_html_e( 'Open cache tools', 'gt-performance' ); ?></a>
+					<p><?php esc_html_e( 'Install the page-cache drop-in below, enable origin caching, then verify a public page before adding more optimizations.', 'gt-performance' ); ?></p>
+					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cache' ) ); ?>"><?php esc_html_e( 'Open cache settings', 'gt-performance' ); ?></a>
 				<?php elseif ( empty( $settings['cloudflare']['enabled'] ) ) : ?>
 					<p><?php esc_html_e( 'Origin caching is ready. Connect Cloudflare Free to cache eligible HTML closer to visitors.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cloudflare' ) ); ?>"><?php esc_html_e( 'Configure Cloudflare', 'gt-performance' ); ?></a>
@@ -593,6 +593,7 @@ final class AdminModule implements Module {
 			</section>
 		</div>
 		<?php
+		$this->renderQuickOperations();
 	}
 
 	/**
@@ -1405,7 +1406,7 @@ PHP;
 		$wpCache = ( new WpCacheConstant() )->status();
 		$redis   = ( new ObjectCacheInstaller() )->status();
 
-		$this->pageIntro( __( 'Tools', 'gt-performance' ), __( 'Install owned drop-ins, purge caches, synchronize Cloudflare, and run bounded database maintenance.', 'gt-performance' ) );
+		$this->pageIntro( __( 'Tools', 'gt-performance' ), __( 'Runtime drop-in status and bounded database maintenance. The everyday operations live on the dashboard.', 'gt-performance' ) );
 		?>
 		<section class="gtp-panel">
 			<div class="gtp-panel__header">
@@ -1420,15 +1421,38 @@ PHP;
 				<div><dt><?php esc_html_e( 'Redis drop-in', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->statusLabel( $redis ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Cache directory', 'gt-performance' ); ?></dt><dd><?php echo esc_html( is_writable( Paths::cacheRoot() ) ? __( 'Writable', 'gt-performance' ) : __( 'Not writable', 'gt-performance' ) ); ?></dd></div>
 			</dl>
-		</section>
-		<section class="gtp-tools-grid">
-			<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtp_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
-			<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
-			<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtp_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
-			<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
+			<p><a href="<?php echo esc_url( $this->tabUrl( 'dashboard' ) ); ?>"><?php esc_html_e( 'Install drop-ins, purge, and sync Cloudflare on the dashboard', 'gt-performance' ); ?></a></p>
 		</section>
 		<?php
 		$this->renderDatabaseOptimization( $settings );
+	}
+
+	/**
+	 * The operations that are worth reaching in one click.
+	 *
+	 * These were buried on the Tools tab, which meant the routine jobs — purging
+	 * after a content change, reconciling the Cloudflare rule — took a detour,
+	 * and the two installers were invisible during setup, exactly when they
+	 * matter. Each form remembers its originating tab, so running one from here
+	 * returns here.
+	 */
+	private function renderQuickOperations(): void {
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Operations', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Install drop-ins, clear caches, and reconcile Cloudflare without leaving this screen.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<div class="gtp-tools-grid">
+				<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtp_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtp_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
+			</div>
+		</section>
+		<?php
 	}
 
 	private function renderLicense(): void {
@@ -2089,6 +2113,8 @@ PHP;
 		?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( $action ); ?>">
+			<?php // These operations are reachable from more than one screen, so remember where the visitor started. ?>
+			<input type="hidden" name="gtp_return" value="<?php echo esc_attr( $this->currentTab() ); ?>">
 			<?php wp_nonce_field( $action ); ?>
 			<?php submit_button( $label, 'secondary', 'submit', false ); ?>
 		</form>
@@ -2102,7 +2128,21 @@ PHP;
 		check_admin_referer( $action );
 	}
 
+	/**
+	 * Return to the admin screen after an operation.
+	 *
+	 * The same operation now runs from either the dashboard or Tools, so an
+	 * originating tab supplied by the form wins over the caller's default —
+	 * otherwise purging from the dashboard would dump the visitor on Tools.
+	 * Every caller verifies its nonce in guard() before reaching this.
+	 */
 	private function redirect( string $notice, string $tab ): never {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by the calling action handler.
+		$return = isset( $_POST['gtp_return'] ) ? sanitize_key( (string) wp_unslash( $_POST['gtp_return'] ) ) : '';
+		if ( '' !== $return && in_array( $return, self::TABS, true ) ) {
+			$tab = $return;
+		}
+
 		wp_safe_redirect(
 			add_query_arg(
 				array(
