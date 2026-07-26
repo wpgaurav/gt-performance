@@ -28,10 +28,30 @@ final class QueueModule implements Module {
 	}
 
 	public function register(): void {
+		add_action( 'init', array( $this, 'ensureScheduled' ) );
 		add_action( 'gt_performance_run_queue', array( $this, 'runScheduled' ) );
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
 		add_action( 'gt_performance_enqueue_purge', array( $this, 'enqueuePurge' ) );
 		add_action( 'gt_performance_purged_all', array( $this, 'scheduleWarm' ) );
+	}
+
+	/**
+	 * Re-arm the queue cron if the event has gone missing.
+	 *
+	 * Activator schedules it once at activation, and nothing restored it if the
+	 * event was later lost — through a cron table reset, a migration, or a
+	 * restore from a backup taken before activation. The queue then stops
+	 * silently: purges never preload, warms never run, and stale pages are
+	 * never rebuilt. A production site was found with the event absent and jobs
+	 * pending for seven days.
+	 */
+	public function ensureScheduled(): void {
+		if ( wp_next_scheduled( 'gt_performance_run_queue' ) ) {
+			return;
+		}
+
+		wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtp_every_minute', 'gt_performance_run_queue' );
+		$this->logger->log( 'warning', 'Queue cron was missing and has been rescheduled' );
 	}
 
 	/**

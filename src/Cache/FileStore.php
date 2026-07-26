@@ -49,7 +49,25 @@ final class FileStore {
 			return false;
 		}
 
+		self::invalidateOpcode( $this->metaPath( $hash ) );
+
 		return true;
+	}
+
+	/**
+	 * Drop a rewritten metadata file from the opcode cache.
+	 *
+	 * The drop-in reads metadata with `include`, so the file passes through
+	 * opcache like any other PHP. With the default settings a rebuilt entry can
+	 * therefore be read back with its previous timestamps until opcache
+	 * revalidates — briefly reporting a page as stale right after it was
+	 * refreshed. On a host tuned with `opcache.validate_timestamps=0` that
+	 * window never closes, and the cache would serve the old metadata forever.
+	 */
+	private static function invalidateOpcode( string $path ): void {
+		if ( function_exists( 'opcache_invalidate' ) ) {
+			@opcache_invalidate( $path, true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Fails harmlessly when opcache is disabled or restricted.
+		}
 	}
 
 	public function delete( string $hash ): bool {
@@ -61,6 +79,7 @@ final class FileStore {
 			$hit = true;
 		}
 		if ( is_file( $meta ) && @unlink( $meta ) ) {
+			self::invalidateOpcode( $meta );
 			$hit = true;
 		}
 

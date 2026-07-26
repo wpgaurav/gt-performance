@@ -171,8 +171,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			if ( null === $this->redis ) {
 				return true;
 			}
-			$prefix = $this->basePrefix();
-			$keys   = $this->scan( $prefix . '*' );
+			$keys = $this->scan( self::globEscape( $this->basePrefix() ) . '*' );
 			if ( $keys ) {
 				$this->redis->del( $keys );
 			}
@@ -188,13 +187,33 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 				}
 			}
 			if ( null !== $this->redis ) {
-				$keys = $this->scan( $this->basePrefix() . '*:' . $group . ':*' );
+				// sanitizeGroup() already restricts the group to [a-z0-9_-], so
+				// only the prefix can carry pattern characters.
+				$keys = $this->scan( self::globEscape( $this->basePrefix() ) . '*:' . $group . ':*' );
 				if ( $keys ) {
 					$this->redis->del( $keys );
 				}
 			}
 
 			return true;
+		}
+
+		/**
+		 * Escape a literal string for use inside a Redis SCAN MATCH pattern.
+		 *
+		 * The key prefix defaults to WP_CACHE_KEY_SALT, and WordPress salts are
+		 * random printable strings that regularly contain `[`, `?`, and `*` —
+		 * every one of which is a glob metacharacter. An unescaped `[` opens a
+		 * character class that is never closed, so the pattern matches nothing
+		 * and both flush() and flush_group() silently delete zero keys while
+		 * still reporting success.
+		 */
+		private static function globEscape( string $literal ): string {
+			return str_replace(
+				array( '\\', '*', '?', '[', ']' ),
+				array( '\\\\', '\\*', '\\?', '\\[', '\\]' ),
+				$literal
+			);
 		}
 
 		public function get_multiple( $keys, $group = 'default', $force = false ): array {
