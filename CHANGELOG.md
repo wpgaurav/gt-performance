@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Stale pages are now rebuilt instead of being served indefinitely. Nothing regenerated an entry between `fresh_ttl` and `stale_ttl`: the drop-in served the stale body and exited, and a preload request received that same stale body, so the only escape from the stale window was `stale_until` expiring. A live site measured 1,011 of 1,023 cached pages stale, median age 14.3 hours. The queue now sweeps for stale entries on each scheduled run and enqueues preloads, and the drop-in treats a stale entry as a miss when the request carries `X-GT-Preload`, so those preloads actually rebuild the page. Batches are capped at 25 per run and filterable via `gt_performance_revalidate_batch`.
+- Wrapped the Redis object cache's `SCAN` loop in the same error handling every other Redis call already had. It was the one unguarded call in the drop-in, so a mid-scan disconnect raised an uncaught `RedisException` through group flushes and took the request down with a fatal instead of degrading to a cache miss. The loop is now bounded as well, so a driver that returns without advancing the cursor cannot spin.
+
 ## 1.0.0-beta-4 - 2026-07-23
 
 ### Added

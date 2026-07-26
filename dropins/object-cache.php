@@ -19,6 +19,12 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		private $redis;
 
 		/**
+		 * Upper bound on SCAN round trips, so a cursor that never returns to 0
+		 * cannot hang a request. 500 keys per pass covers very large keyspaces.
+		 */
+		private const SCAN_MAX_ITERATIONS = 10000;
+
+		/**
 		 * @var array<string, mixed>
 		 */
 		private array $config = array();
@@ -421,20 +427,42 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		}
 
 		/**
+		 * Collect keys matching a pattern.
+		 *
+		 * Every Redis call in this drop-in degrades rather than throws, because a
+		 * cache is never worth taking a site down for. SCAN is the one call that
+		 * runs a loop, so it needs both a try/catch and a hard iteration bound:
+		 * a mid-scan disconnect otherwise raises RedisException through a group
+		 * flush, and a driver that returns false without advancing the cursor
+		 * would spin forever.
+		 *
 		 * @return list<string>
 		 */
 		private function scan( string $pattern ): array {
 			if ( null === $this->redis ) {
 				return array();
 			}
+
 			$iterator = null;
 			$keys     = array();
-			do {
-				$batch = $this->redis->scan( $iterator, $pattern, 500 );
-				if ( is_array( $batch ) ) {
-					$keys = array_merge( $keys, $batch );
-				}
-			} while ( 0 !== $iterator );
+			$guard    = 0;
+
+			try {
+				do {
+					$batch = $this->redis->scan( $iterator, $pattern, 500 );
+					if ( is_array( $batch ) ) {
+						$keys = array_merge( $keys, $batch );
+					}
+
+					if ( ++$guard > self::SCAN_MAX_ITERATIONS ) {
+						break;
+					}
+				} while ( 0 !== (int) $iterator );
+			} catch ( \Throwable ) {
+				// Return whatever was collected before the failure. A partial
+				// flush beats a fatal, and the caller re-scans on the next call.
+				return $keys;
+			}
 
 			return $keys;
 		}

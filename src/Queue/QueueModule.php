@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\Queue;
 
 use GTPerformance\Cache\CacheWarmer;
+use GTPerformance\Cache\FileStore;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Logger;
@@ -53,7 +54,52 @@ final class QueueModule implements Module {
 
 	public function runScheduled(): void {
 		$this->run();
+		$this->revalidateStale();
 		$this->jobs->purgeTerminal();
+	}
+
+	/**
+	 * Queue preloads for entries that have gone stale.
+	 *
+	 * The drop-in serves a stale entry and exits, so nothing regenerates it
+	 * inside the stale window; without this the body a visitor gets can be as
+	 * old as fresh_ttl + stale_ttl. Preload requests carry X-GT-Preload, which
+	 * the drop-in treats as a miss when the entry is stale, so each queued job
+	 * rebuilds one page.
+	 *
+	 * Batches are small and debounced: the sweep walks the cache directory, and
+	 * on a large site that should happen at a steady trickle rather than in one
+	 * burst per cron tick.
+	 */
+	public function revalidateStale(): void {
+		if ( ! (bool) Settings::get( 'cache.enabled', true ) || ! (bool) Settings::get( 'cache.preload', true ) ) {
+			return;
+		}
+
+		if ( get_transient( 'gtp_revalidate_pending' ) ) {
+			return;
+		}
+
+		/**
+		 * Filter how many stale pages may be queued for revalidation per run.
+		 *
+		 * @param int $batch Maximum URLs per sweep.
+		 */
+		$batch = (int) apply_filters( 'gt_performance_revalidate_batch', 25 );
+		$batch = max( 0, min( 200, $batch ) );
+		if ( 0 === $batch ) {
+			return;
+		}
+
+		$urls = ( new FileStore() )->staleUrls( time(), $batch );
+		if ( array() === $urls ) {
+			return;
+		}
+
+		set_transient( 'gtp_revalidate_pending', 1, MINUTE_IN_SECONDS );
+		$this->enqueuePreload( $urls );
+
+		$this->logger->log( 'debug', 'Queued stale page revalidation', array( 'count' => count( $urls ) ) );
 	}
 
 	/**

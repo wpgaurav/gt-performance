@@ -89,6 +89,56 @@ final class FileStore {
 		return false === $size ? 0 : max( 0, $size );
 	}
 
+	/**
+	 * Collect URLs of entries that are past fresh_until but still inside
+	 * stale_until.
+	 *
+	 * Nothing regenerates an entry during that window on its own: the drop-in
+	 * serves the stale copy and exits, so without this sweep a page keeps
+	 * serving its stale body until stale_until finally expires it.
+	 *
+	 * @return list<string>
+	 */
+	public function staleUrls( int $now, int $limit ): array {
+		if ( $limit <= 0 || ! is_dir( Paths::pages() ) ) {
+			return array();
+		}
+
+		$urls = array();
+
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( Paths::pages(), \FilesystemIterator::SKIP_DOTS )
+		);
+
+		foreach ( $iterator as $item ) {
+			if ( count( $urls ) >= $limit ) {
+				break;
+			}
+
+			if ( ! $item->isFile() || ! str_ends_with( $item->getFilename(), '.meta.php' ) ) {
+				continue;
+			}
+
+			// Another worker may purge between the scan and the read.
+			$metadata = @include $item->getPathname();
+			if ( ! is_array( $metadata ) ) {
+				continue;
+			}
+
+			$fresh = (int) ( $metadata['fresh_until'] ?? 0 );
+			$stale = (int) ( $metadata['stale_until'] ?? 0 );
+			$url   = (string) ( $metadata['url'] ?? '' );
+
+			if ( '' === $url || $now <= $fresh || $now > $stale ) {
+				continue;
+			}
+
+			$urls[] = $url;
+		}
+
+		return array_values( array_unique( $urls ) );
+	}
+
 	public function purgeAll(): int {
 		$count = 0;
 		if ( ! is_dir( Paths::pages() ) ) {

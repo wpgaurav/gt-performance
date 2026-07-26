@@ -68,6 +68,11 @@ final class DropinRuntime {
 			return;
 		}
 
+		if ( self::shouldRevalidate( $isStale, $request->headers ) ) {
+			header( 'X-GT-Cache: REVALIDATE' );
+			return;
+		}
+
 		$etag = '"' . hash( 'sha256', $html ) . '"';
 		// WordPress is not loaded in advanced-cache.php, so wp_unslash()/sanitize_text_field() are unavailable.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
@@ -102,6 +107,27 @@ final class DropinRuntime {
 		exit;
 	}
 
+	/**
+	 * Whether a cached entry should be rebuilt instead of served.
+	 *
+	 * A preload request exists to refresh content, so handing it the stale copy
+	 * makes it a no-op — which is why stale pages never recovered on their own.
+	 * Returning true here falls through to WordPress, and
+	 * PageCacheModule::capture() stores the new entry.
+	 *
+	 * Fresh entries are still served from cache, so preloading current content
+	 * stays cheap and a burst of preload jobs cannot stampede the origin.
+	 *
+	 * @param array<string, string> $headers Request headers, lower-cased keys.
+	 */
+	public static function shouldRevalidate( bool $isStale, array $headers ): bool {
+		if ( ! $isStale ) {
+			return false;
+		}
+
+		return '' !== trim( (string) ( $headers['x-gt-preload'] ?? '' ) );
+	}
+
 	private static function request(): RequestContext {
 		$server = $_SERVER;
 		$https  = isset( $server['HTTPS'] ) && 'off' !== strtolower( (string) $server['HTTPS'] );
@@ -134,6 +160,9 @@ final class DropinRuntime {
 		}
 		if ( isset( $server['HTTP_X_GT_PERFORMANCE_BYPASS'] ) ) {
 			$headers['x-gt-performance-bypass'] = (string) $server['HTTP_X_GT_PERFORMANCE_BYPASS'];
+		}
+		if ( isset( $server['HTTP_X_GT_PRELOAD'] ) ) {
+			$headers['x-gt-preload'] = (string) $server['HTTP_X_GT_PRELOAD'];
 		}
 
 		return new RequestContext(
