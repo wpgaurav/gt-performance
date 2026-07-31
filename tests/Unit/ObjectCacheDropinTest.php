@@ -39,7 +39,9 @@ final class ObjectCacheDropinTest extends TestCase {
 
 		$fixture = dirname( __DIR__ ) . '/Fixtures/object-cache-scenario.php';
 		$dropin  = dirname( __DIR__, 2 ) . '/dropins/object-cache.php';
-		$command = array( PHP_BINARY, $fixture, 'add-worker', $dropin, $store );
+		// Disable loaded extensions so the fixture can provide its deterministic
+		// Redis test double even on CI workers with PhpRedis installed.
+		$command = array( PHP_BINARY, '-n', $fixture, 'add-worker', $dropin, $store );
 		$spec    = array(
 			0 => array( 'pipe', 'r' ),
 			1 => array( 'pipe', 'w' ),
@@ -77,7 +79,7 @@ final class ObjectCacheDropinTest extends TestCase {
 		$fixture = dirname( __DIR__ ) . '/Fixtures/object-cache-scenario.php';
 		$dropin  = dirname( __DIR__, 2 ) . '/dropins/object-cache.php';
 		$command = sprintf(
-			'%s %s %s %s',
+			'%s -n %s %s %s',
 			escapeshellarg( PHP_BINARY ),
 			escapeshellarg( $fixture ),
 			escapeshellarg( $scenario ),
