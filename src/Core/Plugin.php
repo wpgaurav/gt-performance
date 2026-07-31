@@ -26,6 +26,7 @@ final class Plugin {
 
 		Database::maybeUpgrade();
 		\GTPerformance\Cache\DropinInstaller::syncVersion();
+		\GTPerformance\Redis\ObjectCacheInstaller::syncVersion();
 
 		self::$instance = new self();
 		self::$instance->register();

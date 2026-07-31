@@ -80,4 +80,41 @@ final class ApiClient {
 
 		return new \WP_Error( 'gtp_cloudflare_zone', __( 'No active Cloudflare zone matched this site.', 'gt-performance' ) );
 	}
+
+	/**
+	 * Purge exact URLs in Cloudflare's maximum batch size.
+	 *
+	 * @param list<string> $urls URLs to purge.
+	 * @return bool|\WP_Error
+	 */
+	public function purgeUrls( string $zoneId, array $urls ): bool|\WP_Error {
+		$urls = array_values( array_unique( array_filter( array_map( 'trim', $urls ) ) ) );
+		foreach ( array_chunk( $urls, 30 ) as $chunk ) {
+			$result = $this->request(
+				'POST',
+				'zones/' . rawurlencode( $zoneId ) . '/purge_cache',
+				array( 'files' => $chunk )
+			);
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Purge every cached item in a Cloudflare zone.
+	 *
+	 * @return bool|\WP_Error
+	 */
+	public function purgeEverything( string $zoneId ): bool|\WP_Error {
+		$result = $this->request(
+			'POST',
+			'zones/' . rawurlencode( $zoneId ) . '/purge_cache',
+			array( 'purge_everything' => true )
+		);
+
+		return is_wp_error( $result ) ? $result : true;
+	}
 }

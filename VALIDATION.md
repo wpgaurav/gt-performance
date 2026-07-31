@@ -1,5 +1,16 @@
 # GT Performance validation
 
+## 1.0.0-beta-6 local release validation
+
+Validated on 2026-07-31:
+
+- Composer metadata and the production dependency installation passed at the declared PHP 8.1 platform. Composer audit reported no known vulnerabilities after updating WordPress Coding Standards to 3.4.1.
+- WordPress Coding Standards, PHPStan, and PHPUnit passed with 133 tests and 319 assertions. Direct syntax validation also passed for 139 source PHP files, four JavaScript files, and the project JSON file.
+- Release metadata agreed on `1.0.0-beta-6` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 294 entries, embedded version `1.0.0-beta-6`, 376,535 bytes, and local SHA-256 `e5a05f691d6ff5c5add49bac8490b39611836a4fd52caa8b6772f32c9e4caa58`. All 212 packaged PHP files passed syntax validation.
+- The established WordPress Studio site on WordPress 7.0.2 and PHP 8.3 installed and activated the exact ZIP as `1.0.0-beta-6`. Its plugin-owned page-cache drop-in, `WP_CACHE`, cache directory, PHP, WordPress, and WP-Cron Doctor checks passed, and a cache-bypassed front-end request returned HTTP 200.
+- Redis request-local coherence, forced refresh, conditional `NX`/`XX` writes with expiry, a deterministic two-process `add()` race, option recreation, cron advancement, owned drop-in refresh, foreign drop-in preservation, and exact aggregate-option invalidation are covered by focused regression tests. The Studio site does not provide PhpRedis, so live Redis/drop-in replacement remains a production deployment verification gate.
+
 ## 1.0.0-beta-4 local release validation
 
 Validated on 2026-07-23:

@@ -38,15 +38,9 @@ final class CloudflareModule implements Module {
 			return;
 		}
 
-		foreach ( array_chunk( array_values( array_unique( $urls ) ), 30 ) as $chunk ) {
-			$result = $client->request(
-				'POST',
-				'zones/' . rawurlencode( $zone ) . '/purge_cache',
-				array( 'files' => $chunk )
-			);
-			if ( is_wp_error( $result ) ) {
-				$this->logger->log( 'error', 'Cloudflare URL purge failed', array( 'error' => $result->get_error_message() ) );
-			}
+		$result = $client->purgeUrls( $zone, $urls );
+		if ( is_wp_error( $result ) ) {
+			$this->logger->log( 'error', 'Cloudflare URL purge failed', array( 'error' => $result->get_error_message() ) );
 		}
 	}
 
@@ -61,11 +55,7 @@ final class CloudflareModule implements Module {
 			return;
 		}
 
-		$result = $client->request(
-			'POST',
-			'zones/' . rawurlencode( $zone ) . '/purge_cache',
-			array( 'purge_everything' => true )
-		);
+		$result = $client->purgeEverything( $zone );
 		if ( is_wp_error( $result ) ) {
 			$this->logger->log( 'error', 'Cloudflare full purge failed', array( 'error' => $result->get_error_message() ) );
 		}

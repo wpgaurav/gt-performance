@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.0-beta-5`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.0-beta-6`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -125,6 +125,20 @@ Credentials may instead be supplied in `wp-config.php` through `GTP_CLOUDFLARE_A
 GT Performance uses the normal Cloudflare CDN fetch path and Cache Rules; it does not require APO, Workers, Cache Reserve, Argo, or an Enterprise plan.
 
 If Cloudflare Free does not expose custom cache-key controls on the zone, GT Performance retries with a portable rule. Marketing query parameters will still be normalized by the origin cache, while Cloudflare may keep separate edge entries for those URLs.
+
+### Cloudflare WP-CLI operations
+
+Use the Cloudflare command family to inspect or change only the edge layer:
+
+```bash
+wp gt-performance cloudflare status
+wp gt-performance cloudflare plan
+wp gt-performance cloudflare sync
+wp gt-performance cloudflare purge
+wp gt-performance cloudflare purge --page-url=https://example.com/page/
+```
+
+The purge command exits non-zero when credentials, zone discovery, URL validation, or the Cloudflare API fails. Use `wp gt-performance cache purge` when both GT Performance's origin page cache and the connected Cloudflare cache should be cleared together.
 
 ## Custom asset CDN
 

@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-5
+Stable tag: 1.0.0-beta-6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,13 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-6 =
+* Fixed Redis request-local cache coherence so successful writes immediately replace stale values in the same request, including WordPress option aggregates and cron state.
+* Made object-cache add and replace operations atomic with Redis NX and XX writes, including expiration, and made forced reads refresh from Redis.
+* Versioned and automatically refreshed GT Performance-owned object-cache drop-ins after plugin updates without overwriting foreign drop-ins. Upgrades clear only the alloptions, notoptions, and cron entries.
+* Added a Doctor warning and host-specific five-minute flock runner when request-driven WP-Cron is disabled and scheduled events are materially overdue.
+* Fixed the Cloudflare WP-CLI purge command, exact-URL purging, invalid action handling, URL validation, and queue-limit validation.
 
 = 1.0.0-beta-5 =
 * Fixed cached pages never being rebuilt once they went stale. Between the fresh and stale lifetimes nothing regenerated an entry, so a page could keep serving content as old as both lifetimes combined. Stale pages are now swept and rebuilt in the background.

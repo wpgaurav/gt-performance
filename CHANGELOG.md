@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-beta-6 - 2026-07-31
+
+### Fixed
+
+- Made Redis object-cache writes request-local immediately, changed `add()` and `replace()` to atomic Redis `NX`/`XX` operations, and honored forced backend refreshes. Owned outdated object-cache drop-ins now update atomically on plugin boot without touching foreign drop-ins, then clear the exact `alloptions`, `notoptions`, and `cron` option-cache entries.
+- Added a Doctor warning for materially overdue scheduled events when request-driven WP-Cron is disabled. The warning provides a host-specific five-minute external `flock` runner and does not change `DISABLE_WP_CRON`.
+- Fixed `wp gt-performance cloudflare purge`, which previously fell through to Cloudflare rule synchronization without purging anything. It now supports a full-zone purge or one exact `--page-url`, reports Cloudflare API failures, and exits non-zero on invalid input.
+- Rejected unknown cache, queue, Cloudflare, database, and fleet actions before constructing services or performing work. Empty or malformed explicit URLs can no longer degrade into unintended full purges, nonnumeric queue limits now fail instead of processing an arbitrary batch, and action-specific options are no longer silently ignored.
+- Corrected the WP-CLI option documentation for action-based command families so WP-CLI can validate and display their positional actions consistently.
+
 ## 1.0.0-beta-5 - 2026-07-26
 
 ### Changed

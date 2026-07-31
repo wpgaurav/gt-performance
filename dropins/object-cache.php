@@ -55,21 +55,67 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		}
 
 		public function add( $key, $value, $group = 'default', $expire = 0 ): bool {
-			$this->get( $key, $group, false, $found );
-			if ( $found ) {
-				return false;
+			$cacheKey = $this->key( $key, $group );
+			if ( $this->nonPersistent( $group ) || null === $this->redis ) {
+				if ( array_key_exists( $cacheKey, $this->local ) ) {
+					return false;
+				}
+
+				$this->local[ $cacheKey ] = $value;
+				return true;
 			}
 
-			return $this->set( $key, $value, $group, $expire );
+			$payload = serialize( array( 'value' => $value ) );
+
+			try {
+				$stored = (bool) $this->redis->set(
+					$cacheKey,
+					$payload,
+					$expire > 0
+						? array( 'nx', 'ex' => (int) $expire )
+						: array( 'nx' )
+				);
+				if ( ! $stored ) {
+					return false;
+				}
+
+				$this->local[ $cacheKey ] = $value;
+				return true;
+			} catch ( \Throwable ) {
+				return false;
+			}
 		}
 
 		public function replace( $key, $value, $group = 'default', $expire = 0 ): bool {
-			$this->get( $key, $group, false, $found );
-			if ( ! $found ) {
-				return false;
+			$cacheKey = $this->key( $key, $group );
+			if ( $this->nonPersistent( $group ) || null === $this->redis ) {
+				if ( ! array_key_exists( $cacheKey, $this->local ) ) {
+					return false;
+				}
+
+				$this->local[ $cacheKey ] = $value;
+				return true;
 			}
 
-			return $this->set( $key, $value, $group, $expire );
+			$payload = serialize( array( 'value' => $value ) );
+
+			try {
+				$stored = (bool) $this->redis->set(
+					$cacheKey,
+					$payload,
+					$expire > 0
+						? array( 'xx', 'ex' => (int) $expire )
+						: array( 'xx' )
+				);
+				if ( ! $stored ) {
+					return false;
+				}
+
+				$this->local[ $cacheKey ] = $value;
+				return true;
+			} catch ( \Throwable ) {
+				return false;
+			}
 		}
 
 		public function set( $key, $value, $group = 'default', $expire = 0 ): bool {
@@ -81,9 +127,15 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 
 			$payload = serialize( array( 'value' => $value ) );
 			try {
-				return $expire > 0
+				$stored = $expire > 0
 					? (bool) $this->redis->setex( $cacheKey, (int) $expire, $payload )
 					: (bool) $this->redis->set( $cacheKey, $payload );
+				if ( ! $stored ) {
+					return false;
+				}
+
+				$this->local[ $cacheKey ] = $value;
+				return true;
 			} catch ( \Throwable ) {
 				$this->local[ $cacheKey ] = $value;
 				return true;
@@ -91,12 +143,15 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		}
 
 		public function get( $key, $group = 'default', $force = false, &$found = null ) {
-			unset( $force );
 			$cacheKey = $this->key( $key, $group );
-			if ( array_key_exists( $cacheKey, $this->local ) ) {
+			if ( ! $force && array_key_exists( $cacheKey, $this->local ) ) {
 				$found = true;
 				++$this->cache_hits;
 				return $this->local[ $cacheKey ];
+			}
+
+			if ( $force ) {
+				unset( $this->local[ $cacheKey ] );
 			}
 
 			if ( $this->nonPersistent( $group ) || null === $this->redis ) {

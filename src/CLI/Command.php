@@ -20,6 +20,7 @@ use GTPerformance\Core\Paths;
 use GTPerformance\Core\Settings;
 use GTPerformance\Database\Cleaner;
 use GTPerformance\Diagnostics\CacheInspector;
+use GTPerformance\Diagnostics\CronHealth;
 use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Fleet\PolicyService;
 use GTPerformance\Queue\QueueModule;
@@ -66,6 +67,7 @@ final class Command {
 				'value'  => Settings::get( 'cloudflare.enabled', false ) ? 'enabled' : 'disabled',
 				'status' => Settings::get( 'cloudflare.enabled', false ) ? 'pass' : 'warning',
 			),
+			( new CronHealth() )->check(),
 		);
 
 		\WP_CLI\Utils\format_items( 'table', $checks, array( 'check', 'value', 'status' ) );
@@ -76,8 +78,8 @@ final class Command {
 	 *
 	 * ## OPTIONS
 	 *
-	 * <action>
-	 * : status, purge, warm, install-dropin, explain, or verify.
+	 * [<action>]
+	 * : status, purge, warm, install-dropin, explain, or verify. Defaults to status.
 	 *
 	 * [--page-url=<url>]
 	 * : Target URL for purge, explain, or verify. Defaults to the home page for explain and verify.
@@ -86,7 +88,20 @@ final class Command {
 	 * @param array<string, string> $assocArgs Named arguments.
 	 */
 	public function cache( array $args, array $assocArgs ): void {
-		$action = (string) ( $args[0] ?? 'status' );
+		$action = $this->action(
+			$args,
+			'status',
+			array( 'status', 'purge', 'warm', 'install-dropin', 'explain', 'verify' ),
+			'cache'
+		);
+		if ( null === $action ) {
+			return;
+		}
+		if ( $this->pageUrlRequested( $assocArgs ) && ! in_array( $action, array( 'purge', 'explain', 'verify' ), true ) ) {
+			\WP_CLI::error( '--page-url is supported only by cache purge, explain, and verify.' );
+			return;
+		}
+
 		if ( 'install-dropin' === $action ) {
 			$result = ( new DropinInstaller() )->install();
 			is_wp_error( $result ) ? \WP_CLI::error( $result->get_error_message() ) : \WP_CLI::success( 'Page-cache drop-in installed.' );
@@ -99,6 +114,9 @@ final class Command {
 		}
 		if ( 'purge' === $action ) {
 			$url = $this->pageUrl( $assocArgs );
+			if ( null === $url ) {
+				return;
+			}
 			if ( '' !== $url ) {
 				( new Purger() )->purgeUrl( $url );
 			} else {
@@ -109,6 +127,9 @@ final class Command {
 		}
 		if ( 'explain' === $action || 'verify' === $action ) {
 			$url = $this->pageUrl( $assocArgs );
+			if ( null === $url ) {
+				return;
+			}
 			$url = '' !== $url ? $url : home_url( '/' );
 			$result = 'verify' === $action
 				? ( new PurgeVerifier() )->verify( $url )
@@ -125,8 +146,6 @@ final class Command {
 			\WP_CLI::log( 'dropin=' . ( new DropinInstaller() )->status() );
 			return;
 		}
-
-		\WP_CLI::error( 'Unknown cache action. Use status, purge, warm, install-dropin, explain, or verify.' );
 	}
 
 	/**
@@ -135,24 +154,59 @@ final class Command {
 	 *
 	 * @param array<string, string> $assocArgs Named arguments.
 	 */
-	private function pageUrl( array $assocArgs ): string {
-		$value = (string) ( $assocArgs['page-url'] ?? $assocArgs['url'] ?? '' );
+	private function pageUrl( array $assocArgs ): ?string {
+		if ( ! $this->pageUrlRequested( $assocArgs ) ) {
+			return '';
+		}
 
-		return esc_url_raw( $value );
+		$value  = esc_url_raw( trim( (string) ( $assocArgs['page-url'] ?? $assocArgs['url'] ?? '' ) ) );
+		$scheme = strtolower( (string) wp_parse_url( $value, PHP_URL_SCHEME ) );
+		$host   = (string) wp_parse_url( $value, PHP_URL_HOST );
+		if ( '' === $value || ! in_array( $scheme, array( 'http', 'https' ), true ) || '' === $host ) {
+			\WP_CLI::error( 'Use --page-url with a complete HTTP or HTTPS URL.' );
+			return null;
+		}
+
+		return $value;
+	}
+
+	/**
+	 * @param array<string, string> $assocArgs Named arguments.
+	 */
+	private function pageUrlRequested( array $assocArgs ): bool {
+		return array_key_exists( 'page-url', $assocArgs ) || array_key_exists( 'url', $assocArgs );
 	}
 
 	/**
 	 * Run queued jobs.
 	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : run. Defaults to run.
+	 *
 	 * [--limit=<number>]
-	 * : Maximum jobs to process.
+	 * : Positive maximum number of jobs to process.
 	 *
 	 * @param list<string>          $args Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.
 	 */
 	public function queue( array $args, array $assocArgs ): void {
-		unset( $args );
-		$limit = max( 1, (int) ( $assocArgs['limit'] ?? 20 ) );
+		$action = $this->action( $args, 'run', array( 'run' ), 'queue' );
+		if ( null === $action ) {
+			return;
+		}
+
+		$limit = filter_var(
+			$assocArgs['limit'] ?? 20,
+			FILTER_VALIDATE_INT,
+			array( 'options' => array( 'min_range' => 1 ) )
+		);
+		if ( false === $limit ) {
+			\WP_CLI::error( 'Use --limit with a positive whole number.' );
+			return;
+		}
+
 		$count = ( new QueueModule( new \GTPerformance\Core\Logger() ) )->run( $limit );
 		\WP_CLI::success( "Processed {$count} job(s)." );
 	}
@@ -160,13 +214,27 @@ final class Command {
 	/**
 	 * Manage Cloudflare.
 	 *
-	 * <action>
-	 * : status, plan, or sync.
+	 * ## OPTIONS
 	 *
-	 * @param list<string> $args Positional arguments.
+	 * [<action>]
+	 * : status, plan, sync, or purge. Defaults to status.
+	 *
+	 * [--page-url=<url>]
+	 * : Purge one exact URL instead of the entire Cloudflare zone cache.
+	 *
+	 * @param list<string>          $args      Positional arguments.
+	 * @param array<string, string> $assocArgs Named arguments.
 	 */
-	public function cloudflare( array $args ): void {
-		$action   = (string) ( $args[0] ?? 'status' );
+	public function cloudflare( array $args, array $assocArgs ): void {
+		$action = $this->action( $args, 'status', array( 'status', 'plan', 'sync', 'purge' ), 'Cloudflare' );
+		if ( null === $action ) {
+			return;
+		}
+		if ( $this->pageUrlRequested( $assocArgs ) && 'purge' !== $action ) {
+			\WP_CLI::error( '--page-url is supported only by cloudflare purge.' );
+			return;
+		}
+
 		$settings = Settings::all();
 		if ( 'status' === $action ) {
 			$domain = ( new ClientFactory() )->domain( $settings );
@@ -191,7 +259,24 @@ final class Command {
 			}
 			$zoneId = (string) $zone['id'];
 		}
-		$cache  = apply_filters( 'gt_performance_cache_policy', (array) $settings['cache'] );
+
+		if ( 'purge' === $action ) {
+			$url = $this->pageUrl( $assocArgs );
+			if ( null === $url ) {
+				return;
+			}
+			$result = '' !== $url
+				? $client->purgeUrls( $zoneId, array( $url ) )
+				: $client->purgeEverything( $zoneId );
+			if ( is_wp_error( $result ) ) {
+				\WP_CLI::error( $result->get_error_message() );
+				return;
+			}
+			\WP_CLI::success( '' !== $url ? 'Cloudflare URL purge completed.' : 'Cloudflare full purge completed.' );
+			return;
+		}
+
+		$cache = apply_filters( 'gt_performance_cache_policy', (array) $settings['cache'] );
 		if ( 'plan' === $action ) {
 			$plan = ( new RuleManager( $client ) )->preview( $zoneId, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ), $cache );
 			if ( is_wp_error( $plan ) ) {
@@ -215,14 +300,21 @@ final class Command {
 	/**
 	 * Preview or execute database cleanup.
 	 *
-	 * <action>
-	 * : preview or run.
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : preview or run. Defaults to preview.
 	 *
 	 * @param list<string> $args Positional arguments.
 	 */
 	public function database( array $args ): void {
+		$action = $this->action( $args, 'preview', array( 'preview', 'run' ), 'database' );
+		if ( null === $action ) {
+			return;
+		}
+
 		$cleaner = new Cleaner();
-		$result  = 'run' === ( $args[0] ?? 'preview' ) ? $cleaner->run() : $cleaner->preview();
+		$result  = 'run' === $action ? $cleaner->run() : $cleaner->preview();
 		$rows    = array();
 		foreach ( $result as $type => $count ) {
 			$rows[] = array(
@@ -247,8 +339,10 @@ final class Command {
 	/**
 	 * Create or apply a signed fleet policy.
 	 *
-	 * <action>
-	 * : export or import.
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : export or import. Defaults to export.
 	 *
 	 * [--file=<path>]
 	 * : JSON bundle to import. Export prints JSON to standard output.
@@ -257,8 +351,16 @@ final class Command {
 	 * @param array<string, string> $assocArgs Named arguments.
 	 */
 	public function fleet( array $args, array $assocArgs ): void {
+		$action = $this->action( $args, 'export', array( 'export', 'import' ), 'fleet' );
+		if ( null === $action ) {
+			return;
+		}
+		if ( 'export' === $action && array_key_exists( 'file', $assocArgs ) ) {
+			\WP_CLI::error( '--file is supported only by fleet import.' );
+			return;
+		}
+
 		$service = new PolicyService();
-		$action  = (string) ( $args[0] ?? 'export' );
 		if ( 'import' === $action ) {
 			$file = (string) ( $assocArgs['file'] ?? '' );
 			if ( '' === $file || ! is_readable( $file ) ) {
@@ -274,5 +376,31 @@ final class Command {
 			\WP_CLI::error( $result->get_error_message() );
 		}
 		\WP_CLI::line( (string) wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
+	}
+
+	/**
+	 * Resolve and validate a command-family action before constructing services
+	 * or performing work. Invalid actions must never fall through to a default
+	 * operation, especially for mutating commands such as Cloudflare sync.
+	 *
+	 * @param list<string> $args    Positional arguments.
+	 * @param list<string> $allowed Allowed actions.
+	 */
+	private function action( array $args, string $default, array $allowed, string $family ): ?string {
+		$action = strtolower( trim( (string) ( $args[0] ?? $default ) ) );
+		if ( in_array( $action, $allowed, true ) ) {
+			return $action;
+		}
+
+		$last = array_pop( $allowed );
+		if ( count( $allowed ) > 1 ) {
+			$choices = implode( ', ', $allowed ) . ', or ' . $last;
+		} elseif ( $allowed ) {
+			$choices = $allowed[0] . ' or ' . $last;
+		} else {
+			$choices = (string) $last;
+		}
+		\WP_CLI::error( sprintf( 'Unknown %s action. Use %s.', $family, $choices ) );
+		return null;
 	}
 }

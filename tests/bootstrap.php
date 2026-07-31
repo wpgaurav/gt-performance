@@ -9,6 +9,18 @@ declare(strict_types=1);
 
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
+if ( ! defined( 'GTP_VERSION' ) ) {
+	define( 'GTP_VERSION', 'test' );
+}
+
+if ( ! defined( 'GTP_DIR' ) ) {
+	define( 'GTP_DIR', dirname( __DIR__ ) );
+}
+
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', sys_get_temp_dir() . '/gt-performance-wordpress/' );
+}
+
 if ( ! function_exists( '__' ) ) {
 	function __( string $text ): string {
 		return $text;
@@ -38,6 +50,135 @@ if ( ! function_exists( 'wp_generate_uuid4' ) ) {
 
 	function wp_rand_int(): int {
 		return random_int( 0, 0xffff );
+	}
+}
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	class WP_Error {
+		public function __construct(
+			private readonly string $code = '',
+			private readonly string $message = '',
+		) {
+		}
+
+		public function get_error_code(): string {
+			return $this->code;
+		}
+
+		public function get_error_message(): string {
+			return $this->message;
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_CLI' ) ) {
+	class WP_CLI {
+		/** @var list<string> */
+		public static array $successes = array();
+
+		/** @var list<string> */
+		public static array $lines = array();
+
+		/** @var list<string> */
+		public static array $logs = array();
+
+		public static function error( string $message ): void {
+			throw new RuntimeException( $message );
+		}
+
+		public static function success( string $message ): void {
+			self::$successes[] = $message;
+		}
+
+		public static function line( string $message ): void {
+			self::$lines[] = $message;
+		}
+
+		public static function log( string $message ): void {
+			self::$logs[] = $message;
+		}
+	}
+}
+
+if ( ! function_exists( 'is_wp_error' ) ) {
+	function is_wp_error( mixed $value ): bool {
+		return $value instanceof WP_Error;
+	}
+}
+
+if ( ! function_exists( 'get_option' ) ) {
+	function get_option( string $name, mixed $default = false ): mixed {
+		return $GLOBALS['gtp_test_options'][ $name ] ?? $default;
+	}
+}
+
+if ( ! function_exists( 'update_option' ) ) {
+	function update_option( string $name, mixed $value, bool $autoload = false ): bool {
+		unset( $autoload );
+		$GLOBALS['gtp_test_options'][ $name ] = $value;
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'wp_cache_delete' ) ) {
+	function wp_cache_delete( mixed $key, string $group = '', bool $deprecated = false ): bool {
+		unset( $deprecated );
+		$GLOBALS['gtp_test_cache_deletions'][] = array( $key, $group );
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'esc_url_raw' ) ) {
+	function esc_url_raw( string $url ): string {
+		$sanitized = filter_var( $url, FILTER_SANITIZE_URL );
+
+		return is_string( $sanitized ) ? $sanitized : '';
+	}
+}
+
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( string $url, int $component = -1 ): mixed {
+		return parse_url( $url, $component );
+	}
+}
+
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	function wp_json_encode( mixed $value, int $flags = 0 ): string|false {
+		return json_encode( $value, $flags );
+	}
+}
+
+if ( ! function_exists( 'wp_remote_request' ) ) {
+	/**
+	 * @param array<string, mixed> $args Request arguments.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	function wp_remote_request( string $url, array $args ): array|WP_Error {
+		$GLOBALS['gtp_test_http_requests'][] = array(
+			'url'  => $url,
+			'args' => $args,
+		);
+
+		return $GLOBALS['gtp_test_http_response'] ?? array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '{"success":true,"result":{}}',
+		);
+	}
+}
+
+if ( ! function_exists( 'wp_remote_retrieve_response_code' ) ) {
+	/** @param array<string, mixed> $response Response. */
+	function wp_remote_retrieve_response_code( array $response ): int {
+		return (int) ( $response['response']['code'] ?? 0 );
+	}
+}
+
+if ( ! function_exists( 'wp_remote_retrieve_body' ) ) {
+	/** @param array<string, mixed> $response Response. */
+	function wp_remote_retrieve_body( array $response ): string {
+		return (string) ( $response['body'] ?? '' );
 	}
 }
 
