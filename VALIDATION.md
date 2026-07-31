@@ -11,6 +11,20 @@ Validated on 2026-07-31:
 - The established WordPress Studio site on WordPress 7.0.2 and PHP 8.3 installed and activated the exact ZIP as `1.0.0-beta-6`. Its plugin-owned page-cache drop-in, `WP_CACHE`, cache directory, PHP, WordPress, and WP-Cron Doctor checks passed, and a cache-bypassed front-end request returned HTTP 200.
 - Redis request-local coherence, forced refresh, conditional `NX`/`XX` writes with expiry, a deterministic two-process `add()` race, option recreation, cron advancement, owned drop-in refresh, foreign drop-in preservation, and exact aggregate-option invalidation are covered by focused regression tests. The Studio site does not provide PhpRedis, so live Redis/drop-in replacement remains a production deployment verification gate.
 
+## 1.0.0-beta-6 distribution validation
+
+Validated on 2026-07-31:
+
+- Commit `8c9e01c` passed GitHub CI run `30600076560` on PHP 8.1, 8.3, and 8.5, including the release-package job. Release workflow `30600132444` published tag `v1.0.0-beta-6` as a prerelease.
+- The canonical GitHub ZIP is 376,535 bytes with SHA-256 `a95d6c4b6cdc67e8bbeaa11b9310866bd848c4e80cb913f729c60e0cdd037e43`. It has one `gt-performance/` root, 294 entries, 212 syntax-valid PHP files, and matching plugin-header, runtime-constant, and stable-tag versions.
+- FluentCart product `1170147` points to download row `146`, version `1.0.0-beta-6`, containing the exact canonical GitHub ZIP. Beta-5 row `120` and its package remain available for rollback.
+- An unlicensed updater request returned beta-6 metadata without a package URL. A disposable non-customer license activated successfully, returned protected beta-6 metadata, downloaded the exact 376,535-byte canonical package, deactivated, and left zero temporary license, activation, and site rows.
+- Both `gauravtiwari.org` and `gatilab.com` run GT Performance `1.0.0-beta-6` as an active plugin. Each host retains a beta-5 rollback archive, and their installed 240-file trees share aggregate SHA-256 `ec19ee60d1da8f6000a19b6310dff3b83568b9ef0fc7e5b720f3453c004c49c5`, matching the extracted canonical ZIP.
+- On the first post-upgrade request, each owned Redis drop-in atomically refreshed to the stamped beta-6 copy. The exact `options:notoptions`, `options:alloptions`, and `options:cron` cache entries were then invalidated without a blanket object-cache flush; an already-absent `cron` entry was left absent.
+- PHP, WordPress, cache-directory writability, the owned page-cache drop-in, `WP_CACHE`, the owned Redis drop-in, and WP-Cron passed `wp gt-performance doctor` on both sites. Gatilab's configured Cloudflare integration also passed; the integration remains disabled on `gauravtiwari.org`, where Doctor reports the expected warning.
+- Both sites have request-driven WP-Cron enabled, so no redundant permanent external runner was installed. The due queues were nevertheless executed once under site-specific `flock` locks; Independent Analytics' module refresh advanced to 2026-07-31 04:00 UTC and its click-processing event resumed its normal recurring schedule.
+- Plugin-owned cache purges succeeded. Direct-origin requests returned HTTP 200 with `X-GT-Cache: HIT` on both sites, while public requests returned HTTP 200 and Cloudflare edge hits.
+
 ## 1.0.0-beta-4 local release validation
 
 Validated on 2026-07-23:
