@@ -9,7 +9,19 @@ Validated on 2026-08-04:
 - The established WordPress Studio site on WordPress 7.0.2 and PHP 8.3 installed and activated the exact ZIP as `1.0.0-beta-7`.
 - File, fully inline, critical-inline-plus-file, and hybrid budget-fallback modes removed the known unused selector while preserving used selectors and hexadecimal icon-font escapes. Inline mode kept `content:"\\e800"` through HTML serialization and emitted no `&#59392;` entity.
 - CSS Reports rendered the URL-specific and site-wide regeneration controls at desktop and 390px mobile widths. URL regeneration invalidated, purged, and warmed the homepage; site-wide regeneration advanced the settings generation and marked 19 reports stale; a cross-site URL was rejected.
-- A live `gauravtiwari.org` hotfix retained 100% unused-CSS rollout while file delivery remained active. The temporary MD stylesheet exception was removed after the generic hexadecimal-escape repair was deployed.
+- A live `gauravtiwari.org` hotfix retained 100% unused-CSS rollout in the site's existing hybrid mode, which selected a generated file for this page. The temporary MD stylesheet exception was removed after the generic hexadecimal-escape repair was deployed.
+
+## 1.0.0-beta-7 distribution validation
+
+Validated on 2026-08-04:
+
+- Commit `c79ce95` passed GitHub CI run `30876228720`; release workflow `30876229951` published tag `v1.0.0-beta-7` as a prerelease.
+- The canonical GitHub ZIP is 380,116 bytes with SHA-256 `e717f338110fb42395a7b760916cf25eb740d87695012cd576a31746c04fa021`. Its checksum, package root, entry count, embedded plugin header, runtime constant, and stable tag agree.
+- FluentCart product `1170147` points to new download row `153`, version `1.0.0-beta-7`, containing the exact canonical GitHub ZIP. Beta-6 row `146` and its R2 object remain available for rollback.
+- An unlicensed updater request returned beta-7 metadata without a package URL. A disposable non-customer license activated successfully, returned protected beta-7 metadata, downloaded the exact 380,116-byte canonical package, deactivated, and left zero temporary license, activation, and site rows.
+- `gauravtiwari.org` runs GT Performance `1.0.0-beta-7` as an active plugin. Its installed 240-file tree has aggregate SHA-256 `76f47ceb5e8a69055d2829fada2c8bd53ab65effb705f745ef95ee7b2cb71e59`, matching the extracted canonical ZIP. The pre-upgrade beta-6 tree is retained at `/home/gauravtiwari/backups/gt-performance/gt-performance-beta6-pre-beta7-20260804040832.tar.gz`.
+- Production settings remained unchanged: unused CSS enabled, 100% rollout, hybrid delivery, `md-icon` safelisted, and only the existing GT Extensions and Razorpay stylesheet exclusions. PHP, WordPress, cache-directory writability, page and Redis drop-in ownership, `WP_CACHE`, and WP-Cron passed Doctor; Cloudflare integration remains intentionally disabled in the plugin.
+- Origin and exact Cloudflare homepage purges succeeded. Desktop and mobile public requests returned HTTP 200. The generated used-CSS file returned HTTP 200, its content hash matched its immutable filename, it retained `\\e800`, `\\f0e1`, and `md-icon`, and it contained no HTML numeric entity.
 
 ## 1.0.0-beta-6 local release validation
 
