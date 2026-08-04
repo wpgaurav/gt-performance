@@ -11,7 +11,7 @@ namespace GTPerformance\Optimization\Css;
 
 final class StylesheetCollector {
 	/**
-	 * @param list<string> $exclusions Excluded URL fragments.
+	 * @param list<string> $exclusions Excluded URL or inline style ID fragments.
 	 * @return array{stylesheets:list<Stylesheet>,nodes:list<\DOMNode>}
 	 */
 	public function collect( \DOMDocument $document, array $exclusions = array() ): array {
@@ -20,13 +20,34 @@ final class StylesheetCollector {
 		$nodes       = array();
 		$siteHost    = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 
-		$links = $xpath->query( '//link[contains(concat(" ", normalize-space(@rel), " "), " stylesheet ")][@href]' );
-		if ( false !== $links ) {
-			foreach ( $links as $link ) {
-				if ( ! $link instanceof \DOMElement ) {
+		// A stylesheet's position is part of the cascade. Query links and inline
+		// styles together so consolidating them never moves every inline block
+		// behind every external file.
+		$nodesInOrder = $xpath->query(
+			'//link[not(ancestor::noscript)][contains(concat(" ", normalize-space(@rel), " "), " stylesheet ")][@href]'
+			. ' | //style[not(ancestor::noscript)][not(@data-gt-performance)]'
+		);
+		if ( false !== $nodesInOrder ) {
+			foreach ( $nodesInOrder as $node ) {
+				if ( ! $node instanceof \DOMElement ) {
 					continue;
 				}
-				$href = html_entity_decode( $link->getAttribute( 'href' ), ENT_QUOTES | ENT_HTML5 );
+
+				if ( 'style' === strtolower( $node->tagName ) ) {
+					if ( '' === trim( $node->textContent ) ) {
+						continue;
+					}
+					$styleId = $node->getAttribute( 'id' );
+					if ( '' !== $styleId && $this->excluded( $styleId, $exclusions ) ) {
+						continue;
+					}
+					$media          = $node->getAttribute( 'media' );
+					$stylesheets[] = new Stylesheet( 'inline', $node->textContent, '' === $media ? 'all' : $media );
+					$nodes[]       = $node;
+					continue;
+				}
+
+				$href = html_entity_decode( $node->getAttribute( 'href' ), ENT_QUOTES | ENT_HTML5 );
 				$url  = $this->absoluteUrl( $href );
 				if ( '' === $url || $this->excluded( $url, $exclusions ) ) {
 					continue;
@@ -43,25 +64,13 @@ final class StylesheetCollector {
 					throw new \RuntimeException( $css->get_error_message() );
 				}
 
-				$media = $link->getAttribute( 'media' );
+				$media = $this->effectiveMedia( $node );
 				$stylesheets[] = new Stylesheet(
 					$url,
 					$this->rebaseUrls( $css, $url ),
 					'' === $media ? 'all' : $media
 				);
-				$nodes[]       = $link;
-			}
-		}
-
-		$inline = $xpath->query( '//style[not(@data-gt-performance)]' );
-		if ( false !== $inline ) {
-			foreach ( $inline as $style ) {
-				if ( ! $style instanceof \DOMElement || '' === trim( $style->textContent ) ) {
-					continue;
-				}
-				$media         = $style->getAttribute( 'media' );
-				$stylesheets[] = new Stylesheet( 'inline', $style->textContent, '' === $media ? 'all' : $media );
-				$nodes[]       = $style;
+				$nodes[]       = $node;
 			}
 		}
 
@@ -69,6 +78,24 @@ final class StylesheetCollector {
 			'stylesheets' => $stylesheets,
 			'nodes'       => $nodes,
 		);
+	}
+
+	private function effectiveMedia( \DOMElement $link ): string {
+		$media  = trim( $link->getAttribute( 'media' ) );
+		$onload = $link->getAttribute( 'onload' );
+
+		// Async-CSS loaders commonly set media="print" to avoid blocking and
+		// promote the stylesheet to all media after it loads. Preserve the
+		// browser's effective media rather than turning that CSS into print-only
+		// rules inside the generated artifact.
+		if (
+			'print' === strtolower( $media )
+			&& preg_match( '/\\.media\\s*=\\s*([\'\"])all\\1/i', $onload )
+		) {
+			return 'all';
+		}
+
+		return '' === $media ? 'all' : $media;
 	}
 
 	private function absoluteUrl( string $url ): string {
@@ -141,7 +168,7 @@ final class StylesheetCollector {
 	}
 
 	/**
-	 * @param list<string> $exclusions Exclusions.
+	 * @param list<string> $exclusions URL or inline style ID fragments.
 	 */
 	private function excluded( string $url, array $exclusions ): bool {
 		foreach ( $exclusions as $exclusion ) {

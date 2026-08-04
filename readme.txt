@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-6
+Stable tag: 1.0.0-beta-7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,13 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-beta-7 =
+* Added URL-specific and site-wide used-CSS regeneration controls to CSS Reports. Regeneration invalidates reports, purges origin and connected edge caches, and warms the selected URL immediately.
+* Added exclusions for inline WordPress style IDs as well as external stylesheet URLs, plus automatic protection for active FluentCart, Easy Digital Downloads, and WooCommerce application styles.
+* Fixed icon fonts and other escaped CSS content values rendering as literal numeric entities in Inline all used CSS mode.
+* Preserved stylesheet source order, asynchronous all-media behavior, custom-property dependencies, dynamic attribute states, and independently parsed stylesheet boundaries during pruning.
+* Made authorized CSS previews private and non-cacheable while still running the real optimization pipeline, and expanded trained compound selectors into reusable ID and class safeguards.
 
 = 1.0.0-beta-6 =
 * Fixed Redis request-local cache coherence so successful writes immediately replace stale values in the same request, including WordPress option aggregates and cron state.

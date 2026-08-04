@@ -62,9 +62,13 @@ final class TrainingModule implements Module {
 	 * @return list<string>
 	 */
 	public function safelist( array $safelist ): array {
+		$trained = ( new SelectorObservation() )->safelistPatterns(
+			array_map( 'strval', (array) Settings::get( 'css.trained_selectors', array() ) )
+		);
+
 		return array_values(
 			array_unique(
-				array_merge( $safelist, array_map( 'strval', (array) Settings::get( 'css.trained_selectors', array() ) ) )
+				array_merge( $safelist, $trained )
 			)
 		);
 	}

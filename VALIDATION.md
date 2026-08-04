@@ -1,5 +1,16 @@
 # GT Performance validation
 
+## 1.0.0-beta-7 local release validation
+
+Validated on 2026-08-04:
+
+- Composer metadata, WordPress Coding Standards, PHPStan, and PHPUnit passed with 146 tests and 356 assertions. Release metadata agreed on `1.0.0-beta-7` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 294 entries, embedded version `1.0.0-beta-7`, 380,116 bytes, and local SHA-256 `71588ab47a821354baccab4101c435889954bab00942e774b9df0a202bffac78`. All 212 packaged PHP files passed syntax validation.
+- The established WordPress Studio site on WordPress 7.0.2 and PHP 8.3 installed and activated the exact ZIP as `1.0.0-beta-7`.
+- File, fully inline, critical-inline-plus-file, and hybrid budget-fallback modes removed the known unused selector while preserving used selectors and hexadecimal icon-font escapes. Inline mode kept `content:"\\e800"` through HTML serialization and emitted no `&#59392;` entity.
+- CSS Reports rendered the URL-specific and site-wide regeneration controls at desktop and 390px mobile widths. URL regeneration invalidated, purged, and warmed the homepage; site-wide regeneration advanced the settings generation and marked 19 reports stale; a cross-site URL was rejected.
+- A live `gauravtiwari.org` hotfix retained 100% unused-CSS rollout while file delivery remained active. The temporary MD stylesheet exception was removed after the generic hexadecimal-escape repair was deployed.
+
 ## 1.0.0-beta-6 local release validation
 
 Validated on 2026-07-31:

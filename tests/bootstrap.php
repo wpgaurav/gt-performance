@@ -21,6 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', sys_get_temp_dir() . '/gt-performance-wordpress/' );
 }
 
+if ( ! defined( 'MB_IN_BYTES' ) ) {
+	define( 'MB_IN_BYTES', 1024 * 1024 );
+}
+
 if ( ! function_exists( '__' ) ) {
 	function __( string $text ): string {
 		return $text;
@@ -121,6 +125,17 @@ if ( ! function_exists( 'update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'apply_filters' ) ) {
+	function apply_filters( string $hook, mixed $value, mixed ...$args ): mixed {
+		$callbacks = $GLOBALS['gtp_test_filters'][ $hook ] ?? array();
+		foreach ( $callbacks as $callback ) {
+			$value = $callback( $value, ...$args );
+		}
+
+		return $value;
+	}
+}
+
 if ( ! function_exists( 'wp_cache_delete' ) ) {
 	function wp_cache_delete( mixed $key, string $group = '', bool $deprecated = false ): bool {
 		unset( $deprecated );
@@ -141,6 +156,56 @@ if ( ! function_exists( 'esc_url_raw' ) ) {
 if ( ! function_exists( 'wp_parse_url' ) ) {
 	function wp_parse_url( string $url, int $component = -1 ): mixed {
 		return parse_url( $url, $component );
+	}
+}
+
+if ( ! function_exists( 'home_url' ) ) {
+	function home_url( string $path = '' ): string {
+		return 'https://example.com' . $path;
+	}
+}
+
+if ( ! function_exists( 'content_url' ) ) {
+	function content_url( string $path = '' ): string {
+		return 'https://example.com/wp-content/' . ltrim( $path, '/' );
+	}
+}
+
+if ( ! function_exists( 'is_ssl' ) ) {
+	function is_ssl(): bool {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'trailingslashit' ) ) {
+	function trailingslashit( string $value ): string {
+		return rtrim( $value, '/\\' ) . '/';
+	}
+}
+
+if ( ! function_exists( 'wp_safe_remote_get' ) ) {
+	/**
+	 * @param array<string, mixed> $args Request arguments.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	function wp_safe_remote_get( string $url, array $args = array() ): array|WP_Error {
+		$GLOBALS['gtp_test_http_requests'][] = array(
+			'url'  => $url,
+			'args' => $args,
+		);
+
+		return $GLOBALS['gtp_test_http_response'] ?? array(
+			'response' => array( 'code' => 200 ),
+			'headers'  => array( 'content-type' => 'text/css' ),
+			'body'     => '.remote{}',
+		);
+	}
+}
+
+if ( ! function_exists( 'wp_remote_retrieve_header' ) ) {
+	/** @param array<string, mixed> $response Response. */
+	function wp_remote_retrieve_header( array $response, string $header ): string {
+		return (string) ( $response['headers'][ strtolower( $header ) ] ?? '' );
 	}
 }
 

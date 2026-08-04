@@ -39,4 +39,23 @@ final class SelectorObservationTest extends TestCase {
 
 		self::assertSame( array(), $selectors );
 	}
+
+	public function testCompoundObservationsExpandToReusableSafelistFragments(): void {
+		$patterns = ( new SelectorObservation() )->safelistPatterns(
+			array( '#cart-drawer', 'button.is-open.primary', 'div.md\\:flex.w-1\\/2' )
+		);
+
+		self::assertSame(
+			array(
+				'#cart-drawer',
+				'button.is-open.primary',
+				'.is-open',
+				'.primary',
+				'div.md\\:flex.w-1\\/2',
+				'.md\\:flex',
+				'.w-1\\/2',
+			),
+			$patterns
+		);
+	}
 }

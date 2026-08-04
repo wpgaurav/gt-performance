@@ -49,4 +49,28 @@ final class SelectorObservation {
 
 		return $selector;
 	}
+
+	/**
+	 * Expand observed compound selectors into fragments that can protect rules
+	 * written with a different tag or class order.
+	 *
+	 * @param list<string> $selectors Observed selectors.
+	 * @return list<string>
+	 */
+	public function safelistPatterns( array $selectors ): array {
+		$patterns = array();
+		$token    = '(?:[a-zA-Z0-9_-]|\\\\[0-9a-fA-F]{1,6} ?|\\\\[^\s])+';
+
+		foreach ( $this->sanitizeMany( $selectors ) as $selector ) {
+			$patterns[] = $selector;
+			$matches    = array();
+			if ( preg_match_all( '/[.#]' . $token . '/', $selector, $matches ) ) {
+				foreach ( $matches[0] as $fragment ) {
+					$patterns[] = $fragment;
+				}
+			}
+		}
+
+		return array_values( array_unique( $patterns ) );
+	}
 }

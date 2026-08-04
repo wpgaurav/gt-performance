@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-beta-7 - 2026-08-04
+
+### Added
+
+- Added URL-specific and site-wide regeneration controls to CSS Reports. URL regeneration invalidates every delivery-mode report for that page, purges its origin and connected edge cache entries, and warms it immediately. Site-wide regeneration advances the settings generation, marks existing reports stale, purges the full page cache, and uses the normal preload queue.
+- Extended stylesheet exclusions to match WordPress inline style IDs as well as external URLs, and added automatic server-side pruning exclusions for active FluentCart, Easy Digital Downloads, and WooCommerce application styles.
+
+### Fixed
+
+- Preserved hexadecimal CSS escapes such as `\\e800` and `\\f0e1` through parsing and HTML serialization. Inline used CSS no longer turns icon-font glyphs or other escaped `content` values into literal numeric entities.
+- Preserved the original cascade order when collecting external and inline styles, ignored `noscript` fallbacks, treated asynchronous `media="print"` loaders that promote themselves to `all` correctly, and parsed each stylesheet independently so one parser-hostile source cannot alter following stylesheets.
+- Kept custom-property definition blocks as dependencies, expanded supported dynamic pseudo-classes and state attributes, and expanded trained compound selectors into reusable ID and class fragments so runtime states remain protected when selector order differs.
+- Made authenticated used-CSS previews bypass page and edge storage while still executing the production optimization pipeline.
+
 ## 1.0.0-beta-6 - 2026-07-31
 
 ### Fixed

@@ -10,14 +10,15 @@ declare(strict_types=1);
 add_action(
 	'template_redirect',
 	static function (): void {
-		$isAdminPreview = isset( $_GET['gtp-css-admin'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['gtp-css-admin'] ) );
-		if ( ! $isAdminPreview ) {
+		$adminTarget = isset( $_GET['gtp-css-admin'] ) ? sanitize_key( wp_unslash( $_GET['gtp-css-admin'] ) ) : '';
+		if ( ! in_array( $adminTarget, array( '1', 'css-reports' ), true ) ) {
 			return;
 		}
 
 		wp_set_current_user( 1 );
 		wp_set_auth_cookie( 1 );
-		wp_safe_redirect( admin_url( 'admin.php?page=gt-performance&tab=optimization' ) );
+		$tab = 'css-reports' === $adminTarget ? 'css-reports' : 'optimization';
+		wp_safe_redirect( admin_url( 'admin.php?page=gt-performance&tab=' . $tab ) );
 		exit;
 	},
 	-10002
@@ -80,6 +81,11 @@ add_action(
 		echo '<!doctype html><html><head><meta charset="utf-8">';
 		echo '<style>';
 		echo '.gtp-used{color:#123456}.gtp-used:hover{color:#654321}';
+		echo '.gtp-icon::before{font-family:serif;content:"\\e800"}';
+		echo 'details[open] summary::after{content:"-"}';
+		echo '[data-theme="dark"] .gtp-used{color:#f5f5f5}';
+		echo '.gtp-state[aria-expanded="true"]{font-weight:700}';
+		echo '.gtp-missing[data-state="open"]{display:block}';
 		if ( 'hybrid-fallback' === $mode ) {
 			echo '.gtp-used{--gtp-large-token:"' . esc_html( str_repeat( 'x', 2300 ) ) . '"}';
 		}
@@ -88,6 +94,9 @@ add_action(
 		echo '.gtp-regex-kept{border-bottom:1px solid green}';
 		echo '</style></head><body><main class="gtp-used">';
 		echo '<h1>GT Performance unused CSS smoke test</h1>';
+		echo '<button class="gtp-state" aria-expanded="false">Toggle</button>';
+		echo '<i class="gtp-icon" aria-hidden="true"></i>';
+		echo '<details><summary>Details</summary><p>Content</p></details>';
 		for ( $index = 0; $index < 170; ++$index ) {
 			echo '<span>Node ' . esc_html( (string) $index ) . '</span>';
 		}

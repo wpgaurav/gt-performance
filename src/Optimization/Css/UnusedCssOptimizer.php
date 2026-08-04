@@ -48,10 +48,23 @@ final class UnusedCssOptimizer {
 				throw new \RuntimeException( 'The HTML document could not be parsed.' );
 			}
 
-			$collected = $this->collector->collect(
-				$document,
+			$stylesheetExclusions = array_map(
+				'strval',
 				(array) Settings::get( 'css.excluded_stylesheets', array() )
 			);
+			$stylesheetExclusions = array_values(
+				array_filter(
+					array_map(
+						'strval',
+						(array) apply_filters(
+							'gt_performance_css_stylesheet_exclusions',
+							$stylesheetExclusions,
+							$url
+						)
+					)
+				)
+			);
+			$collected             = $this->collector->collect( $document, $stylesheetExclusions );
 			if ( ! $collected['stylesheets'] ) {
 				$this->reports->complete(
 					$fingerprint,
@@ -68,15 +81,16 @@ final class UnusedCssOptimizer {
 				return $html;
 			}
 
-			$css = '';
+			$stylesheets = array();
 			foreach ( $collected['stylesheets'] as $stylesheet ) {
-				$css .= "\n@media " . $stylesheet->media . " {\n" . $stylesheet->css . "\n}\n";
+				$stylesheets[] = "\n@media " . $stylesheet->media . " {\n" . $stylesheet->css . "\n}\n";
 			}
+			$css = implode( '', $stylesheets );
 
 			$safelist             = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
 			$safelist             = apply_filters( 'gt_performance_css_safelist', $safelist, $url );
 			$preserveDynamicStates = (bool) Settings::get( 'css.keep_dynamic_states', true );
-			$used                 = $this->pruner->prune( $css, $document, 'used', $safelist, $preserveDynamicStates );
+			$used                 = $this->pruner->pruneMany( $stylesheets, $document, 'used', $safelist, $preserveDynamicStates );
 			if ( '' === trim( $used ) ) {
 				throw new \RuntimeException( 'The used CSS result was empty.' );
 			}
@@ -95,8 +109,8 @@ final class UnusedCssOptimizer {
 			if ( 'inline' === $mode ) {
 				$outputs[] = $this->appendInline( $document, $head, $used, 'used' );
 			} elseif ( 'hybrid' === $mode ) {
-				$critical  = $this->pruner->prune( $css, $document, 'critical', $safelist, $preserveDynamicStates );
-				$remaining = $this->pruner->prune( $css, $document, 'remaining', $safelist, $preserveDynamicStates );
+				$critical  = $this->pruner->pruneMany( $stylesheets, $document, 'critical', $safelist, $preserveDynamicStates );
+				$remaining = $this->pruner->pruneMany( $stylesheets, $document, 'remaining', $safelist, $preserveDynamicStates );
 				$budget    = (int) Settings::get( 'css.critical_budget', 14336 );
 
 				if ( strlen( $critical ) > $budget ) {

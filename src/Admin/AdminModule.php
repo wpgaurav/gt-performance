@@ -74,6 +74,7 @@ final class AdminModule implements Module {
 		add_action( 'admin_post_gtp_purge_verify', array( $this, 'purgeVerify' ) );
 		add_action( 'admin_post_gtp_commerce_safety', array( $this, 'commerceSafety' ) );
 		add_action( 'admin_post_gtp_css_training', array( $this, 'cssTraining' ) );
+		add_action( 'admin_post_gtp_css_regenerate', array( $this, 'cssRegenerate' ) );
 		add_action( 'admin_post_gtp_fleet_export', array( $this, 'fleetExport' ) );
 		add_action( 'admin_post_gtp_fleet_import', array( $this, 'fleetImport' ) );
 		add_action( 'admin_post_gtp_database_clean', array( $this, 'databaseClean' ) );
@@ -445,6 +446,30 @@ final class AdminModule implements Module {
 		$this->redirect( $notice, 'css-reports' );
 	}
 
+	public function cssRegenerate(): void {
+		$this->guard( 'gtp_css_regenerate' );
+		// Capability and nonce checks above authorize these explicit operation fields.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		$command = isset( $_POST['command'] ) ? sanitize_key( wp_unslash( $_POST['command'] ) ) : '';
+		$url     = isset( $_POST['url'] ) ? $this->sameSitePublicUrl( sanitize_url( wp_unslash( $_POST['url'] ) ) ) : null;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( 'all' === $command ) {
+			Settings::save( Settings::all() );
+			( new Purger() )->purgeAll();
+			$this->redirect( 'css-regenerated-all', 'css-reports' );
+		}
+
+		if ( 'url' !== $command || null === $url ) {
+			$this->redirect( 'css-regenerate-invalid', 'css-reports' );
+		}
+
+		( new ReportRepository() )->invalidateUrl( $url );
+		( new Purger() )->purgeUrl( $url );
+		$this->warmCssUrl( $url );
+		$this->redirect( 'css-regenerated-url', 'css-reports' );
+	}
+
 	public function fleetExport(): void {
 		$this->guard( 'gtp_fleet_export' );
 		$result = ( new PolicyService() )->create();
@@ -811,7 +836,7 @@ final class AdminModule implements Module {
 
 		$this->panelOpen( __( 'Unused CSS exceptions', 'gt-performance' ), __( 'Use partial selector matches, regular expressions, or stylesheet URLs. Add the smallest stable pattern that protects the dynamic component.', 'gt-performance' ) );
 		$this->textarea( 'css', 'safelist', __( 'Selector safelist', 'gt-performance' ), __( 'One pattern per line. Plain text is a partial match; use a delimited expression such as /^\\.modal(?:--|\\b)/i for regex matching.', 'gt-performance' ), $settings, ".is-open\n/^\\.modal(?:--|\\b)/i" );
-		$this->textarea( 'css', 'excluded_stylesheets', __( 'Excluded stylesheets', 'gt-performance' ), __( 'Leave matching stylesheets untouched and loaded normally.', 'gt-performance' ), $settings, '/checkout.css' );
+		$this->textarea( 'css', 'excluded_stylesheets', __( 'Excluded stylesheets', 'gt-performance' ), __( 'Leave matching external stylesheet URLs or inline style IDs untouched and loaded normally.', 'gt-performance' ), $settings, "/checkout.css\nmy-inline-style-css" );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'JavaScript exceptions', 'gt-performance' ), __( 'Patterns are matched against script URLs. Transactional cart, checkout, and payment scripts are protected automatically.', 'gt-performance' ) );
@@ -1253,6 +1278,7 @@ PHP;
 
 		$this->pageIntro( __( 'Unused CSS reports', 'gt-performance' ), __( 'Live generation status for page-specific CSS. This screen refreshes while it is open, so processing and failures are visible.', 'gt-performance' ) );
 		$this->renderCssTraining( $training, $approved );
+		$this->renderCssRegeneration();
 		?>
 		<section class="gtp-stat-grid gtp-report-summary" aria-label="<?php esc_attr_e( 'CSS generation summary', 'gt-performance' ); ?>">
 			<?php $this->reportStat( 'processing', __( 'Processing', 'gt-performance' ), $summary['processing'], 'warning' ); ?>
@@ -1285,6 +1311,28 @@ PHP;
 				</table>
 			</div>
 			<p class="gtp-report-note" aria-live="polite" data-gtp-report-note><?php esc_html_e( 'Waiting for CSS generation activity.', 'gt-performance' ); ?></p>
+		</section>
+		<?php
+	}
+
+	private function renderCssRegeneration(): void {
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Regenerate used CSS', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Invalidate generated CSS, purge the matching origin and edge cache, and rebuild the page with the current settings.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<form class="gtp-inline-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="gtp_css_regenerate">
+				<label for="gtp-css-regenerate-url" class="screen-reader-text"><?php esc_html_e( 'Public page URL', 'gt-performance' ); ?></label>
+				<input id="gtp-css-regenerate-url" class="regular-text" type="url" name="url" value="<?php echo esc_attr( home_url( '/' ) ); ?>" required>
+				<?php wp_nonce_field( 'gtp_css_regenerate' ); ?>
+				<button class="button button-secondary" type="submit" name="command" value="url"><?php esc_html_e( 'Regenerate URL CSS', 'gt-performance' ); ?></button>
+				<button class="button button-secondary" type="submit" name="command" value="all" formnovalidate><?php esc_html_e( 'Regenerate all CSS', 'gt-performance' ); ?></button>
+			</form>
+			<p class="gtp-report-note"><?php esc_html_e( 'Regenerate all marks every existing report stale and purges the full page cache. Pages rebuild through the normal preload queue and subsequent public visits.', 'gt-performance' ); ?></p>
 		</section>
 		<?php
 	}
@@ -1821,6 +1869,34 @@ PHP;
 		return (string) ob_get_clean();
 	}
 
+	private function sameSitePublicUrl( string $url ): ?string {
+		$url      = esc_url_raw( $url );
+		$host     = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$homeHost = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$scheme   = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		$port     = wp_parse_url( $url, PHP_URL_PORT );
+		$homePort = wp_parse_url( home_url( '/' ), PHP_URL_PORT );
+
+		return '' !== $host
+			&& hash_equals( $homeHost, $host )
+			&& in_array( $scheme, array( 'http', 'https' ), true )
+			&& $port === $homePort
+			? $url
+			: null;
+	}
+
+	private function warmCssUrl( string $url ): void {
+		wp_safe_remote_get(
+			$url,
+			array(
+				'timeout'     => 15,
+				'redirection' => 3,
+				'headers'     => array( 'X-GT-Preload' => '1' ),
+				'user-agent'  => 'GT-Performance-CSS-Regenerator/' . GTP_VERSION,
+			)
+		);
+	}
+
 	private function settingsFormOpen(): void {
 		?>
 		<form method="post" action="options.php" class="gtp-settings-form">
@@ -2231,6 +2307,9 @@ PHP;
 			'css-training-published'    => array( __( 'The candidate selectors were published and page caches were invalidated for safe regeneration.', 'gt-performance' ), 'success' ),
 			'css-training-rolled-back'  => array( __( 'The previous trained selector set was restored and page caches were invalidated.', 'gt-performance' ), 'success' ),
 			'css-training-cleared'      => array( __( 'The CSS training candidates were cleared.', 'gt-performance' ), 'success' ),
+			'css-regenerated-url'       => array( __( 'Used CSS for the selected URL was invalidated, purged, and regenerated.', 'gt-performance' ), 'success' ),
+			'css-regenerated-all'       => array( __( 'All used CSS was invalidated and the page cache was purged for regeneration.', 'gt-performance' ), 'success' ),
+			'css-regenerate-invalid'    => array( __( 'Enter a valid public URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'fleet-policy-applied'      => array( __( 'The signed fleet policy was verified and applied.', 'gt-performance' ), 'success' ),
 			'license-activated'         => array( __( 'The GT Performance license was activated for this site.', 'gt-performance' ), 'success' ),
 			'license-deactivated'       => array( __( 'The GT Performance license was deactivated for this site.', 'gt-performance' ), 'success' ),

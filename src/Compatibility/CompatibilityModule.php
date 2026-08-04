@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace GTPerformance\Compatibility;
 
+use GTPerformance\Commerce\CommerceAdapter;
+use GTPerformance\Commerce\Registry;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Settings;
 
@@ -16,12 +18,14 @@ final class CompatibilityModule implements Module {
 	public function __construct(
 		private readonly PluginDetector $plugins = new PluginDetector(),
 		private readonly FeatureOwnership $ownership = new FeatureOwnership(),
+		private readonly Registry $commerce = new Registry(),
 	) {
 	}
 
 	public function register(): void {
 		add_filter( 'gt_performance_optimize_stage', array( $this, 'allowGtOptimization' ), 10, 2 );
 		add_filter( 'gt_performance_css_safelist', array( $this, 'cssSafelist' ) );
+		add_filter( 'gt_performance_css_stylesheet_exclusions', array( $this, 'stylesheetExclusions' ) );
 		add_filter( 'gt_performance_javascript_exclusions', array( $this, 'javascriptExclusions' ) );
 		add_filter( 'gt_performance_cache_policy', array( $this, 'cachePolicy' ), 20 );
 		add_filter( 'gt_performance_compiled_config', array( $this, 'compiledConfig' ), 20 );
@@ -70,6 +74,46 @@ final class CompatibilityModule implements Module {
 		}
 
 		return array_values( array_unique( $safelist ) );
+	}
+
+	/**
+	 * Keep client-rendered commerce application styles outside server-side
+	 * pruning. Their modal, cart, validation, and checkout states do not all
+	 * exist in the initial HTML and cannot be exercised safely during training.
+	 *
+	 * @param list<string> $exclusions Stylesheet URL fragments.
+	 * @return list<string>
+	 */
+	public function stylesheetExclusions( array $exclusions ): array {
+		if ( ! $this->protectionEnabled() ) {
+			return $exclusions;
+		}
+
+		$active = array_map(
+			static fn( CommerceAdapter $adapter ): string => $adapter->id(),
+			$this->commerce->active()
+		);
+
+		return $this->stylesheetExclusionsForCommerce( $exclusions, $active );
+	}
+
+	/**
+	 * @param list<string> $exclusions Stylesheet URL fragments.
+	 * @param list<string> $commerceIds Active commerce adapter IDs.
+	 * @return list<string>
+	 */
+	public function stylesheetExclusionsForCommerce( array $exclusions, array $commerceIds ): array {
+		$catalog = array(
+			'fluentcart'  => array( '/plugins/fluent-cart/', '/plugins/fluent-cart-pro/' ),
+			'edd'         => array( '/plugins/easy-digital-downloads/' ),
+			'woocommerce' => array( '/plugins/woocommerce/' ),
+		);
+
+		foreach ( array_values( array_unique( $commerceIds ) ) as $commerceId ) {
+			$exclusions = array_merge( $exclusions, $catalog[ $commerceId ] ?? array() );
+		}
+
+		return array_values( array_unique( array_map( 'strval', $exclusions ) ) );
 	}
 
 	/**

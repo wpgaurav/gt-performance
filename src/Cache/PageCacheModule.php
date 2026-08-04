@@ -55,7 +55,14 @@ final class PageCacheModule implements Module {
 			return;
 		}
 
-		$this->request  = RequestContext::fromGlobals();
+		$this->request = RequestContext::fromGlobals();
+		if ( $this->isCssPreview() ) {
+			nocache_headers();
+			header( 'Cache-Control: no-store, private, max-age=0' );
+			ob_start( array( $this, 'capturePreview' ) );
+			return;
+		}
+
 		$config         = $this->cacheConfig();
 		$this->decision = $this->eligibility->decide( $this->request, $config );
 
@@ -143,6 +150,20 @@ final class PageCacheModule implements Module {
 		$this->sendCacheHeaders();
 
 		return $optimized;
+	}
+
+	/**
+	 * Run the optimization pipeline for an authorized CSS preview without
+	 * storing the response in either the page cache or a shared edge cache.
+	 */
+	public function capturePreview( string $html ): string {
+		if ( null === $this->request ) {
+			return $html;
+		}
+
+		$optimized = apply_filters( 'gt_performance_html', $html, $this->request );
+
+		return is_string( $optimized ) && '' !== trim( $optimized ) ? $optimized : $html;
 	}
 
 	public function sendCacheHeaders(): void {
@@ -249,6 +270,16 @@ final class PageCacheModule implements Module {
 		$config['generation'] = (int) Settings::get( 'generation', 1 );
 
 		return apply_filters( 'gt_performance_cache_policy', $config );
+	}
+
+	private function isCssPreview(): bool {
+		if ( ! current_user_can( 'manage_options' ) || ! isset( $_GET['gtp_css_preview'] ) ) {
+			return false;
+		}
+
+		$nonce = sanitize_text_field( wp_unslash( $_GET['gtp_css_preview'] ) );
+
+		return (bool) wp_verify_nonce( $nonce, 'gtp_css_preview' );
 	}
 
 	private function purgeCommentPost( int $postId ): void {
