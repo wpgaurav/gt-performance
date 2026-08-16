@@ -11,6 +11,17 @@ Validated on 2026-08-16:
 - WordPress Studio CLI 1.18.0 installed and activated the exact production ZIP over beta-9. The dedicated site reported GT Performance `1.0.0-rc.1` active on WordPress 7.0.4 and PHP 8.3.33, returned HTTP 200, scheduled the plugin queue, and passed the PHP, WordPress, cache-directory, page-drop-in, `WP_CACHE`, xCloud, and WP-Cron Doctor checks. Redis and direct Cloudflare produced the expected warnings because those optional services are not configured in the isolated site.
 - A live upload of the original image returned promptly after queuing 13 per-file image jobs; all 13 jobs completed in the background. EWWW Image Optimizer remained inactive, so the test covered GT Performance's independent queue ownership without reintroducing synchronous image processing.
 
+## 1.0.0-rc.1 distribution validation
+
+Validated on 2026-08-16:
+
+- Commit `40219ea` passed GitHub CI on PHP 8.1, 8.3, and 8.5, including the release-package job. The tag workflow published `v1.0.0-rc.1` as a prerelease.
+- The canonical GitHub ZIP is 397,521 bytes with SHA-256 `d6476408d172e359294c1cc3cc0fb8c4bb25fed130d51fceddfd4b67cfa22674`. Its published checksum, ZIP integrity, single package root, 247-file extracted tree, plugin header, runtime constant, and stable tag agree with the locally tested package.
+- FluentCart now exposes `1.0.0-rc.1` through a new R2-backed download row containing the exact GitHub ZIP. The beta-7 row and exact R2 object remain available for rollback, and product variations were unchanged.
+- No reusable active activation existed, so a disposable local non-customer license, site, and activation exercised the public updater and were deleted afterward. The valid response returned RC1 metadata and a direct off-site R2 package; the invalid response remained package-free. The protected package matched the GitHub size, checksum, ZIP root, and embedded version.
+- A dedicated WordPress Studio site bulk-updated from beta-7 to RC1 through the licensed R2 package while WordPress maintenance mode was active. Maintenance mode cleared afterward, GT Performance remained active as `1.0.0-rc.1`, and the front end returned HTTP 200.
+- Temporary local and server-side release files were removed after verification. The live production plugin installation was not upgraded as part of this distribution release.
+
 ## 1.0.0-beta-9 recommended integration defaults
 
 Validated on 2026-08-04 against `gauravtiwari.org`:
