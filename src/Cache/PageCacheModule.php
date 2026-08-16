@@ -51,14 +51,14 @@ final class PageCacheModule implements Module {
 
 		if ( is_feed() || is_robots() ) {
 			nocache_headers();
-			header( 'Cache-Control: no-store, private, max-age=0' );
+			SharedCacheHeaders::noStore();
 			return;
 		}
 
 		$this->request = RequestContext::fromGlobals();
 		if ( $this->isCssPreview() ) {
 			nocache_headers();
-			header( 'Cache-Control: no-store, private, max-age=0' );
+			SharedCacheHeaders::noStore();
 			ob_start( array( $this, 'capturePreview' ) );
 			return;
 		}
@@ -68,7 +68,7 @@ final class PageCacheModule implements Module {
 
 		if ( ! $this->decision->cacheable ) {
 			nocache_headers();
-			header( 'Cache-Control: no-store, private, max-age=0' );
+			SharedCacheHeaders::noStore();
 			if ( (bool) Settings::get( 'debug', false ) ) {
 				header( 'X-GT-Cache: BYPASS' );
 				header( 'X-GT-Cache-Reason: ' . sanitize_key( $this->decision->reason ) );
@@ -113,7 +113,7 @@ final class PageCacheModule implements Module {
 
 		if ( ! $decision->cacheable ) {
 			if ( ! headers_sent() ) {
-				header( 'Cache-Control: no-store, private, max-age=0' );
+				SharedCacheHeaders::noStore();
 				if ( (bool) Settings::get( 'debug', false ) ) {
 					header( 'X-GT-Cache: DYNAMIC' );
 					header( 'X-GT-Cache-Reason: ' . sanitize_key( $decision->reason ) );

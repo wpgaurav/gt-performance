@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-beta-7
+Stable tag: 1.0.0-rc.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Safe page caching, server-side CSS optimization, Cloudflare and custom CDN deliv
 
 == Description ==
 
-GT Performance combines an atomic origin page cache with server-side CSS and frontend optimization. It can synchronize a narrowly scoped Cloudflare Cache Rule and purge exact URLs on Cloudflare Free.
+GT Performance combines an atomic origin page cache with server-side CSS and frontend optimization. It can synchronize a narrowly scoped Cloudflare Cache Rule and purge exact URLs on Cloudflare Free. It also detects xCloud's separate Cloudflare Enterprise add-on, reports its edge traffic, and prevents duplicate edge ownership.
 
 An optional origin-pull CDN can rewrite selected same-site static-file URLs to a separate HTTPS hostname while Cloudflare continues to cache eligible HTML independently.
 
@@ -24,7 +24,7 @@ Perfmatters ownership coordination, Akismet and Jetpack safeguards, automatic an
 
 Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a 25-site policy console add deterministic diagnostics and safer deployment controls.
 
-This is a beta. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
+This is a release candidate. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
 == Installation ==
 
@@ -75,6 +75,24 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-rc.1 =
+* Moved WebP and AVIF generation out of media-upload requests and split each source and registered image size into its own durable background job, preventing large uploads from exhausting one PHP execution window.
+* Added automatic EWWW Image Optimizer ownership for next-generation formats, Easy IO, lazy loading, and missing dimensions without disabling complementary upload compression.
+* Added xCloud site discovery, host-cache status and purge routing, independent Cloudflare Enterprise detection, explicit edge ownership, and fail-closed Enterprise purge behavior.
+* Added safe enable-time profiles for Cloudflare, xCloud, static CDN rewriting, Redis, compatibility safeguards, Private Islands, and Fleet while preserving credentials and custom provider values.
+* Added generic CDN and Cloudflare-specific no-store headers to private, commerce, feed, preview, and fragment responses.
+
+= 1.0.0-beta-9 =
+* Added recommended enable-time profiles for Cloudflare, xCloud, static CDN rewriting, Redis, compatibility safeguards, Private Islands, and Fleet.
+* Recommended profiles fill missing provider values and arm safe dependent options without replacing saved credentials, endpoints, or other non-empty custom settings.
+
+= 1.0.0-beta-8 =
+* Added xCloud Public API site discovery, encrypted token storage, host page-cache status and purge routing, and WP-CLI controls.
+* Added independent Cloudflare Enterprise add-on detection and 12-hour edge traffic reporting without conflating it with xCloud's free Edge Full Page Cache.
+* Made xCloud the sole edge owner when its Enterprise add-on is active, blocking direct Cloudflare rule synchronization and duplicate purge routing.
+* Enterprise purge fails closed because xCloud's current Public API token does not authenticate the dashboard-only purge mutation; GT Performance never substitutes the unrelated broad host purge-all endpoint.
+* Added generic CDN and Cloudflare-specific no-store headers to private and bypassed responses as defense in depth. Live testing found xCloud Enterprise Edge Page Caching overrides these directives, so commerce sites must leave that page-cache option off unless equivalent request-level bypass rules are available; static caching and the other Enterprise features can remain enabled.
 
 = 1.0.0-beta-7 =
 * Added URL-specific and site-wide used-CSS regeneration controls to CSS Reports. Regeneration invalidates reports, purges origin and connected edge caches, and warms the selected URL immediately.

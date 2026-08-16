@@ -1,5 +1,42 @@
 # GT Performance validation
 
+## 1.0.0-rc.1 local release validation
+
+Validated on 2026-08-16:
+
+- Composer metadata and the locked production dependency installation passed at the declared PHP 8.1 platform. Composer audit reported no known vulnerabilities after updating PHP_CodeSniffer from 3.13.5 to the patched 3.13.6 release.
+- WordPress Coding Standards passed across 106 PHP files, PHPStan completed without errors, and PHPUnit passed 170 tests with 418 assertions. JavaScript syntax, project JSON, PHP syntax, and whitespace checks also passed.
+- Release metadata agreed on `1.0.0-rc.1` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 303 entries, 247 files, 397,521 bytes, and local SHA-256 `6bf2fb88b68410e1b9128aaa55934975583e4c08e21c653be7b912602606148f`. Every packaged PHP file passed syntax validation, and development-only root files were absent.
+- WordPress Studio CLI 1.18.0 installed and activated the exact production ZIP over beta-9. The dedicated site reported GT Performance `1.0.0-rc.1` active on WordPress 7.0.4 and PHP 8.3.33, returned HTTP 200, scheduled the plugin queue, and passed the PHP, WordPress, cache-directory, page-drop-in, `WP_CACHE`, xCloud, and WP-Cron Doctor checks. Redis and direct Cloudflare produced the expected warnings because those optional services are not configured in the isolated site.
+- A live upload of the original image returned promptly after queuing 13 per-file image jobs; all 13 jobs completed in the background. EWWW Image Optimizer remained inactive, so the test covered GT Performance's independent queue ownership without reintroducing synchronous image processing.
+
+## 1.0.0-beta-9 recommended integration defaults
+
+Validated on 2026-08-04 against `gauravtiwari.org`:
+
+- JavaScript syntax, WordPress Coding Standards across 106 PHP files, PHPStan, and PHPUnit passed; PHPUnit completed 159 tests with 399 assertions.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 303 entries, 247 files, 395,038 bytes, and local SHA-256 `676da92a9972c7b24c1a57cd05252bab39e967bbe3bf375910bfa72b17222812`.
+- The live WordPress admin rendered beta-9 without console warnings or errors. Enabling xCloud filled an intentionally blank site domain and displayed the recommended-default notice; enabling Private Islands restored both recommended fragment switches. Reloading without saving discarded the test values and preserved production state.
+- Production uses xCloud as the sole edge owner and GT Performance Redis as the object-cache owner. Direct Cloudflare and custom CDN rewriting remain off; xCloud host page cache, free Edge Full Page Cache, and Enterprise Edge Page Caching remain off; Enterprise static caching and security features remain available.
+- Automatic Perfmatters ownership, Akismet and Jetpack safeguards, and all three commerce adapters are armed. Only active plugins contribute rules. Private Islands is disabled because no stored content uses its shortcode; the public homepage no longer loads `private-islands.js`.
+- Redis connection testing passed. Doctor passed PHP, WordPress, cache-directory, page drop-in, `WP_CACHE`, Redis drop-in, xCloud, and WP-Cron checks. The expected direct-Cloudflare-disabled warning remains.
+- Commerce Safety Lab passed ten FluentCart policy checks and four live checks with no failures or warnings. Two consecutive exact requests each to cart, checkout, account, and receipt returned HTTP 200, `CF-Cache-Status: DYNAMIC`, no edge `Age`, `X-GT-Commerce-Cache: BYPASS`, and `X-GT-Cache: BYPASS`. Enterprise static asset delivery remained a cache `HIT`.
+- The installed 247-file plugin tree has aggregate SHA-256 `1e111dd884eb32d8e1c17c7ee353d11ae3f5a5ea975e243a52676ff8bef99b0d`, matching the extracted ZIP. The beta-8 plugin tree and pre-change settings are retained outside the public web root for rollback.
+
+## 1.0.0-beta-8 xCloud Enterprise validation
+
+Validated on 2026-08-04 against the live `gauravtiwari.org` installation:
+
+- WordPress Coding Standards scanned 105 PHP files, PHPStan completed without errors, and PHPUnit passed 156 tests with 381 assertions.
+- The production ZIP passed its integrity test with one `gt-performance/` root, 301 entries, 218 PHP files, 392,435 bytes, and local SHA-256 `eb692b65da666fbafd3a1605b733479820c5f3db2d70d195a1d6032031e7aac4`.
+- The xCloud Public API confirmed the OpenLiteSpeed stack, disabled host page cache, disabled free Edge Full Page Cache, and independently active Cloudflare Enterprise add-on without exposing private traffic data in the release record.
+- The Enterprise analytics request is token-authenticated, but the dashboard Enterprise purge mutation redirects token-only requests to interactive login. GT Performance therefore fails closed with a non-zero WP-CLI exit and never substitutes the unrelated broad host `purge-all` endpoint.
+- Initial live requests proved xCloud Enterprise Edge Page Caching cached `/cart/`, `/checkout/`, `/account/`, and `/receipt/` despite browser, generic CDN, and Cloudflare-specific `no-store` origin directives. That Enterprise page-cache option was disabled and its dashboard cache was purged; static caching, WAF, and the other add-on features remained enabled.
+- Two consecutive exact requests to each commerce route returned HTTP 200, `X-GT-Commerce-Cache: BYPASS`, `X-GT-Cache: BYPASS`, `CF-Cache-Status: DYNAMIC`, and no edge `Age`. A static CSS asset independently changed from `CF-Cache-Status: MISS` to `HIT`.
+- GT Performance `1.0.0-beta-8` is active. PHP 8.3.30, WordPress 7.0.2, the writable cache directory, owned page and Redis drop-ins, `WP_CACHE`, xCloud, and WP-Cron passed Doctor; direct Cloudflare remains intentionally disabled. The installed 246-file tree has aggregate SHA-256 `27bc0eddaf50f496e56bce9c36beeafcc16c0f0fb8a41f216fcd944e098cb777`, matching the extracted ZIP.
+- The pre-final live plugin tree is retained outside the public web root for rollback.
+
 ## 1.0.0-beta-7 local release validation
 
 Validated on 2026-08-04:

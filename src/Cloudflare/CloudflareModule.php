@@ -12,6 +12,7 @@ namespace GTPerformance\Cloudflare;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Settings;
+use GTPerformance\XCloud\EdgeOwnership;
 
 final class CloudflareModule implements Module {
 	public function __construct(
@@ -28,7 +29,7 @@ final class CloudflareModule implements Module {
 	 * @param list<string> $urls URLs.
 	 */
 	public function purgeUrls( array $urls ): void {
-		if ( ! (bool) Settings::get( 'cloudflare.enabled', false ) || ! $urls ) {
+		if ( ! (bool) Settings::get( 'cloudflare.enabled', false ) || ( new EdgeOwnership() )->xcloudOwnsEdge() || ! $urls ) {
 			return;
 		}
 
@@ -45,7 +46,7 @@ final class CloudflareModule implements Module {
 	}
 
 	public function purgeEverything(): void {
-		if ( ! (bool) Settings::get( 'cloudflare.enabled', false ) ) {
+		if ( ! (bool) Settings::get( 'cloudflare.enabled', false ) || ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
 			return;
 		}
 

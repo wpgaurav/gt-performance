@@ -112,6 +112,82 @@
 		});
 	};
 
+	const setupIntegrationDefaults = () => {
+		const config = window.gtPerformanceAdmin;
+		if (!config || typeof config.integrationProfiles !== "object") {
+			return;
+		}
+
+		const fieldName = (section, key, list = false) =>
+			`gt_performance_settings[${section}][${key}]${list ? "[]" : ""}`;
+
+		const applyValue = (section, key, value) => {
+			if (Array.isArray(value)) {
+				const textField = document.querySelector(`#gtp-${section}-${key}`);
+				if (textField && String(textField.value).trim() === "") {
+					textField.value = value.join("\n");
+					return true;
+				}
+				const fields = Array.from(
+					document.querySelectorAll(`[name="${fieldName(section, key, true)}"]`),
+				);
+				if (!fields.length || fields.some((field) => field.checked)) {
+					return false;
+				}
+				fields.forEach((field) => {
+					field.checked = value.includes(field.value);
+				});
+				return true;
+			}
+
+			const field = document.querySelector(`#gtp-${section}-${key}`);
+			if (!field) {
+				return false;
+			}
+			if (field.type === "checkbox") {
+				field.checked = Boolean(value);
+				return true;
+			}
+			if (String(field.value).trim() !== "") {
+				return false;
+			}
+			field.value = String(value);
+			return true;
+		};
+
+		document.querySelectorAll("[data-gtp-enable-profile]").forEach((toggle) => {
+			toggle.addEventListener("change", () => {
+				if (!toggle.checked) {
+					return;
+				}
+
+				const profile = config.integrationProfiles[toggle.dataset.gtpEnableProfile];
+				if (!profile) {
+					return;
+				}
+
+				let changes = 0;
+				Object.entries(profile).forEach(([section, values]) => {
+					Object.entries(values).forEach(([key, value]) => {
+						changes += applyValue(section, key, value) ? 1 : 0;
+					});
+				});
+
+				if (!changes) {
+					return;
+				}
+				let status = toggle.closest(".gtp-field")?.querySelector("[data-gtp-integration-default-status]");
+				if (!status) {
+					status = document.createElement("p");
+					status.dataset.gtpIntegrationDefaultStatus = "";
+					status.setAttribute("aria-live", "polite");
+					toggle.closest(".gtp-field")?.querySelector("div")?.append(status);
+				}
+				status.textContent = "Recommended defaults applied. Existing credentials and custom endpoints were preserved. Save changes to activate them.";
+			});
+		});
+	};
+
 	const setupCssReport = () => {
 		const report = document.querySelector("[data-gtp-css-report]");
 
@@ -167,5 +243,6 @@
 
 	setupCachePresets();
 	setupWordPressPresets();
+	setupIntegrationDefaults();
 	setupCssReport();
 })();

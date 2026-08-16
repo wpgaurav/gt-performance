@@ -160,6 +160,12 @@ final class CommandTest extends TestCase {
 				},
 				'Unknown Cloudflare action. Use status, plan, sync, or purge.',
 			),
+			'xcloud' => array(
+				static function ( Command $command ): void {
+					$command->xcloud( array( 'typo' ) );
+				},
+				'Unknown xCloud action. Use status, refresh, or purge.',
+			),
 			'database'   => array(
 				static function ( Command $command ): void {
 					$command->database( array( 'typo' ) );

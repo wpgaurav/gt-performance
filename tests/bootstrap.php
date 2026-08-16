@@ -116,6 +116,18 @@ if ( ! function_exists( 'get_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'is_multisite' ) ) {
+	function is_multisite(): bool {
+		return (bool) ( $GLOBALS['gtp_test_is_multisite'] ?? false );
+	}
+}
+
+if ( ! function_exists( 'get_site_option' ) ) {
+	function get_site_option( string $name, mixed $default = false ): mixed {
+		return $GLOBALS['gtp_test_site_options'][ $name ] ?? $default;
+	}
+}
+
 if ( ! function_exists( 'update_option' ) ) {
 	function update_option( string $name, mixed $value, bool $autoload = false ): bool {
 		unset( $autoload );
@@ -133,6 +145,15 @@ if ( ! function_exists( 'apply_filters' ) ) {
 		}
 
 		return $value;
+	}
+}
+
+if ( ! function_exists( 'do_action' ) ) {
+	function do_action( string $hook, mixed ...$args ): void {
+		$GLOBALS['gtp_test_actions'][] = array(
+			'hook' => $hook,
+			'args' => $args,
+		);
 	}
 }
 

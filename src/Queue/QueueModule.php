@@ -15,6 +15,7 @@ use GTPerformance\Cache\Purger;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Settings;
+use GTPerformance\Optimization\ImageVariantGenerator;
 
 final class QueueModule implements Module {
 	private JobRepository $jobs;
@@ -33,6 +34,7 @@ final class QueueModule implements Module {
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
 		add_action( 'gt_performance_enqueue_purge', array( $this, 'enqueuePurge' ) );
 		add_action( 'gt_performance_purged_all', array( $this, 'scheduleWarm' ) );
+		add_action( ImageVariantGenerator::ENQUEUE_HOOK, array( $this, 'enqueueImageVariants' ), 10, 2 );
 	}
 
 	/**
@@ -146,6 +148,29 @@ final class QueueModule implements Module {
 		foreach ( array_unique( array_filter( $urls, 'is_string' ) ) as $url ) {
 			$this->jobs->enqueue( 'purge_url', array( 'url' => $url ), 10 );
 		}
+	}
+
+	/**
+	 * Queue modern variants after WordPress has saved attachment metadata.
+	 *
+	 * The worker is idempotent because existing target files are skipped. Keeping
+	 * this work out of wp_generate_attachment_metadata prevents large uploads from
+	 * blocking the Media Library while every registered sub-size is re-encoded.
+	 */
+	public function enqueueImageVariants( int $attachmentId, string $variantKey = 'full' ): void {
+		if ( $attachmentId <= 0 ) {
+			return;
+		}
+
+		$this->jobs->enqueue(
+			ImageVariantGenerator::JOB_TYPE,
+			array(
+				'attachment_id' => $attachmentId,
+				'variant_key'   => $variantKey,
+			),
+			20,
+			5
+		);
 	}
 
 	public function run( int $limit = 5 ): int {

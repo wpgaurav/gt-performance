@@ -80,4 +80,14 @@ final class SettingsDefaultsTest extends TestCase {
 		self::assertContains( 'commerce', $defaults['fleet']['policy_modules'] );
 		self::assertContains( 'cdn', $defaults['fleet']['policy_modules'] );
 	}
+
+	public function testXcloudEnterpriseIntegrationFailsClosedByDefault(): void {
+		$xcloud = Settings::defaults()['xcloud'];
+
+		self::assertFalse( $xcloud['enabled'] );
+		self::assertFalse( $xcloud['enterprise_available'] );
+		self::assertFalse( $xcloud['free_edge_cache_enabled'] );
+		self::assertSame( 0, $xcloud['server_id'] );
+		self::assertSame( 0, $xcloud['site_id'] );
+	}
 }

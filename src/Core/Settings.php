@@ -75,6 +75,26 @@ final class Settings {
 				'edge_ttl'           => 86400,
 				'drift_hash'         => '',
 			),
+			'xcloud'     => array(
+				'enabled'                  => false,
+				'domain'                   => '',
+				'site_uuid'                => '',
+				'server_id'                => 0,
+				'site_id'                  => 0,
+				'api_token'                => '',
+				'dashboard_url'             => '',
+				'stack'                     => '',
+				'page_cache_enabled'        => false,
+				'page_cache_source'         => '',
+				'redis_enabled'             => false,
+				'object_cache_pro'          => false,
+				'free_edge_cache_enabled'   => false,
+				'enterprise_available'      => false,
+				'enterprise_requests'       => 0,
+				'enterprise_edge_requests'  => 0,
+				'enterprise_hit_percent'    => 0.0,
+				'checked_at'                => '',
+			),
 			'cdn'        => array(
 				'enabled'    => false,
 				'url'        => '',
@@ -267,6 +287,18 @@ final class Settings {
 		$merged['cloudflare']['domain']    = self::sanitizeDomain( (string) ( $merged['cloudflare']['domain'] ?? '' ) );
 		$merged['cloudflare']['zone_id']   = sanitize_text_field( (string) ( $merged['cloudflare']['zone_id'] ?? '' ) );
 		$merged['cloudflare']['edge_ttl']  = max( 0, min( 31536000, (int) ( $merged['cloudflare']['edge_ttl'] ?? 86400 ) ) );
+		$merged['xcloud']['domain']         = self::sanitizeDomain( (string) ( $merged['xcloud']['domain'] ?? '' ) );
+		$siteUuid                           = strtolower( sanitize_text_field( (string) ( $merged['xcloud']['site_uuid'] ?? '' ) ) );
+		$merged['xcloud']['site_uuid']      = preg_match( '/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/', $siteUuid ) ? $siteUuid : '';
+		$merged['xcloud']['server_id']      = max( 0, (int) ( $merged['xcloud']['server_id'] ?? 0 ) );
+		$merged['xcloud']['site_id']        = max( 0, (int) ( $merged['xcloud']['site_id'] ?? 0 ) );
+		$merged['xcloud']['dashboard_url']  = self::sanitizeXcloudDashboardUrl( (string) ( $merged['xcloud']['dashboard_url'] ?? '' ) );
+		$merged['xcloud']['stack']          = sanitize_key( (string) ( $merged['xcloud']['stack'] ?? '' ) );
+		$merged['xcloud']['page_cache_source'] = sanitize_text_field( (string) ( $merged['xcloud']['page_cache_source'] ?? '' ) );
+		$merged['xcloud']['enterprise_requests'] = max( 0, (int) ( $merged['xcloud']['enterprise_requests'] ?? 0 ) );
+		$merged['xcloud']['enterprise_edge_requests'] = max( 0, (int) ( $merged['xcloud']['enterprise_edge_requests'] ?? 0 ) );
+		$merged['xcloud']['enterprise_hit_percent'] = max( 0.0, min( 100.0, (float) ( $merged['xcloud']['enterprise_hit_percent'] ?? 0.0 ) ) );
+		$merged['xcloud']['checked_at']     = sanitize_text_field( (string) ( $merged['xcloud']['checked_at'] ?? '' ) );
 		$merged['cdn']['url']               = self::sanitizeCdnUrl( (string) ( $merged['cdn']['url'] ?? '' ) );
 		$merged['cdn']['file_types']        = array_values(
 			array_intersect(
@@ -323,6 +355,12 @@ final class Settings {
 
 		$booleanPaths = array(
 			array( 'cloudflare', 'enabled' ),
+			array( 'xcloud', 'enabled' ),
+			array( 'xcloud', 'page_cache_enabled' ),
+			array( 'xcloud', 'redis_enabled' ),
+			array( 'xcloud', 'object_cache_pro' ),
+			array( 'xcloud', 'free_edge_cache_enabled' ),
+			array( 'xcloud', 'enterprise_available' ),
 			array( 'cdn', 'enabled' ),
 			array( 'css', 'enabled' ),
 			array( 'css', 'keep_dynamic_states' ),
@@ -516,6 +554,14 @@ final class Settings {
 		$host = wp_parse_url( $url, PHP_URL_HOST );
 
 		return trim( strtolower( is_string( $host ) ? $host : '' ), ". \t\n\r\0\x0B" );
+	}
+
+	private static function sanitizeXcloudDashboardUrl( string $value ): string {
+		$value = esc_url_raw( trim( $value ) );
+		$host  = strtolower( (string) wp_parse_url( $value, PHP_URL_HOST ) );
+		$scheme = strtolower( (string) wp_parse_url( $value, PHP_URL_SCHEME ) );
+
+		return 'https' === $scheme && 'app.xcloud.host' === $host ? $value : '';
 	}
 
 	private static function sanitizeRedisHost( string $value ): string {

@@ -21,6 +21,12 @@ final class PluginDetector {
 				'group'      => 'optimization',
 				'protection' => __( 'Coordinates unused CSS, JavaScript, and front-end optimization ownership.', 'gt-performance' ),
 			),
+			'ewww-image-optimizer' => array(
+				'name'       => 'EWWW Image Optimizer',
+				'files'      => array( 'ewww-image-optimizer/ewww-image-optimizer.php' ),
+				'group'      => 'optimization',
+				'protection' => __( 'Coordinates modern image formats, lazy loading, and missing image dimensions while preserving EWWW upload compression.', 'gt-performance' ),
+			),
 			'flyingpress'     => array(
 				'name'       => 'FlyingPress',
 				'files'      => array( 'flying-press/flying-press.php', 'flyingpress/flyingpress.php' ),

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\PrivateFragments;
 
+use GTPerformance\Cache\SharedCacheHeaders;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Settings;
 
@@ -107,7 +108,7 @@ final class PrivateFragmentsModule implements Module {
 
 	public function respond(): void {
 		nocache_headers();
-		header( 'Cache-Control: no-store, private, max-age=0' );
+		SharedCacheHeaders::noStore();
 		header( 'X-GT-Private-Fragments: BYPASS' );
 
 		// This read-only public endpoint verifies each purpose-bound fragment signature.

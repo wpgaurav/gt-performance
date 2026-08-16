@@ -2,13 +2,14 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.0-beta-7`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.0-rc.1`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
 - Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, configurable automatic invalidation after publishing, a preload queue, and sitemap-driven cache warming after a full purge.
 - Reversible `WP_CACHE` management and drop-in ownership checks, including exact restoration of existing single-line declarations.
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule backup, and automatic fallback when a Free zone rejects custom query-string cache keys.
+- xCloud site discovery, host-cache status, and cache invalidation through its Public API, plus separate detection and 12-hour traffic reporting for xCloud's Cloudflare Enterprise add-on.
 - Optional origin-pull CDN URL rewriting for an HTTPS hostname or hostname plus path, restricted to selected static-file extensions and same-site source URLs.
 - A Cloudflare Free rule compiler that previews the exact expression, managed-rule drift, competing rules, operation, and remaining ten-rule budget before synchronization.
 - First-class bypass policies and product invalidation for FluentCart, Easy Digital Downloads, and WooCommerce.
@@ -77,6 +78,7 @@ The receiver applies only sanitized GT Performance settings. It does not install
 - Composer dependencies bundled in the release ZIP
 - A writable `wp-content` directory for origin caching
 - Optional: Cloudflare proxied DNS and a scoped API token or legacy Global API Key
+- Optional: an xCloud API token with `read:sites` and `write:sites` scopes
 - Optional: an origin-pull CDN hostname configured to fetch static files from the WordPress site
 - Optional: PhpRedis for the object-cache drop-in
 
@@ -140,6 +142,41 @@ wp gt-performance cloudflare purge --page-url=https://example.com/page/
 
 The purge command exits non-zero when credentials, zone discovery, URL validation, or the Cloudflare API fails. Use `wp gt-performance cache purge` when both GT Performance's origin page cache and the connected Cloudflare cache should be cleared together.
 
+## xCloud and Cloudflare Enterprise
+
+Open **GT Performance → Integrations** to connect an xCloud API token. GT Performance discovers the exact hosted domain and keeps three cache products separate:
+
+- xCloud host page cache, purged through the narrow Public API page-cache endpoint;
+- xCloud's free Edge Full Page Cache, purged through its documented host all-cache endpoint only when that free edge layer is enabled;
+- the paid Cloudflare Enterprise add-on, detected independently through its add-on analytics capability.
+
+When Cloudflare Enterprise is active, GT Performance treats xCloud as the edge owner and blocks direct Cloudflare rule synchronization and duplicate direct-Cloudflare purges. The Integrations screen reports the last 12 hours of total and Cloudflare-served requests.
+
+Private and commerce responses send browser `Cache-Control`, standard `CDN-Cache-Control`, and Cloudflare's higher-priority `Cloudflare-CDN-Cache-Control` no-store directives as defense in depth. Live xCloud testing found that the add-on's current **Edge Page Caching** rule overrides even these origin directives and caches cart, checkout, account, and receipt HTML. Commerce sites must keep **Edge Page Caching** off unless xCloud provides equivalent request-level bypass rules. Enterprise static caching, WAF, DDoS protection, HTTP/3, Brotli, and the add-on's other features can remain enabled.
+
+xCloud's current Public API does not publish a token-authenticated purge operation for the Enterprise add-on. The dashboard's Enterprise purge action requires an interactive xCloud session, so GT Performance deliberately fails closed instead of calling xCloud's unrelated broad host `purge-all` endpoint. Use the Purge control on the site's Cloudflare Enterprise page until xCloud adds that operation to the Public API.
+
+The token is encrypted in the WordPress option. It may instead be supplied with `GTP_XCLOUD_API_TOKEN` in `wp-config.php`; the constant takes precedence over the saved value.
+
+```bash
+wp gt-performance xcloud status
+wp gt-performance xcloud refresh
+wp gt-performance xcloud purge
+```
+
+`xcloud purge` exits non-zero for an active Enterprise add-on rather than claiming a purge that xCloud's token API did not perform.
+
+## Recommended integration defaults
+
+When an integration is switched on in the WordPress admin, GT Performance fills only missing values with its recommended baseline and arms safe dependent safeguards. It preserves saved credentials, provider endpoints, and non-empty custom values.
+
+- Cloudflare defaults to scoped-token authentication, the current site domain, and a 24-hour edge lifetime.
+- xCloud defaults to the current site domain while site identifiers remain API-discovered.
+- CDN rewriting defaults to static styles, scripts, images, and font formats only.
+- Redis defaults to local PhpRedis with short half-second timeouts; existing remote host, database, and credential values are preserved.
+- Compatibility protection defaults to automatic Perfmatters ownership plus dormant Akismet and Jetpack safeguards that activate only when those plugins are active.
+- Private Islands enables both registered commerce fragments, while Fleet enables signed imports and the full safe configuration-module set.
+
 ## Custom asset CDN
 
 Open **GT Performance → CDN** to rewrite selected same-site static asset URLs to a separate HTTPS CDN hostname. The provider must support origin pull and retain the original WordPress path. Cloudflare remains independent: it can continue caching eligible HTML while browsers request selected CSS, JavaScript, image, font, media, or download files from the custom CDN.
@@ -170,6 +207,6 @@ composer check
 
 ## Status
 
-This is a beta for controlled staging and production validation. Cloudflare mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, and host-cache combinations still need a growing compatibility matrix before a stable release.
+This is a release candidate for controlled staging and production validation. Cloudflare and xCloud mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, image-optimizer, and host-cache combinations still need a growing compatibility matrix before the stable release.
 
 GT Performance is an independent implementation. It does not include or copy FlyingPress code, branding, or private protocols.

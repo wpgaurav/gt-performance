@@ -29,6 +29,10 @@ final class CompatibilityModule implements Module {
 		add_filter( 'gt_performance_javascript_exclusions', array( $this, 'javascriptExclusions' ) );
 		add_filter( 'gt_performance_cache_policy', array( $this, 'cachePolicy' ), 20 );
 		add_filter( 'gt_performance_compiled_config', array( $this, 'compiledConfig' ), 20 );
+		add_filter( 'gt_performance_generate_image_variants', array( $this, 'allowGtImageVariants' ) );
+		add_filter( 'gt_performance_rewrite_image_variants', array( $this, 'allowGtImageVariants' ) );
+		add_filter( 'gt_performance_media_lazy_load', array( $this, 'allowGtMediaLazyLoad' ) );
+		add_filter( 'gt_performance_media_add_dimensions', array( $this, 'allowGtMediaDimensions' ) );
 
 		add_filter( 'perfmatters_remove_unused_css', array( $this, 'perfmattersUnusedCss' ), PHP_INT_MAX );
 		add_filter( 'perfmatters_minify_css', array( $this, 'perfmattersUnusedCss' ), PHP_INT_MAX );
@@ -47,6 +51,46 @@ final class CompatibilityModule implements Module {
 		}
 
 		return $this->ownership->gtOwns( $this->perfmattersMode(), true );
+	}
+
+	/**
+	 * Let EWWW own local next-generation files and delivery when enabled.
+	 *
+	 * EWWW's ordinary upload compression remains complementary and does not turn
+	 * off GT Performance variants by itself.
+	 */
+	public function allowGtImageVariants( bool $enabled ): bool {
+		if ( ! $enabled || ! $this->ewwwProtectionEnabled() ) {
+			return $enabled;
+		}
+
+		return $this->ewwwModernFormatsEnabled() ? false : $enabled;
+	}
+
+	/**
+	 * Avoid adding a second lazy-loading implementation to the same images.
+	 */
+	public function allowGtMediaLazyLoad( bool $enabled ): bool {
+		if ( ! $enabled || ! $this->ewwwProtectionEnabled() ) {
+			return $enabled;
+		}
+
+		return $this->ewwwLazyLoadEnabled() ? false : $enabled;
+	}
+
+	/**
+	 * EWWW adds dimensions through its lazy-load pipeline. Only yield this
+	 * feature when that paired option, or Easy IO, actually owns it.
+	 */
+	public function allowGtMediaDimensions( bool $enabled ): bool {
+		if ( ! $enabled || ! $this->ewwwProtectionEnabled() ) {
+			return $enabled;
+		}
+
+		$ewwwOwnsDimensions = $this->ewwwExactDnEnabled()
+			|| ( $this->ewwwLazyLoadEnabled() && (bool) $this->ewwwOption( 'ewww_image_optimizer_add_missing_dims' ) );
+
+		return $ewwwOwnsDimensions ? false : $enabled;
 	}
 
 	/**
@@ -220,6 +264,33 @@ final class CompatibilityModule implements Module {
 
 	private function protectionEnabled(): bool {
 		return (bool) Settings::get( 'integrations.auto_protection', true );
+	}
+
+	private function ewwwProtectionEnabled(): bool {
+		return $this->protectionEnabled() && $this->plugins->active( 'ewww-image-optimizer' );
+	}
+
+	private function ewwwModernFormatsEnabled(): bool {
+		return (bool) $this->ewwwOption( 'ewww_image_optimizer_webp' ) || $this->ewwwExactDnEnabled();
+	}
+
+	private function ewwwLazyLoadEnabled(): bool {
+		return (bool) $this->ewwwOption( 'ewww_image_optimizer_lazy_load' )
+			|| (bool) get_option( 'easyio_lazy_load', false )
+			|| $this->ewwwExactDnEnabled();
+	}
+
+	private function ewwwExactDnEnabled(): bool {
+		return (bool) $this->ewwwOption( 'ewww_image_optimizer_exactdn' )
+			|| (bool) get_option( 'easyio_exactdn', false );
+	}
+
+	private function ewwwOption( string $name ): mixed {
+		if ( function_exists( 'ewww_image_optimizer_get_option' ) ) {
+			return ewww_image_optimizer_get_option( $name );
+		}
+
+		return get_option( $name, false );
 	}
 
 	private function perfmattersMode(): string {

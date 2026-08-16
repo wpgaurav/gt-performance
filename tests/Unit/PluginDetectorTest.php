@@ -34,6 +34,12 @@ final class PluginDetectorTest extends TestCase {
 		self::assertTrue( $detector->detected( 'independent-analytics', array( 'independent-analytics-pro/iawp.php' ) ) );
 	}
 
+	public function test_ewww_image_optimizer_is_detected(): void {
+		$detector = new PluginDetector();
+
+		self::assertTrue( $detector->detected( 'ewww-image-optimizer', array( 'ewww-image-optimizer/ewww-image-optimizer.php' ) ) );
+	}
+
 	public function test_only_active_analytics_plugins_add_script_exclusions(): void {
 		$detector   = new PluginDetector();
 		$exclusions = $detector->javascriptExclusionsForPlugins(

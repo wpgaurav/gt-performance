@@ -20,8 +20,8 @@ final class MediaOptimizer {
 		$processor  = new \WP_HTML_Tag_Processor( $html );
 		$index      = 0;
 		$critical   = max( 0, (int) Settings::get( 'media.critical_images', 2 ) );
-		$lazy       = (bool) Settings::get( 'media.lazy_load', true );
-		$dimensions = (bool) Settings::get( 'media.add_dimensions', true );
+		$lazy       = (bool) apply_filters( 'gt_performance_media_lazy_load', (bool) Settings::get( 'media.lazy_load', true ) );
+		$dimensions = (bool) apply_filters( 'gt_performance_media_add_dimensions', (bool) Settings::get( 'media.add_dimensions', true ) );
 
 		while ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
 			if ( $index < $critical ) {

@@ -44,6 +44,7 @@ final class Plugin {
 			new \GTPerformance\Compatibility\CoreFormsModule(),
 			new \GTPerformance\Compatibility\CompatibilityModule(),
 			new \GTPerformance\Cloudflare\CloudflareModule( $logger ),
+			new \GTPerformance\XCloud\XCloudModule( $logger ),
 			new \GTPerformance\Optimization\OptimizationModule( $logger ),
 			new \GTPerformance\Optimization\Css\TrainingModule(),
 			new \GTPerformance\Database\DatabaseModule(),

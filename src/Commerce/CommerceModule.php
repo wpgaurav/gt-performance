@@ -11,6 +11,7 @@ namespace GTPerformance\Commerce;
 
 use GTPerformance\Cache\Eligibility;
 use GTPerformance\Cache\RequestContext;
+use GTPerformance\Cache\SharedCacheHeaders;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Settings;
 
@@ -82,7 +83,7 @@ final class CommerceModule implements Module {
 			|| str_starts_with( $decision->reason, 'cookie:' )
 			|| str_starts_with( $decision->reason, 'query:' ) ) {
 			nocache_headers();
-			header( 'Cache-Control: no-store, private, max-age=0' );
+			SharedCacheHeaders::noStore();
 			header( 'X-GT-Commerce-Cache: BYPASS' );
 		}
 	}

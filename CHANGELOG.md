@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.0.0-rc.1 - 2026-08-16
+
+### Added
+
+- Added xCloud Public API site discovery, host-cache status and purge routing, independent Cloudflare Enterprise detection, explicit edge ownership, and requested 12-hour traffic reporting.
+- Added safe enable-time profiles for Cloudflare, xCloud, static CDN rewriting, Redis, compatibility safeguards, Private Islands, and Fleet while preserving credentials, custom endpoints, and other non-empty provider values.
+- Added feature-level EWWW Image Optimizer ownership for next-generation formats, Easy IO, lazy loading, and missing dimensions without disabling complementary upload compression.
+
+### Changed
+
+- Moved WebP and AVIF generation out of media-upload requests and split each source and registered image size into its own durable background job. Image work now runs ahead of cache preloads while keeping cache purges first.
+- Added generic CDN and Cloudflare-specific no-store directives to private, commerce, feed, authenticated preview, and Private Islands responses.
+
+### Fixed
+
+- Prevented large multi-image uploads from spending the full PHP execution window generating every modern-format variant synchronously. Existing targets are skipped, duplicate physical sub-sizes are deduplicated, and queued jobs recheck ownership before writing.
+- Prevented GT Performance and EWWW from generating, rewriting, lazy-loading, or dimensioning the same images when EWWW or Easy IO owns the corresponding feature.
+- Blocked direct Cloudflare synchronization and duplicate purge routing while an enabled xCloud edge layer owns the cache, and failed closed when xCloud Enterprise exposes analytics but no token-authenticated purge mutation.
+
+## 1.0.0-beta-9 - 2026-08-04
+
+### Added
+
+- Added recommended enable-time profiles for Cloudflare, xCloud, static CDN rewriting, Redis, compatibility safeguards, Private Islands, and Fleet.
+- Profiles fill missing values, select safe dependent options, and keep existing credentials, custom endpoints, and provider-specific non-empty values intact.
+
+## 1.0.0-beta-8 - 2026-08-04
+
+### Added
+
+- Added xCloud Public API site discovery, encrypted credentials, host-cache status and invalidation, requested status refresh, WP-CLI controls, and automatic routing from GT Performance origin purges.
+- Added separate detection and 12-hour traffic reporting for xCloud's paid Cloudflare Enterprise add-on. GT Performance now treats an active xCloud edge as the sole edge owner and blocks direct Cloudflare rule synchronization and duplicate purge calls.
+
+### Security
+
+- Kept xCloud's free Edge Full Page Cache and Cloudflare Enterprise add-on on distinct code paths. Because xCloud's current Public API token does not authenticate the dashboard-only Enterprise purge mutation, the integration fails closed and never substitutes the unrelated broad host `purge-all` endpoint.
+- Added `CDN-Cache-Control: no-store` and the higher-priority Cloudflare-specific no-store directive to every GT Performance private response as defense in depth. Live testing found xCloud's current Enterprise Edge Page Caching rule overrides those origin directives; the tested commerce-safe configuration therefore leaves that page-cache option off while retaining static caching and the add-on's other features.
+
 ## 1.0.0-beta-7 - 2026-08-04
 
 ### Added

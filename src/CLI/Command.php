@@ -25,6 +25,8 @@ use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Fleet\PolicyService;
 use GTPerformance\Queue\QueueModule;
 use GTPerformance\Redis\ObjectCacheInstaller;
+use GTPerformance\XCloud\EdgeOwnership;
+use GTPerformance\XCloud\SiteService;
 
 final class Command {
 	/**
@@ -66,6 +68,11 @@ final class Command {
 				'check'  => 'Cloudflare',
 				'value'  => Settings::get( 'cloudflare.enabled', false ) ? 'enabled' : 'disabled',
 				'status' => Settings::get( 'cloudflare.enabled', false ) ? 'pass' : 'warning',
+			),
+			array(
+				'check'  => 'xCloud',
+				'value'  => Settings::get( 'xcloud.enabled', false ) ? 'enabled' : 'disabled',
+				'status' => ( new EdgeOwnership() )->hasDirectCloudflareConflict() ? 'warning' : 'pass',
 			),
 			( new CronHealth() )->check(),
 		);
@@ -244,6 +251,10 @@ final class Command {
 			\WP_CLI::log( 'zone=' . ( $settings['cloudflare']['zone_id'] ? 'configured' : 'missing' ) );
 			return;
 		}
+		if ( 'sync' === $action && ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
+			\WP_CLI::error( 'xCloud Cloudflare Enterprise is active. Disable one edge owner before synchronizing a direct Cloudflare cache rule.' );
+			return;
+		}
 
 		$factory = new ClientFactory();
 		$client  = $factory->create( $settings );
@@ -295,6 +306,83 @@ final class Command {
 		$settings['cloudflare']['drift_hash'] = hash( 'sha256', (string) wp_json_encode( $cache ) );
 		Settings::save( $settings );
 		\WP_CLI::success( 'Cloudflare rule synchronized.' );
+	}
+
+	/**
+	 * Manage the xCloud hosting cache integration.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : status, refresh, or purge. Defaults to status.
+	 *
+	 * `purge` selects the narrowest operation for the last refreshed cache
+	 * state. Enterprise purge fails closed because xCloud's current Public API
+	 * does not expose a token-authenticated mutation for that add-on.
+	 *
+	 * @param list<string> $args Positional arguments.
+	 */
+	public function xcloud( array $args ): void {
+		$action = $this->action( $args, 'status', array( 'status', 'refresh', 'purge' ), 'xCloud' );
+		if ( null === $action ) {
+			return;
+		}
+
+		$settings = Settings::all();
+		if ( 'status' === $action ) {
+			$xcloud = (array) $settings['xcloud'];
+			\WP_CLI::log( 'enabled=' . ( $xcloud['enabled'] ? 'yes' : 'no' ) );
+			\WP_CLI::log( 'domain=' . ( $xcloud['domain'] ? $xcloud['domain'] : 'home-domain' ) );
+			\WP_CLI::log( 'site=' . ( $xcloud['site_uuid'] ? 'configured' : 'missing' ) );
+			\WP_CLI::log( 'page_cache=' . ( $xcloud['page_cache_enabled'] ? 'enabled' : 'disabled' ) );
+			\WP_CLI::log( 'cloudflare_enterprise=' . ( $xcloud['enterprise_available'] ? 'active' : 'not-detected' ) );
+			\WP_CLI::log( 'free_edge_cache=' . ( $xcloud['free_edge_cache_enabled'] ? 'enabled' : 'disabled' ) );
+			\WP_CLI::log( 'enterprise_12h=' . (int) $xcloud['enterprise_edge_requests'] . '/' . (int) $xcloud['enterprise_requests'] . ' (' . (float) $xcloud['enterprise_hit_percent'] . '%)' );
+			\WP_CLI::log( 'checked_at=' . ( $xcloud['checked_at'] ? $xcloud['checked_at'] : 'never' ) );
+			return;
+		}
+
+		$service = new SiteService();
+		if ( 'refresh' === $action ) {
+			$status = $service->refresh( $settings );
+			if ( is_wp_error( $status ) ) {
+				\WP_CLI::error( $status->get_error_message() );
+			}
+
+			foreach (
+				array(
+					'site_uuid',
+					'server_id',
+					'site_id',
+					'domain',
+					'dashboard_url',
+					'stack',
+					'page_cache_enabled',
+					'page_cache_source',
+					'redis_enabled',
+					'object_cache_pro',
+					'free_edge_cache_enabled',
+					'enterprise_available',
+					'enterprise_requests',
+					'enterprise_edge_requests',
+					'enterprise_hit_percent',
+					'checked_at',
+				) as $key
+			) {
+				$settings['xcloud'][ $key ] = $status[ $key ];
+			}
+			$settings['xcloud']['enabled'] = true;
+			Settings::save( $settings );
+			\WP_CLI::line( (string) wp_json_encode( $status, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
+			return;
+		}
+
+		$result = $service->purgeAutomatic();
+		if ( is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+		}
+		\WP_CLI::line( (string) wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
+		\WP_CLI::success( 'xCloud cache purge accepted.' );
 	}
 
 	/**

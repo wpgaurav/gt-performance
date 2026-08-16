@@ -28,6 +28,7 @@ use GTPerformance\Diagnostics\PurgeReceiptRepository;
 use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Fleet\FleetRepository;
 use GTPerformance\Fleet\PolicyService;
+use GTPerformance\Integrations\RecommendedDefaults;
 use GTPerformance\Licensing\Configuration as LicenseConfiguration;
 use GTPerformance\Licensing\LicenseRepository;
 use GTPerformance\Optimization\Css\ReportRepository;
@@ -35,6 +36,8 @@ use GTPerformance\Optimization\Css\SelectorSafelist;
 use GTPerformance\Optimization\Css\TrainingRepository;
 use GTPerformance\Redis\ConnectionTester;
 use GTPerformance\Redis\ObjectCacheInstaller;
+use GTPerformance\XCloud\EdgeOwnership;
+use GTPerformance\XCloud\SiteService;
 
 final class AdminModule implements Module {
 	private const PAGE_SLUG = 'gt-performance';
@@ -68,6 +71,7 @@ final class AdminModule implements Module {
 		add_action( 'admin_post_gtp_install_dropin', array( $this, 'installDropin' ) );
 		add_action( 'admin_post_gtp_install_redis', array( $this, 'installRedis' ) );
 		add_action( 'admin_post_gtp_test_redis', array( $this, 'testRedis' ) );
+		add_action( 'admin_post_gtp_xcloud_refresh', array( $this, 'xcloudRefresh' ) );
 		add_action( 'admin_post_gtp_purge', array( $this, 'purge' ) );
 		add_action( 'admin_post_gtp_cloudflare_sync', array( $this, 'cloudflareSync' ) );
 		add_action( 'admin_post_gtp_cloudflare_preview', array( $this, 'cloudflarePreview' ) );
@@ -150,8 +154,9 @@ final class AdminModule implements Module {
 			'gt-performance-admin',
 			'gtPerformanceAdmin',
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'gtp_css_report' ),
+				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
+				'nonce'               => wp_create_nonce( 'gtp_css_report' ),
+				'integrationProfiles' => RecommendedDefaults::profiles( home_url( '/' ) ),
 			)
 		);
 	}
@@ -169,6 +174,9 @@ final class AdminModule implements Module {
 		$input['redis']      = isset( $input['redis'] ) && is_array( $input['redis'] )
 			? $input['redis']
 			: array();
+		$input['xcloud']     = isset( $input['xcloud'] ) && is_array( $input['xcloud'] )
+			? $input['xcloud']
+			: array();
 		$cipher              = new TokenCipher();
 
 		foreach ( array( 'api_token', 'global_api_key' ) as $secretKey ) {
@@ -185,6 +193,13 @@ final class AdminModule implements Module {
 			$input['redis']['password'] = (string) $current['redis']['password'];
 		} elseif ( ! str_starts_with( $redisPassword, 'sodium:' ) && ! str_starts_with( $redisPassword, 'openssl:' ) ) {
 			$input['redis']['password'] = ( new SecretCipher( 'redis' ) )->encrypt( $redisPassword );
+		}
+
+		$xcloudToken = trim( (string) ( $input['xcloud']['api_token'] ?? '' ) );
+		if ( '' === $xcloudToken ) {
+			$input['xcloud']['api_token'] = (string) $current['xcloud']['api_token'];
+		} elseif ( ! str_starts_with( $xcloudToken, 'sodium:' ) && ! str_starts_with( $xcloudToken, 'openssl:' ) ) {
+			$input['xcloud']['api_token'] = ( new SecretCipher( 'xcloud' ) )->encrypt( $xcloudToken );
 		}
 
 		$patterns   = SelectorSafelist::split( $input['css']['safelist'] ?? array() );
@@ -317,6 +332,45 @@ final class AdminModule implements Module {
 		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'redis-connected', 'integrations' );
 	}
 
+	public function xcloudRefresh(): void {
+		$this->guard( 'gtp_xcloud_refresh' );
+		$settings = Settings::all();
+		$status   = ( new SiteService() )->refresh( $settings );
+		if ( is_wp_error( $status ) ) {
+			$this->redirect( $status->get_error_code(), 'integrations' );
+		}
+
+		foreach (
+			array(
+				'site_uuid',
+				'server_id',
+				'site_id',
+				'domain',
+				'dashboard_url',
+				'stack',
+				'page_cache_enabled',
+				'page_cache_source',
+				'redis_enabled',
+				'object_cache_pro',
+				'free_edge_cache_enabled',
+				'enterprise_available',
+				'enterprise_requests',
+				'enterprise_edge_requests',
+				'enterprise_hit_percent',
+				'checked_at',
+			) as $key
+		) {
+			$settings['xcloud'][ $key ] = $status[ $key ];
+		}
+		$settings['xcloud']['enabled'] = true;
+		Settings::save( $settings );
+
+		$notice = ( new EdgeOwnership() )->hasDirectCloudflareConflict()
+			? 'xcloud-edge-conflict'
+			: 'xcloud-connected';
+		$this->redirect( $notice, 'integrations' );
+	}
+
 	public function purge(): void {
 		$this->guard( 'gtp_purge' );
 		( new Purger() )->purgeAll();
@@ -326,6 +380,9 @@ final class AdminModule implements Module {
 	public function cloudflareSync(): void {
 		$this->guard( 'gtp_cloudflare_sync' );
 		$settings = Settings::all();
+		if ( ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
+			$this->redirect( 'gtp_edge_owner_conflict', 'cloudflare' );
+		}
 		$factory  = new ClientFactory();
 		$client   = $factory->create( $settings );
 		if ( is_wp_error( $client ) ) {
@@ -1066,6 +1123,13 @@ final class AdminModule implements Module {
 		);
 		$this->panelClose();
 
+		$this->panelOpen( __( 'xCloud and Cloudflare Enterprise', 'gt-performance' ), __( 'Connect the xCloud API, detect the separate Cloudflare Enterprise add-on, show its edge traffic snapshot, and keep cache ownership explicit.', 'gt-performance' ) );
+		$this->checkbox( 'xcloud', 'enabled', __( 'Enable xCloud cache integration', 'gt-performance' ), __( 'Let GT Performance detect xCloud ownership and purge token-authenticated host cache layers after origin invalidation.', 'gt-performance' ), $settings, __( 'Cloudflare Enterprise is distinct from xCloud\'s free Edge Full Page Cache. The current xCloud Public API has no token-authenticated Enterprise purge, so GT Performance fails closed instead of sending the broad host purge-all request.', 'gt-performance' ) );
+		$this->text( 'xcloud', 'domain', __( 'xCloud site domain', 'gt-performance' ), __( 'Exact primary domain used to discover the xCloud site UUID. Leave blank to use this WordPress home domain.', 'gt-performance' ), $settings, 'text', (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$this->text( 'xcloud', 'site_uuid', __( 'xCloud site UUID', 'gt-performance' ), __( 'Optional. Connect/refresh discovers and saves it from the exact domain.', 'gt-performance' ), $settings );
+		$this->password( 'xcloud', 'api_token', __( 'xCloud API token', 'gt-performance' ), __( 'Requires read:sites and write:sites scopes. Encrypted in WordPress; leave blank to keep the saved token.', 'gt-performance' ), ! empty( $settings['xcloud']['api_token'] ) );
+		$this->panelClose();
+
 		$this->panelOpen( __( 'Private Islands', 'gt-performance' ), __( 'Keep the public page shell cacheable while explicitly registered cart and account fragments render through a private no-store request.', 'gt-performance' ) );
 		$this->checkbox( 'private_fragments', 'enabled', __( 'Enable Private Islands', 'gt-performance' ), __( 'Load registered cart and account fragments through a signed private request.', 'gt-performance' ), $settings, __( 'The public page stays cacheable, but each fragment adds a separate no-store request. Test its theme placement and signed endpoint before enabling sitewide.', 'gt-performance' ) );
 		$this->checkbox( 'private_fragments', 'cart_count', __( 'Commerce cart count fragment', 'gt-performance' ), __( 'Register commerce_cart_count for WooCommerce, EDD, and extension-provided FluentCart counts.', 'gt-performance' ), $settings );
@@ -1098,6 +1162,7 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->settingsFormClose();
+		$this->renderXcloudStatus( $settings );
 		$this->renderRedisConstants();
 		$this->renderPluginCompatibilityList( $settings );
 		?>
@@ -1107,6 +1172,64 @@ final class AdminModule implements Module {
 				<p><?php esc_html_e( 'Save first, then run a bounded connection, authentication, database selection, and ping check.', 'gt-performance' ); ?></p>
 			</div>
 			<?php $this->actionButton( 'gtp_test_redis', __( 'Test Redis connection', 'gt-performance' ) ); ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderXcloudStatus( array $settings ): void {
+		$xcloud = (array) ( $settings['xcloud'] ?? array() );
+		$purge  = get_option( 'gt_performance_xcloud_last_purge', array() );
+		$purge  = is_array( $purge ) ? $purge : array();
+		$conflict = ( new EdgeOwnership() )->hasDirectCloudflareConflict();
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'xCloud cache status', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Status is refreshed only on request. Enterprise settings and purge remain owned by the xCloud dashboard; GT Performance detects and reports the add-on.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<dl class="gtp-definition-list">
+				<div><dt><?php esc_html_e( 'Site', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $xcloud['domain'] ? $xcloud['domain'] : __( 'Not connected', 'gt-performance' ) ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Stack', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $xcloud['stack'] ? $xcloud['stack'] : __( 'Unknown', 'gt-performance' ) ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Page cache', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['page_cache_enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Redis', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['redis_enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Object Cache Pro', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['object_cache_pro'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Cloudflare Enterprise', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['enterprise_available'] ) ? __( 'Active through xCloud', 'gt-performance' ) : __( 'Not detected', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Enterprise edge traffic (12h)', 'gt-performance' ); ?></dt><dd><?php echo esc_html( number_format_i18n( (int) ( $xcloud['enterprise_edge_requests'] ?? 0 ) ) . ' / ' . number_format_i18n( (int) ( $xcloud['enterprise_requests'] ?? 0 ) ) . ' (' . number_format_i18n( (float) ( $xcloud['enterprise_hit_percent'] ?? 0 ), 1 ) . '%)' ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Free xCloud edge cache', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['free_edge_cache_enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Last checked', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $xcloud['checked_at'] ? $xcloud['checked_at'] : __( 'Never', 'gt-performance' ) ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Last xCloud purge', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $purge['created_at'] ?? __( 'Never', 'gt-performance' ) ) ); ?></dd></div>
+			</dl>
+			<?php if ( $conflict || ! empty( $xcloud['enterprise_available'] ) ) : ?>
+				<div class="gtp-guidance-list">
+					<?php if ( $conflict ) : ?>
+						<div class="gtp-callout gtp-callout--warning" role="note">
+							<strong><?php esc_html_e( 'Resolve edge ownership', 'gt-performance' ); ?></strong>
+							<p><?php esc_html_e( 'xCloud Cloudflare Enterprise and GT Performance direct Cloudflare are both enabled. xCloud owns purge routing; direct Cloudflare rule synchronization is blocked until only one edge owner remains.', 'gt-performance' ); ?></p>
+						</div>
+					<?php endif; ?>
+					<?php if ( ! empty( $xcloud['enterprise_available'] ) ) : ?>
+						<div class="gtp-callout gtp-callout--warning" role="note">
+							<strong><?php esc_html_e( 'Enterprise purge remains manual', 'gt-performance' ); ?></strong>
+							<p><?php esc_html_e( 'Enterprise analytics are available through the API token, but its purge action currently requires an xCloud dashboard session. Automatic Enterprise purge is intentionally disabled until xCloud publishes a token-authenticated endpoint.', 'gt-performance' ); ?></p>
+						</div>
+						<div class="gtp-callout gtp-callout--danger" role="note">
+							<strong><?php esc_html_e( 'Keep commerce HTML out of edge cache', 'gt-performance' ); ?></strong>
+							<p><?php esc_html_e( 'Keep xCloud Enterprise Edge Page Caching off unless xCloud provides request-level bypass rules. Live testing found its current page-cache rule overrides origin no-store directives and caches cart, checkout, account, and receipt HTML. Enterprise static caching, WAF, and the other add-on features can remain enabled.', 'gt-performance' ); ?></p>
+						</div>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+			<div class="gtp-panel-actions gtp-panel-actions--split">
+				<?php if ( ! empty( $xcloud['dashboard_url'] ) ) : ?>
+					<?php $this->fieldHelpLink( (string) $xcloud['dashboard_url'], __( 'Open this site in xCloud', 'gt-performance' ) ); ?>
+				<?php endif; ?>
+				<?php $this->actionButton( 'gtp_xcloud_refresh', __( 'Connect/refresh xCloud', 'gt-performance' ) ); ?>
+			</div>
 		</section>
 		<?php
 	}
@@ -1948,6 +2071,7 @@ PHP;
 	private function checkbox( string $section, string $key, string $label, string $description, array $settings, string $tooltip = '' ): void {
 		$name = Settings::OPTION . '[' . $section . '][' . $key . ']';
 		$id   = 'gtp-' . $section . '-' . $key;
+		$profile = $this->enableProfile( $section, $key );
 		?>
 		<div class="gtp-field gtp-field--toggle">
 			<div>
@@ -1956,10 +2080,24 @@ PHP;
 			</div>
 			<div class="gtp-field__control">
 				<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="0">
-				<input id="<?php echo esc_attr( $id ); ?>" type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $settings[ $section ][ $key ] ) ); ?>>
+				<input id="<?php echo esc_attr( $id ); ?>" type="checkbox" name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $settings[ $section ][ $key ] ) ); ?><?php echo '' !== $profile ? ' data-gtp-enable-profile="' . esc_attr( $profile ) . '"' : ''; ?>>
 			</div>
 		</div>
 		<?php
+	}
+
+	private function enableProfile( string $section, string $key ): string {
+		$profiles = array(
+			'cloudflare.enabled'              => 'cloudflare',
+			'xcloud.enabled'                 => 'xcloud',
+			'cdn.enabled'                    => 'cdn',
+			'integrations.auto_protection'   => 'compatibility',
+			'private_fragments.enabled'      => 'private_fragments',
+			'redis.enabled'                  => 'redis',
+			'fleet.enabled'                  => 'fleet',
+		);
+
+		return $profiles[ $section . '.' . $key ] ?? '';
 	}
 
 	/**
@@ -2332,6 +2470,16 @@ PHP;
 			'gtp_cloudflare_api'        => array( __( 'Cloudflare rejected the request. Check the credentials and required zone permissions.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_ruleset'    => array( __( 'Cloudflare did not return the cache ruleset needed to finish setup.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_rule_budget' => array( __( 'The Cloudflare Free Cache Rules budget is full. Remove an unused rule or reconnect the existing GT Performance rule.', 'gt-performance' ), 'warning' ),
+			'gtp_xcloud_token'         => array( __( 'Enter an xCloud API token with read:sites and write:sites scopes, save, then connect again.', 'gt-performance' ), 'error' ),
+			'gtp_xcloud_site'          => array( __( 'No exact xCloud site matched this domain or UUID.', 'gt-performance' ), 'error' ),
+			'gtp_xcloud_enterprise_ids' => array( __( 'xCloud did not expose the numeric site identifiers required by the Cloudflare Enterprise add-on. Refresh and try again.', 'gt-performance' ), 'error' ),
+			'gtp_xcloud_cache_settings' => array( __( 'xCloud did not return cache-layer settings for this site.', 'gt-performance' ), 'error' ),
+			'gtp_xcloud_json'          => array( __( 'xCloud returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
+			'gtp_xcloud_api'           => array( __( 'xCloud rejected the request. Check the token scopes and team permissions.', 'gt-performance' ), 'error' ),
+			'gtp_xcloud_enterprise_purge_unavailable' => array( __( 'Cloudflare Enterprise purge is not available through the xCloud Public API token. Use the Purge control in the xCloud Enterprise dashboard.', 'gt-performance' ), 'warning' ),
+			'gtp_edge_owner_conflict'  => array( __( 'xCloud Cloudflare Enterprise is the active owner. Disable it or the direct Cloudflare integration before synchronizing another cache rule.', 'gt-performance' ), 'warning' ),
+			'xcloud-connected'         => array( __( 'xCloud site, host cache, and Cloudflare Enterprise status refreshed.', 'gt-performance' ), 'success' ),
+			'xcloud-edge-conflict'     => array( __( 'xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules.', 'gt-performance' ), 'warning' ),
 			'gtp_diagnostic_url'        => array( __( 'Enter a valid URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'gtp_purge_verification_http' => array( __( 'The purge ran, but GT Performance could not fetch the public page for verification.', 'gt-performance' ), 'warning' ),
 			'gtp_fleet_license'         => array( __( 'Activate a valid GT Performance license before creating or applying fleet policies.', 'gt-performance' ), 'warning' ),
