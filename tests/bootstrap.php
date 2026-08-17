@@ -25,6 +25,58 @@ if ( ! defined( 'MB_IN_BYTES' ) ) {
 	define( 'MB_IN_BYTES', 1024 * 1024 );
 }
 
+if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
+	define( 'HOUR_IN_SECONDS', 3600 );
+}
+
+if ( ! defined( 'GTP_BASENAME' ) ) {
+	define( 'GTP_BASENAME', 'gt-performance/gt-performance.php' );
+}
+
+if ( ! function_exists( 'gtp_test_site_transients' ) ) {
+	/**
+	 * Shared store behind the site-transient stubs.
+	 *
+	 * @return array<string, mixed>
+	 */
+	function &gtp_test_site_transients(): array {
+		static $store = array();
+
+		return $store;
+	}
+
+	function get_site_transient( string $transient ): mixed {
+		$store = &gtp_test_site_transients();
+
+		return $store[ $transient ] ?? false;
+	}
+
+	function set_site_transient( string $transient, mixed $value, int $expiration = 0 ): bool {
+		unset( $expiration );
+		$store               = &gtp_test_site_transients();
+		$store[ $transient ] = $value;
+
+		return true;
+	}
+
+	function delete_site_transient( string $transient ): bool {
+		$store = &gtp_test_site_transients();
+		unset( $store[ $transient ] );
+
+		$GLOBALS['gtp_test_transient_deletions'][] = $transient;
+
+		// Stands in for any listener on the generic deleted_site_transient /
+		// deleted_option hooks that refreshes the plugin update cache, which is
+		// what re-enters the deletion hook on a live site.
+		$listener = $GLOBALS['gtp_test_deleted_site_transient_listener'] ?? null;
+		if ( is_callable( $listener ) ) {
+			$listener( $transient );
+		}
+
+		return true;
+	}
+}
+
 if ( ! function_exists( '__' ) ) {
 	function __( string $text ): string {
 		return $text;

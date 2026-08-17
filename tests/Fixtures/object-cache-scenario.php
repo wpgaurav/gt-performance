@@ -292,6 +292,20 @@ if ( 'notoptions' === $scenario ) {
 	exit;
 }
 
+if ( 'delete-reports-absence' === $scenario ) {
+	$cache->add_non_persistent_groups( array( 'transient-ish' ) );
+	$cache->set( 'present', 'value', 'transient-ish' );
+
+	echo (string) json_encode(
+		array(
+			'ok' => true === $cache->delete( 'present', 'transient-ish' )
+				&& false === $cache->delete( 'present', 'transient-ish' )
+				&& false === $cache->delete( 'never-stored', 'transient-ish' ),
+		)
+	);
+	exit;
+}
+
 if ( 'add-worker' === $scenario ) {
 	echo $cache->add( 'race', getmypid(), 'group' ) ? '1' : '0';
 	exit;

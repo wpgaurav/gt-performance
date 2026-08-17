@@ -12,4 +12,4 @@ defined( 'WP_CONTENT_DIR' ) || define( 'WP_CONTENT_DIR', '/tmp/wordpress/wp-cont
 defined( 'GTP_DIR' ) || define( 'GTP_DIR', dirname( __DIR__ ) );
 defined( 'GTP_FILE' ) || define( 'GTP_FILE', dirname( __DIR__ ) . '/gt-performance.php' );
 defined( 'GTP_BASENAME' ) || define( 'GTP_BASENAME', 'gt-performance/gt-performance.php' );
-defined( 'GTP_VERSION' ) || define( 'GTP_VERSION', '1.0.0-rc.1' );
+defined( 'GTP_VERSION' ) || define( 'GTP_VERSION', '1.0.0-rc.2' );

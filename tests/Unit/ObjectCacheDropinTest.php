@@ -32,6 +32,16 @@ final class ObjectCacheDropinTest extends TestCase {
 		self::assertTrue( $this->scenario( 'cron-advancement' ) );
 	}
 
+	/**
+	 * delete_site_transient() fires the generic deleted_site_transient hook only
+	 * when the delete reported success. Answering true for a key that was never
+	 * stored makes every repeat deletion dispatch that hook again, so a listener
+	 * on it never stops being re-triggered.
+	 */
+	public function testDeleteReportsFalseWhenNothingWasStored(): void {
+		self::assertTrue( $this->scenario( 'delete-reports-absence' ) );
+	}
+
 	public function testTwoProcessesAttemptingAddProduceExactlyOneWinner(): void {
 		$store = tempnam( sys_get_temp_dir(), 'gtp-object-cache-race-' );
 		self::assertIsString( $store );

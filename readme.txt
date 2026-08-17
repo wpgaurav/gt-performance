@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc.1
+Stable tag: 1.0.0-rc.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,11 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-rc.2 =
+* Fixed a fatal "Allowed memory size exhausted" error when updating the plugin. Clearing the update cache ran inside WordPress's own update-transient deletion hook and could be re-entered by any other plugin listening for deleted transients or options, recursing until PHP ran out of stack.
+* Stopped the updater from repeating the license-server request when WordPress rebuilds the plugin update transient before the first response is cached.
+* Fixed the Redis object-cache drop-in reporting a successful delete for a key it never held, which is what kept the recursion above from settling on sites running the drop-in without a reachable Redis server.
 
 = 1.0.0-rc.1 =
 * Moved WebP and AVIF generation out of media-upload requests and split each source and registered image size into its own durable background job, preventing large uploads from exhausting one PHP execution window.

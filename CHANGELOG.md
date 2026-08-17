@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0-rc.2 - 2026-08-17
+
+### Fixed
+
+- Fixed a fatal "Allowed memory size exhausted" error when updating the plugin. `Updater::clearCache()` runs on `delete_site_transient_update_plugins` and then deletes an update transient of its own, which fires the generic `deleted_site_transient` and `deleted_option` hooks; any listener that refreshes the plugin update cache in response re-entered the deletion hook, and the two recursed until PHP ran out of VM stack. `clearCache()`, `injectUpdate()`, and the remote fetch in `metadata()` now each hold a re-entry guard.
+- Stopped `Updater::metadata()` from repeating the license-server request when the update transient filter re-enters before the first response is cached.
+- Fixed the Redis object-cache drop-in reporting a successful delete for a key it never held. Core's `WP_Object_Cache::delete()` returns false in that case, and `delete_site_transient()` fires the generic `deleted_site_transient` hook only on a true result, so the unconditional answer re-dispatched that hook on every repeat deletion. This is what kept the update-cache recursion above from settling on sites where the drop-in is installed without a reachable Redis server.
+
 ## 1.0.0-rc.1 - 2026-08-16
 
 ### Added

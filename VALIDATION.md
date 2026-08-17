@@ -1,5 +1,17 @@
 # GT Performance validation
 
+## 1.0.0-rc.2 local release validation
+
+Validated on 2026-08-17:
+
+- Composer metadata validated strictly after regenerating the lock content hash for the new version. WordPress Coding Standards passed across 106 PHP files, PHPStan completed without errors, and PHPUnit passed 174 tests with 423 assertions. Whitespace checks passed.
+- Release metadata agreed on `1.0.0-rc.2` across Composer, the plugin header, runtime constant, WordPress stable tag, package builder, PHPStan bootstrap, README, and dated changelog.
+- The production ZIP passed integrity checks with one `gt-performance/` root, 303 entries, 247 files, 398,509 bytes, and local SHA-256 `d03cc9957065c9edea5fc527332d37ce2ab73d03b08ca6b7cdb5a1b23ba214aa`. All 219 packaged PHP files passed syntax validation, and development-only root files were absent.
+- The RC1 update fatal was reproduced before fixing it. On a dedicated WordPress Studio site running `1.0.0-rc.1`, a stand-in listener on `deleted_site_transient` that refreshes the plugin update cache drove `Updater::clearCache()` into unbounded recursion; the run had to be killed after two minutes. The same scenario under PHPUnit reached 569,006 stack frames before exhausting memory, which matches the reported production allocation failure of one 262,144-byte PHP VM stack page.
+- Two defects combined to produce it. `Updater::clearCache()` deleted its own transient from inside WordPress's update-transient deletion hook, and the Redis object-cache drop-in reported a successful delete for a key it never held, so `delete_site_transient()` re-dispatched the generic `deleted_site_transient` hook on every repeat pass instead of settling after one.
+- With RC2 installed, the full WordPress upgrader completed in three seconds under a 512 MB memory limit while the re-entrant listener was armed and the unfixed RC1 drop-in was deliberately restored, confirming the updater guard alone is sufficient for sites upgrading with an older drop-in still on disk.
+- The dedicated Studio site upgraded from `1.0.0-rc.1` to `1.0.0-rc.2` through the WordPress upgrader and reported the plugin active on WordPress 7.0.4. The Redis drop-in regenerated itself to the fixed build on the version change, and the PHP, WordPress, cache-directory, page-drop-in, `WP_CACHE`, Redis drop-in, xCloud, and WP-Cron Doctor checks passed. Cloudflare produced the expected warning because that optional service is not configured in the isolated site.
+
 ## 1.0.0-rc.1 local release validation
 
 Validated on 2026-08-16:

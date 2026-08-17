@@ -185,12 +185,23 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			return $data['value'];
 		}
 
+		/**
+		 * Delete a key, reporting whether something was actually removed.
+		 *
+		 * Core's WP_Object_Cache::delete() returns false for a key that was not
+		 * there, and callers rely on that. delete_site_transient() only fires
+		 * the generic deleted_site_transient hook when this returns true, so a
+		 * drop-in that answers true unconditionally turns every repeat deletion
+		 * into a fresh hook dispatch — which is what let a listener on that hook
+		 * recurse without ever settling.
+		 */
 		public function delete( $key, $group = 'default', $deprecated = false ): bool {
 			unset( $deprecated );
 			$cacheKey = $this->key( $key, $group );
+			$existed  = array_key_exists( $cacheKey, $this->local );
 			unset( $this->local[ $cacheKey ] );
 			if ( $this->nonPersistent( $group ) || null === $this->redis ) {
-				return true;
+				return $existed;
 			}
 
 			try {
