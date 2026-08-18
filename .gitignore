@@ -10,3 +10,6 @@
 /vendor/
 *.log
 *.zip
+
+# Local release staging (packages + one-off release scripts)
+/__release-*/

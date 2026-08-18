@@ -20,6 +20,7 @@ rsync -a \
 	--exclude 'build' \
 	--exclude 'dist' \
 	--exclude 'distribution-assets' \
+	--exclude '__release-*' \
 	--exclude 'FEATURE-IMPLEMENTATION.md' \
 	--exclude 'notes.md' \
 	--exclude 'phpcs.xml.dist' \
