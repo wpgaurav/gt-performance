@@ -18,12 +18,20 @@ final class ApiClient {
 	}
 
 	/**
+	 * Which authentication style this client is using: "token" or "global".
+	 */
+	public function mode(): string {
+		return $this->credentials->mode();
+	}
+
+	/**
 	 * @param array<string, mixed>|null $body Request body.
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	public function request( string $method, string $path, ?array $body = null ): array|\WP_Error {
-		$args = array(
-			'method'      => strtoupper( $method ),
+		$method = strtoupper( $method );
+		$args   = array(
+			'method'      => $method,
 			'timeout'     => 20,
 			'redirection' => 0,
 			'headers'     => array_merge(
@@ -41,25 +49,125 @@ final class ApiClient {
 
 		$response = wp_remote_request( self::BASE . '/' . ltrim( $path, '/' ), $args );
 		if ( is_wp_error( $response ) ) {
-			return $response;
+			// A transport failure never reached Cloudflare, so say so rather than
+			// letting it read as a rejected request.
+			return new \WP_Error(
+				'gtp_cloudflare_transport',
+				sprintf(
+					/* translators: %s: transport error reported by WordPress. */
+					__( 'WordPress could not reach the Cloudflare API: %s', 'gt-performance' ),
+					$response->get_error_message()
+				),
+				array(
+					'method' => $method,
+					'path'   => $path,
+				)
+			);
 		}
 
-		$code = wp_remote_retrieve_response_code( $response );
+		$code = (int) wp_remote_retrieve_response_code( $response );
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( ! is_array( $data ) ) {
-			return new \WP_Error( 'gtp_cloudflare_json', __( 'Cloudflare returned an invalid response.', 'gt-performance' ), array( 'status' => $code ) );
+			return new \WP_Error(
+				'gtp_cloudflare_json',
+				sprintf(
+					/* translators: %d: HTTP status code. */
+					__( 'Cloudflare returned an unreadable response (HTTP %d).', 'gt-performance' ),
+					$code
+				),
+				array(
+					'status' => $code,
+					'method' => $method,
+					'path'   => $path,
+				)
+			);
 		}
 
 		if ( $code < 200 || $code >= 300 || empty( $data['success'] ) ) {
-			$message = __( 'Cloudflare API request failed.', 'gt-performance' );
-			if ( isset( $data['errors'][0]['message'] ) && is_string( $data['errors'][0]['message'] ) ) {
-				$message = $data['errors'][0]['message'];
-			}
-
-			return new \WP_Error( 'gtp_cloudflare_api', $message, array( 'status' => $code ) );
+			return new \WP_Error(
+				'gtp_cloudflare_api',
+				$this->describeErrors( $data, $code ),
+				array(
+					'status'  => $code,
+					'method'  => $method,
+					'path'    => $path,
+					'errors'  => $this->errorList( $data ),
+				)
+			);
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Build a message that names what Cloudflare actually objected to.
+	 *
+	 * Cloudflare puts the useful part in errors[].message, with a numeric code and
+	 * sometimes a nested error_chain. Collapsing all of that into one generic
+	 * sentence is what makes these failures hard to act on.
+	 *
+	 * @param array<string, mixed> $data Decoded response.
+	 */
+	private function describeErrors( array $data, int $status ): string {
+		$parts = array();
+		foreach ( $this->errorList( $data ) as $error ) {
+			$text = $error['message'];
+			if ( 0 !== $error['code'] ) {
+				/* translators: %d: Cloudflare numeric error code. */
+				$text .= ' ' . sprintf( __( '(Cloudflare code %d)', 'gt-performance' ), $error['code'] );
+			}
+			$parts[] = $text;
+		}
+
+		if ( ! $parts ) {
+			/* translators: %d: HTTP status code. */
+			return sprintf( __( 'Cloudflare rejected the request with HTTP %d and gave no reason.', 'gt-performance' ), $status );
+		}
+
+		return sprintf(
+			/* translators: 1: HTTP status code, 2: reasons reported by Cloudflare. */
+			__( 'Cloudflare rejected the request (HTTP %1$d): %2$s', 'gt-performance' ),
+			$status,
+			implode( '; ', $parts )
+		);
+	}
+
+	/**
+	 * Flatten Cloudflare's errors, including any nested error_chain entries.
+	 *
+	 * @param array<string, mixed> $data Decoded response.
+	 * @return list<array{code:int, message:string}>
+	 */
+	private function errorList( array $data ): array {
+		$flat = array();
+		foreach ( (array) ( $data['errors'] ?? array() ) as $error ) {
+			if ( ! is_array( $error ) ) {
+				continue;
+			}
+
+			$message = trim( (string) ( $error['message'] ?? '' ) );
+			if ( '' !== $message ) {
+				$flat[] = array(
+					'code'    => (int) ( $error['code'] ?? 0 ),
+					'message' => $message,
+				);
+			}
+
+			foreach ( (array) ( $error['error_chain'] ?? array() ) as $chained ) {
+				if ( ! is_array( $chained ) ) {
+					continue;
+				}
+				$chainedMessage = trim( (string) ( $chained['message'] ?? '' ) );
+				if ( '' !== $chainedMessage ) {
+					$flat[] = array(
+						'code'    => (int) ( $chained['code'] ?? 0 ),
+						'message' => $chainedMessage,
+					);
+				}
+			}
+		}
+
+		return $flat;
 	}
 
 	/**
@@ -78,7 +186,14 @@ final class ApiClient {
 			}
 		}
 
-		return new \WP_Error( 'gtp_cloudflare_zone', __( 'No active Cloudflare zone matched this site.', 'gt-performance' ) );
+		return new \WP_Error(
+			'gtp_cloudflare_zone',
+			sprintf(
+				/* translators: %s: hostname that was searched for. */
+				__( 'No active Cloudflare zone matched %s on this account.', 'gt-performance' ),
+				$hostname
+			)
+		);
 	}
 
 	/**

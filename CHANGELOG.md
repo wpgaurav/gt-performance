@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.0.0-rc.3 - 2026-08-18
+
+### Fixed
+
+- Fixed Cloudflare cache rule synchronization failing outright on any site with more than one bypassed query parameter. `RuleExpression::compile()` emitted a separate `concat("&", http.request.uri.query)` per parameter, and Cloudflare rejects an expression that calls `concat` more than once (error 20127), so every sync returned HTTP 400 and the managed rule silently stopped updating. Each parameter now compiles to an equivalent `starts_with()` plus `contains` pair that calls no rationed functions.
+- Fixed the managed rule permanently reporting drift on plans that do not support custom cache keys. A custom cache key is an Enterprise capability, so the write only lands after `RuleManager` strips it, but `RuleCompiler::rule()` kept compiling the ideal rule for comparison. Drift was measured against a shape Cloudflare can never store and no amount of syncing cleared it. Comparison now uses the shape the plan accepts, while a sync still attempts the ideal rule so an upgraded plan heals itself.
+- Fixed cache rule conflict detection ignoring rules that never name a hostname. A catch-all expression such as `true` applies to every hostname in the zone and was reported as zero conflicts.
+- Fixed a fatal error in the connection check on zones with no cache ruleset yet, where a `WP_Error` was indexed as an array.
+
+### Added
+
+- Cloudflare API failures now report the reason Cloudflare gave, including its numeric error code and any nested error chain, instead of collapsing every failure into one generic sentence. Requests that never reached Cloudflare are reported separately from requests Cloudflare rejected.
+- Added a Cloudflare connection check that walks integration state, edge ownership, credentials, authentication, zone lookup, and cache rule read and write in order, and names the stage that failed with the reason. The write stage rewrites the managed rule with its own current contents, so it proves the write path without changing anything.
+- Added an API token panel listing the exact permissions the integration needs, a Cloudflare token-creation template link, and optional automatic creation of a zone-scoped token when a Global API Key is on file. A newly minted token is exercised before it replaces working credentials, because Cloudflare reveals a token secret only once.
+- The rule plan panel now lists overlapping rules with their expressions and reports whether a custom cache key was applied.
+
+### Changed
+
+- A failed synchronization now still records the live rule plan, so the screen reflects current zone state instead of appearing never to have run.
+
 ## 1.0.0-rc.2 - 2026-08-17
 
 ### Fixed

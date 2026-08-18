@@ -21,6 +21,7 @@ delete_option( 'gt_performance_dropin_version' );
 delete_option( 'gt_performance_cloudflare_backup' );
 delete_option( 'gt_performance_cloudflare_state' );
 delete_option( 'gt_performance_cloudflare_query_key_fallback' );
+delete_option( 'gt_performance_cloudflare_diagnostics' );
 delete_option( 'gt_performance_wp_cache_constant_ownership' );
 delete_option( 'gt_performance_remove_data_on_uninstall' );
 

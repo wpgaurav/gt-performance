@@ -1446,3 +1446,44 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+.gtp-notice__reason {
+	margin: 4px 0 0;
+	color: var(--gtp-muted);
+}
+
+.gtp-conflict-list {
+	margin: 0 0 8px;
+	padding: 0;
+	list-style: none;
+}
+
+.gtp-conflict-list li {
+	padding: 10px 0;
+	border-top: 1px solid #f0f0f1;
+}
+
+.gtp-conflict-list em {
+	margin-left: 6px;
+	color: var(--gtp-muted);
+	font-size: 12px;
+	font-style: normal;
+	font-weight: 500;
+}
+
+.gtp-conflict-list code {
+	display: block;
+	margin-top: 6px;
+	overflow-wrap: anywhere;
+	font-size: 12px;
+}
+
+.gtp-permission-list {
+	margin: 0 0 12px;
+	padding: 0;
+	list-style: none;
+}
+
+.gtp-permission-list li {
+	padding: 4px 0;
+}

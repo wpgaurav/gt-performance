@@ -25,23 +25,7 @@ final class ClientFactory {
 		$cipher     = new TokenCipher();
 
 		if ( 'global' === $mode ) {
-			$email = $this->constant( 'GTP_CLOUDFLARE_EMAIL' );
-			if ( '' === $email ) {
-				$email = trim( (string) ( $cloudflare['email'] ?? '' ) );
-			}
-
-			$key = $cipher->decrypt(
-				(string) ( $cloudflare['global_api_key'] ?? '' ),
-				'GTP_CLOUDFLARE_GLOBAL_API_KEY'
-			);
-			if ( '' === $email || false === filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
-				return new \WP_Error( 'gtp_cloudflare_email', __( 'A valid Cloudflare account email is required for Global API Key authentication.', 'gt-performance' ) );
-			}
-			if ( '' === $key ) {
-				return new \WP_Error( 'gtp_cloudflare_global_key', __( 'Cloudflare Global API Key is unavailable.', 'gt-performance' ) );
-			}
-
-			return new ApiClient( ApiCredentials::globalKey( $email, $key ) );
+			return $this->createGlobal( $settings );
 		}
 
 		$token = $cipher->decrypt( (string) ( $cloudflare['api_token'] ?? '' ) );
@@ -50,6 +34,41 @@ final class ClientFactory {
 		}
 
 		return new ApiClient( ApiCredentials::apiToken( $token ) );
+	}
+
+	/**
+	 * Build a Global API Key client regardless of the configured mode.
+	 *
+	 * Minting a scoped token is the one operation that needs account-wide
+	 * credentials even when the site is already authenticating with a token.
+	 *
+	 * @param array<string, mixed>|null $settings Plugin settings.
+	 * @return ApiClient|\WP_Error
+	 */
+	public function createGlobal( ?array $settings = null ): ApiClient|\WP_Error {
+		$settings   = $settings ?? Settings::all();
+		$cloudflare = isset( $settings['cloudflare'] ) && is_array( $settings['cloudflare'] )
+			? $settings['cloudflare']
+			: array();
+
+		$email = $this->constant( 'GTP_CLOUDFLARE_EMAIL' );
+		if ( '' === $email ) {
+			$email = trim( (string) ( $cloudflare['email'] ?? '' ) );
+		}
+
+		$key = ( new TokenCipher() )->decrypt(
+			(string) ( $cloudflare['global_api_key'] ?? '' ),
+			'GTP_CLOUDFLARE_GLOBAL_API_KEY'
+		);
+
+		if ( '' === $email || false === filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
+			return new \WP_Error( 'gtp_cloudflare_email', __( 'A valid Cloudflare account email is required for Global API Key authentication.', 'gt-performance' ) );
+		}
+		if ( '' === $key ) {
+			return new \WP_Error( 'gtp_cloudflare_global_key', __( 'Cloudflare Global API Key is unavailable.', 'gt-performance' ) );
+		}
+
+		return new ApiClient( ApiCredentials::globalKey( $email, $key ) );
 	}
 
 	/**

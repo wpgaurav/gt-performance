@@ -12,8 +12,11 @@ namespace GTPerformance\Admin;
 use GTPerformance\Cache\DropinInstaller;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\WpCacheConstant;
+use GTPerformance\Cloudflare\ApiClient;
 use GTPerformance\Cloudflare\ClientFactory;
+use GTPerformance\Cloudflare\ConnectionDiagnostics;
 use GTPerformance\Cloudflare\RuleManager;
+use GTPerformance\Cloudflare\TokenProvisioner;
 use GTPerformance\Cloudflare\TokenCipher;
 use GTPerformance\Commerce\SafetyLab;
 use GTPerformance\Commerce\SafetyReportRepository;
@@ -41,6 +44,12 @@ use GTPerformance\XCloud\SiteService;
 
 final class AdminModule implements Module {
 	private const PAGE_SLUG = 'gt-performance';
+
+	/**
+	 * Carries the upstream failure text across the post-then-redirect hop, so the
+	 * notice can name the real cause instead of only the stage that failed.
+	 */
+	private const ERROR_DETAIL_TRANSIENT = 'gtp_admin_error_detail';
 
 	/**
 	 * @var list<string>
@@ -75,6 +84,8 @@ final class AdminModule implements Module {
 		add_action( 'admin_post_gtp_purge', array( $this, 'purge' ) );
 		add_action( 'admin_post_gtp_cloudflare_sync', array( $this, 'cloudflareSync' ) );
 		add_action( 'admin_post_gtp_cloudflare_preview', array( $this, 'cloudflarePreview' ) );
+		add_action( 'admin_post_gtp_cloudflare_diagnose', array( $this, 'cloudflareDiagnose' ) );
+		add_action( 'admin_post_gtp_cloudflare_token', array( $this, 'cloudflareProvisionToken' ) );
 		add_action( 'admin_post_gtp_purge_verify', array( $this, 'purgeVerify' ) );
 		add_action( 'admin_post_gtp_commerce_safety', array( $this, 'commerceSafety' ) );
 		add_action( 'admin_post_gtp_css_training', array( $this, 'cssTraining' ) );
@@ -386,33 +397,33 @@ final class AdminModule implements Module {
 		$factory  = new ClientFactory();
 		$client   = $factory->create( $settings );
 		if ( is_wp_error( $client ) ) {
-			$this->redirect( $client->get_error_code(), 'cloudflare' );
+			$this->redirectError( $client, 'cloudflare' );
 		}
 
 		$zoneId = (string) $settings['cloudflare']['zone_id'];
 		if ( '' === $zoneId ) {
 			$zone = $client->zoneByName( $factory->domain( $settings ) );
 			if ( is_wp_error( $zone ) ) {
-				$this->redirect( $zone->get_error_code(), 'cloudflare' );
+				$this->redirectError( $zone, 'cloudflare' );
 			}
 			$zoneId                            = (string) ( $zone['id'] ?? '' );
 			$settings['cloudflare']['zone_id'] = $zoneId;
 		}
 
+		$host   = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
 		$cache  = apply_filters( 'gt_performance_cache_policy', (array) $settings['cache'] );
-		$result = ( new RuleManager( $client ) )->sync( $zoneId, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ), $cache );
+		$result = ( new RuleManager( $client ) )->sync( $zoneId, $host, $cache );
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $result->get_error_code(), 'cloudflare' );
+			// Record what the zone looks like even though the write failed, so the
+			// tab can still show which rule is live and how far it has drifted.
+			$this->storeCloudflarePlan( $client, $zoneId, $host, $cache );
+			$this->redirectError( $result, 'cloudflare' );
 		}
 
-		$settings['cloudflare']['enabled']     = true;
+		$settings['cloudflare']['enabled']    = true;
 		$settings['cloudflare']['drift_hash'] = hash( 'sha256', (string) wp_json_encode( $cache ) );
 		Settings::save( $settings );
-		$plan = ( new RuleManager( $client ) )->preview( $zoneId, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ), $cache );
-		if ( ! is_wp_error( $plan ) ) {
-			$plan['checked_at'] = current_time( 'mysql', true );
-			update_option( 'gt_performance_cloudflare_plan', $plan, false );
-		}
+		$this->storeCloudflarePlan( $client, $zoneId, $host, $cache );
 		$this->redirect( 'cloudflare-synced', 'cloudflare' );
 	}
 
@@ -422,27 +433,66 @@ final class AdminModule implements Module {
 		$factory  = new ClientFactory();
 		$client   = $factory->create( $settings );
 		if ( is_wp_error( $client ) ) {
-			$this->redirect( $client->get_error_code(), 'cloudflare' );
+			$this->redirectError( $client, 'cloudflare' );
 		}
 
 		$zoneId = (string) $settings['cloudflare']['zone_id'];
 		if ( '' === $zoneId ) {
 			$zone = $client->zoneByName( $factory->domain( $settings ) );
 			if ( is_wp_error( $zone ) ) {
-				$this->redirect( $zone->get_error_code(), 'cloudflare' );
+				$this->redirectError( $zone, 'cloudflare' );
 			}
 			$zoneId = (string) ( $zone['id'] ?? '' );
 		}
 
+		$host  = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
 		$cache = apply_filters( 'gt_performance_cache_policy', (array) $settings['cache'] );
-		$plan  = ( new RuleManager( $client ) )->preview( $zoneId, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ), $cache );
+		$plan  = ( new RuleManager( $client ) )->preview( $zoneId, $host, $cache );
 		if ( is_wp_error( $plan ) ) {
-			$this->redirect( $plan->get_error_code(), 'cloudflare' );
+			$this->redirectError( $plan, 'cloudflare' );
 		}
 
 		$plan['checked_at'] = current_time( 'mysql', true );
 		update_option( 'gt_performance_cloudflare_plan', $plan, false );
 		$this->redirect( 'cloudflare-previewed', 'cloudflare' );
+	}
+
+	/**
+	 * Walk the connection one stage at a time and report the stage that breaks.
+	 */
+	public function cloudflareDiagnose(): void {
+		$this->guard( 'gtp_cloudflare_diagnose' );
+		$report = ( new ConnectionDiagnostics() )->run();
+		$this->redirect( empty( $report['ok'] ) ? 'cloudflare-diagnosed-fail' : 'cloudflare-diagnosed-ok', 'cloudflare' );
+	}
+
+	/**
+	 * Mint a least-privilege Cloudflare token from the stored Global API Key.
+	 */
+	public function cloudflareProvisionToken(): void {
+		$this->guard( 'gtp_cloudflare_token' );
+		$created = ( new TokenProvisioner() )->provision();
+		if ( is_wp_error( $created ) ) {
+			$this->redirectError( $created, 'cloudflare' );
+		}
+
+		$this->redirect( 'cloudflare-token-created', 'cloudflare' );
+	}
+
+	/**
+	 * Best-effort refresh of the stored rule plan. Never fatal: this only powers a
+	 * status panel, so a failure here must not mask the operation that ran before it.
+	 *
+	 * @param array<string, mixed> $cache Cache policy.
+	 */
+	private function storeCloudflarePlan( ApiClient $client, string $zoneId, string $host, array $cache ): void {
+		$plan = ( new RuleManager( $client ) )->preview( $zoneId, $host, $cache );
+		if ( is_wp_error( $plan ) ) {
+			return;
+		}
+
+		$plan['checked_at'] = current_time( 'mysql', true );
+		update_option( 'gt_performance_cloudflare_plan', $plan, false );
 	}
 
 	public function purgeVerify(): void {
@@ -608,8 +658,18 @@ final class AdminModule implements Module {
 		}
 
 		$details = $this->noticeDetails( $notice );
+
+		// The mapped sentence says which stage failed; this says what the upstream
+		// service actually reported. Without it every failure reads the same.
+		$reason = get_transient( self::ERROR_DETAIL_TRANSIENT );
+		delete_transient( self::ERROR_DETAIL_TRANSIENT );
 		?>
-		<div class="notice notice-<?php echo esc_attr( $details['type'] ); ?> is-dismissible gtp-notice"><p><?php echo esc_html( $details['message'] ); ?></p></div>
+		<div class="notice notice-<?php echo esc_attr( $details['type'] ); ?> is-dismissible gtp-notice">
+			<p><?php echo esc_html( $details['message'] ); ?></p>
+			<?php if ( is_string( $reason ) && '' !== $reason ) : ?>
+				<p class="gtp-notice__reason"><strong><?php esc_html_e( 'Reported reason:', 'gt-performance' ); ?></strong> <?php echo esc_html( $reason ); ?></p>
+			<?php endif; ?>
+		</div>
 		<?php
 	}
 
@@ -976,7 +1036,121 @@ final class AdminModule implements Module {
 			</div>
 			<?php $this->actionButton( 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
 		</section>
+		<?php $this->renderCloudflareToken( $settings ); ?>
+		<?php $this->renderCloudflareDiagnostics(); ?>
 		<?php $this->renderCloudflarePlan(); ?>
+		<?php
+	}
+
+	/**
+	 * Routes for obtaining the API token this integration needs.
+	 *
+	 * Cloudflare has no authorization flow that lets a third-party application sign
+	 * in to someone's account, so there are exactly two honest options: create the
+	 * token by hand in the dashboard, or have the plugin mint one over the API using
+	 * an account-wide Global API Key that is already on file.
+	 *
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderCloudflareToken( array $settings ): void {
+		$provisioner = new TokenProvisioner();
+		$canProvision = $provisioner->canProvision( $settings );
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Get an API token', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'The connection needs a token carrying exactly these three permissions, scoped to this site\'s zone:', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<ul class="gtp-permission-list">
+				<?php foreach ( $provisioner->requiredPermissions() as $permission ) : ?>
+					<li><code><?php echo esc_html( $permission ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+			<p class="gtp-panel-note">
+				<a class="button button-secondary" href="<?php echo esc_url( $provisioner->templateUrl( $settings ) ); ?>" target="_blank" rel="noopener noreferrer">
+					<?php esc_html_e( 'Create token at Cloudflare', 'gt-performance' ); ?>
+				</a>
+				<?php esc_html_e( 'Opens the Create Token form with the name and zone filled in. Cloudflare does not currently preselect the permission groups, so pick the three above from the dropdowns, then paste the token into the Scoped API token field and save.', 'gt-performance' ); ?>
+			</p>
+			<?php if ( $canProvision ) : ?>
+				<div class="gtp-operation-panel">
+					<div>
+						<h4><?php esc_html_e( 'Or create it automatically', 'gt-performance' ); ?></h4>
+						<p><?php esc_html_e( 'A Global API Key is on file, so GT Performance can create the zone-scoped token for you and save it. The new token is tested before it replaces the current credentials. Clear the Global API Key afterwards: it grants far more than this plugin needs.', 'gt-performance' ); ?></p>
+					</div>
+					<?php $this->actionButton( 'gtp_cloudflare_token', __( 'Create scoped token', 'gt-performance' ) ); ?>
+				</div>
+			<?php else : ?>
+				<p class="gtp-panel-note"><?php esc_html_e( 'Cloudflare does not allow an application to sign in to your account, so the token has to be created in the dashboard. Saving a Global API Key and account email here would let GT Performance mint the scoped token over the API instead.', 'gt-performance' ); ?></p>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Show the per-stage connection check so a failure names its own cause.
+	 */
+	private function renderCloudflareDiagnostics(): void {
+		$report = ( new ConnectionDiagnostics() )->last();
+		$labels = array(
+			'pass' => __( 'Pass', 'gt-performance' ),
+			'fail' => __( 'Failed', 'gt-performance' ),
+			'warn' => __( 'Warning', 'gt-performance' ),
+			'skip' => __( 'Not checked', 'gt-performance' ),
+		);
+		$tones  = array(
+			'pass' => 'success',
+			'fail' => 'danger',
+			'warn' => 'warning',
+			'skip' => 'neutral',
+		);
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Connection check', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Walks credentials, authentication, zone lookup, and cache-rule read and write in order, and reports the exact stage and reason for any failure. The write stage rewrites the managed rule with its own current contents, so it changes nothing.', 'gt-performance' ); ?></p>
+				</div>
+				<?php $this->actionButton( 'gtp_cloudflare_diagnose', __( 'Run connection check', 'gt-performance' ) ); ?>
+			</div>
+			<?php if ( null === $report ) : ?>
+				<p class="gtp-panel-note"><?php esc_html_e( 'No connection check has been run yet.', 'gt-performance' ); ?></p>
+			<?php else : ?>
+				<p class="gtp-panel-note"><strong><?php echo esc_html( (string) ( $report['summary'] ?? '' ) ); ?></strong></p>
+				<div class="gtp-table-wrap">
+					<table class="widefat striped gtp-report-table">
+						<thead>
+							<tr>
+								<th scope="col"><?php esc_html_e( 'Stage', 'gt-performance' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Result', 'gt-performance' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Detail', 'gt-performance' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+						<?php foreach ( (array) ( $report['steps'] ?? array() ) as $step ) : ?>
+							<?php $status = (string) ( $step['status'] ?? 'skip' ); ?>
+							<tr>
+								<th scope="row"><?php echo esc_html( (string) ( $step['label'] ?? '' ) ); ?></th>
+								<td><span class="gtp-status gtp-status--<?php echo esc_attr( $tones[ $status ] ?? 'neutral' ); ?>"><?php echo esc_html( $labels[ $status ] ?? $status ); ?></span></td>
+								<td><?php echo esc_html( (string) ( $step['detail'] ?? '' ) ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+				<p class="gtp-panel-note">
+					<?php
+					printf(
+						/* translators: %s: UTC timestamp of the last connection check. */
+						esc_html__( 'Last checked %s UTC.', 'gt-performance' ),
+						esc_html( (string) ( $report['checked_at'] ?? '' ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+		</section>
 		<?php
 	}
 
@@ -1089,8 +1263,27 @@ final class AdminModule implements Module {
 					<div><dt><?php esc_html_e( 'Free rule budget', 'gt-performance' ); ?></dt><dd><?php echo esc_html( sprintf( '%d / %d', (int) ( $plan['used'] ?? 0 ), (int) ( $plan['limit'] ?? 10 ) ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Managed-rule drift', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $plan['drift'] ) ? __( 'Needs reconciliation', 'gt-performance' ) : __( 'In sync', 'gt-performance' ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Potential overlaps', 'gt-performance' ); ?></dt><dd><?php echo esc_html( number_format_i18n( count( (array) ( $plan['conflicts'] ?? array() ) ) ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Custom cache key', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $plan['custom_key'] ) ? __( 'Applied', 'gt-performance' ) : __( 'Not supported on this plan, so query-string exclusions are skipped', 'gt-performance' ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Last checked', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $plan['checked_at'] ?? __( 'Unknown', 'gt-performance' ) ) ); ?></dd></div>
 				</dl>
+					<?php if ( ! empty( $plan['conflicts'] ) ) : ?>
+						<h4><?php esc_html_e( 'Other cache rules that also match this site', 'gt-performance' ); ?></h4>
+						<p class="gtp-panel-note"><?php esc_html_e( 'These rules sit in the same phase and can override the managed rule. A rule that never names a hostname applies to every hostname in the zone.', 'gt-performance' ); ?></p>
+						<ul class="gtp-conflict-list">
+							<?php foreach ( (array) $plan['conflicts'] as $conflict ) : ?>
+								<li>
+									<strong><?php echo esc_html( (string) ( $conflict['description'] ?? __( 'Untitled rule', 'gt-performance' ) ) ); ?></strong>
+									<?php if ( 'every-host' === ( $conflict['scope'] ?? '' ) ) : ?>
+										<em><?php esc_html_e( '(matches every hostname)', 'gt-performance' ); ?></em>
+									<?php endif; ?>
+									<?php if ( ! empty( $conflict['bypasses'] ) ) : ?>
+										<em><?php esc_html_e( '(bypasses cache)', 'gt-performance' ); ?></em>
+									<?php endif; ?>
+									<code><?php echo esc_html( (string) ( $conflict['expression'] ?? '' ) ); ?></code>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
 				<div class="gtp-code-detail">
 					<strong><?php esc_html_e( 'Compiled expression', 'gt-performance' ); ?></strong>
 					<code><?php echo esc_html( (string) ( $plan['expression'] ?? '' ) ); ?></code>
@@ -2350,6 +2543,22 @@ PHP;
 	 * otherwise purging from the dashboard would dump the visitor on Tools.
 	 * Every caller verifies its nonce in guard() before reaching this.
 	 */
+	/**
+	 * Redirect after a failure, keeping the reason the upstream service gave.
+	 *
+	 * The notice map can only translate an error code into a generic sentence. The
+	 * specific text -- a Cloudflare permission complaint, an expired token, a DNS
+	 * failure -- lives on the WP_Error and is otherwise thrown away at this point.
+	 */
+	private function redirectError( \WP_Error $error, string $tab ): never {
+		$reason = trim( $error->get_error_message() );
+		if ( '' !== $reason ) {
+			set_transient( self::ERROR_DETAIL_TRANSIENT, $reason, 5 * MINUTE_IN_SECONDS );
+		}
+
+		$this->redirect( $error->get_error_code(), $tab );
+	}
+
 	private function redirect( string $notice, string $tab ): never {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by the calling action handler.
 		$return = isset( $_POST['gtp_return'] ) ? sanitize_key( (string) wp_unslash( $_POST['gtp_return'] ) ) : '';
@@ -2436,6 +2645,9 @@ PHP;
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
 			'cloudflare-synced'         => array( __( 'Cloudflare connected and the managed cache rule was synchronized.', 'gt-performance' ), 'success' ),
 			'cloudflare-previewed'      => array( __( 'The live Cloudflare rule plan was checked without changing it.', 'gt-performance' ), 'success' ),
+			'cloudflare-diagnosed-ok'   => array( __( 'Every Cloudflare connection stage passed, including writing cache rules.', 'gt-performance' ), 'success' ),
+			'cloudflare-token-created'  => array( __( 'A zone-scoped Cloudflare API token was created and saved. The Global API Key is no longer needed here and can be cleared.', 'gt-performance' ), 'success' ),
+			'cloudflare-diagnosed-fail' => array( __( 'The Cloudflare connection check stopped at a failing stage. The results below name the exact cause.', 'gt-performance' ), 'error' ),
 			'purge-verified'            => array( __( 'The origin artifact was removed and the refreshed public response passed verification.', 'gt-performance' ), 'success' ),
 			'purge-warning'             => array( __( 'The purge completed, but one or more verification signals need review.', 'gt-performance' ), 'warning' ),
 			'commerce-safety-pass'      => array( __( 'Every active commerce cache-policy check and live protection check passed.', 'gt-performance' ), 'success' ),
@@ -2467,7 +2679,8 @@ PHP;
 			'gtp_cloudflare_global_key' => array( __( 'Enter a Cloudflare Global API Key, save the settings, then connect again.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_zone'       => array( __( 'No active Cloudflare zone matched this domain. Check the domain or enter the Zone ID.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_json'       => array( __( 'Cloudflare returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_api'        => array( __( 'Cloudflare rejected the request. Check the credentials and required zone permissions.', 'gt-performance' ), 'error' ),
+			'gtp_cloudflare_api'        => array( __( 'Cloudflare rejected the request. Editing cache rules needs an API token with Zone → Cache Rules → Edit (permission group "Cache Settings Write"), plus Zone Read and Cache Purge. Run the connection check for the failing stage.', 'gt-performance' ), 'error' ),
+			'gtp_cloudflare_transport'  => array( __( 'WordPress could not reach the Cloudflare API at all, so this is a network or firewall problem rather than a credential problem.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_ruleset'    => array( __( 'Cloudflare did not return the cache ruleset needed to finish setup.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_rule_budget' => array( __( 'The Cloudflare Free Cache Rules budget is full. Remove an unused rule or reconnect the existing GT Performance rule.', 'gt-performance' ), 'warning' ),
 			'gtp_xcloud_token'         => array( __( 'Enter an xCloud API token with read:sites and write:sites scopes, save, then connect again.', 'gt-performance' ), 'error' ),

@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc.2
+Stable tag: 1.0.0-rc.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,15 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-rc.3 =
+* Fixed Cloudflare cache rule synchronization failing outright on any site with more than one bypassed query parameter. Each one compiled to its own `concat()` call, and Cloudflare rejects an expression calling `concat` more than once, so the managed rule silently stopped updating.
+* Fixed the managed rule always reporting configuration drift on plans without custom cache keys. Drift was measured against a rule shape those plans cannot store, so reconciliation never finished no matter how often it ran.
+* Cache rule conflicts now include rules that never name a hostname. A catch-all rule applies to every hostname in the zone and previously went unreported.
+* Cloudflare failures now show the reason Cloudflare gave, including its numeric error code, instead of one generic message for every kind of failure. Unreachable-API failures are reported separately from rejected requests.
+* Added a Cloudflare connection check that walks credentials, authentication, zone lookup, and cache rule read and write in order and names the stage that fails. The write stage rewrites the managed rule with its own current contents, so it changes nothing.
+* Added an API token panel listing the exact permissions required, a Cloudflare token-creation link, and optional automatic creation of a zone-scoped token when a Global API Key is available. New tokens are exercised before they replace working credentials.
+* A failed synchronization now still records the live rule plan, so the screen shows the current state instead of appearing to have never run.
 
 = 1.0.0-rc.2 =
 * Fixed a fatal "Allowed memory size exhausted" error when updating the plugin. Clearing the update cache ran inside WordPress's own update-transient deletion hook and could be re-entered by any other plugin listening for deleted transients or options, recursing until PHP ran out of stack.

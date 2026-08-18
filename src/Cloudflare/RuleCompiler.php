@@ -14,10 +14,18 @@ final class RuleCompiler {
 	public const FREE_RULE_LIMIT  = 10;
 
 	/**
+	 * Compile the managed cache rule.
+	 *
+	 * A custom cache key is an Enterprise capability. On plans that reject it the
+	 * write succeeds only after RuleManager strips it, so the stored rule can never
+	 * carry one. Callers that compare against the stored rule must pass
+	 * $allowCustomKey = false, or every comparison reports drift that no sync can
+	 * ever resolve.
+	 *
 	 * @param array<string, mixed> $cache Cache policy.
 	 * @return array<string, mixed>
 	 */
-	public function rule( string $host, array $cache, int $edgeTtl = 0 ): array {
+	public function rule( string $host, array $cache, int $edgeTtl = 0, bool $allowCustomKey = true ): array {
 		$ignored = array_values( array_filter( array_map( 'strval', (array) ( $cache['ignored_query_params'] ?? array() ) ) ) );
 		$edgeTtl = max( 0, min( 31536000, $edgeTtl ) );
 		$action  = array(
@@ -37,7 +45,7 @@ final class RuleCompiler {
 			),
 		);
 
-		if ( $ignored ) {
+		if ( $ignored && $allowCustomKey ) {
 			$action['cache_key']['custom_key'] = array(
 				'query_string' => array(
 					'exclude' => array( 'list' => $ignored ),
@@ -60,10 +68,10 @@ final class RuleCompiler {
 	 * @param list<array<string, mixed>> $existingRules Existing entrypoint rules.
 	 * @return array<string, mixed>
 	 */
-	public function plan( string $host, array $cache, array $existingRules, int $limit = self::FREE_RULE_LIMIT, int $edgeTtl = 0 ): array {
-		$expected    = $this->rule( $host, $cache, $edgeTtl );
-		$managed     = null;
-		$conflicts   = array();
+	public function plan( string $host, array $cache, array $existingRules, int $limit = self::FREE_RULE_LIMIT, int $edgeTtl = 0, bool $allowCustomKey = true ): array {
+		$expected       = $this->rule( $host, $cache, $edgeTtl, $allowCustomKey );
+		$managed        = null;
+		$conflicts      = array();
 		$normalizedHost = preg_replace( '/:\d+$/', '', strtolower( $host ) );
 
 		foreach ( $existingRules as $rule ) {
@@ -72,17 +80,29 @@ final class RuleCompiler {
 				continue;
 			}
 
-			if (
-				'set_cache_settings' === (string) ( $rule['action'] ?? '' )
-				&& ! empty( $rule['enabled'] )
-				&& str_contains( (string) ( $rule['expression'] ?? '' ), (string) $normalizedHost )
-			) {
-				$conflicts[] = array(
-					'id'          => $this->plainText( (string) ( $rule['id'] ?? '' ), 64 ),
-					'ref'         => $this->plainText( (string) ( $rule['ref'] ?? '' ), 96 ),
-					'description' => $this->plainText( (string) ( $rule['description'] ?? '' ), 160 ),
-				);
+			if ( 'set_cache_settings' !== (string) ( $rule['action'] ?? '' ) || empty( $rule['enabled'] ) ) {
+				continue;
 			}
+
+			// A rule that never mentions http.host applies to every hostname in the
+			// zone, so a catch-all such as "true" overlaps this site even though the
+			// hostname never appears in its expression.
+			$expression = (string) ( $rule['expression'] ?? '' );
+			$namesHost  = str_contains( $expression, (string) $normalizedHost );
+			$anyHost    = ! str_contains( $expression, 'http.host' );
+			if ( ! $namesHost && ! $anyHost ) {
+				continue;
+			}
+
+			$parameters  = (array) ( $rule['action_parameters'] ?? array() );
+			$conflicts[] = array(
+				'id'          => $this->plainText( (string) ( $rule['id'] ?? '' ), 64 ),
+				'ref'         => $this->plainText( (string) ( $rule['ref'] ?? '' ), 96 ),
+				'description' => $this->plainText( (string) ( $rule['description'] ?? '' ), 160 ),
+				'expression'  => $this->plainText( $expression, 300 ),
+				'scope'       => $anyHost ? 'every-host' : 'this-host',
+				'bypasses'    => array_key_exists( 'cache', $parameters ) && false === $parameters['cache'],
+			);
 		}
 
 		$expectedHash = $this->fingerprint( $expected );
@@ -99,6 +119,7 @@ final class RuleCompiler {
 			'drift'           => null === $managed || ! hash_equals( $expectedHash, $liveHash ),
 			'expected_hash'   => $expectedHash,
 			'live_hash'       => $liveHash,
+			'custom_key'      => isset( $expected['action_parameters']['cache_key']['custom_key'] ),
 			'expression'      => (string) $expected['expression'],
 			'expression_size' => strlen( (string) $expected['expression'] ),
 			'conflicts'       => $conflicts,

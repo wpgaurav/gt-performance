@@ -125,4 +125,87 @@ final class RuleCompilerTest extends TestCase {
 		);
 		self::assertSame( array( 'mode' => 'respect_origin' ), $respect['action_parameters']['edge_ttl'] );
 	}
+
+	public function testDroppingTheCustomCacheKeyRemovesQueryStringExclusions(): void {
+		$compiler = new RuleCompiler();
+
+		$ideal    = $compiler->rule( 'example.com', $this->cachePolicy(), 0, true );
+		$degraded = $compiler->rule( 'example.com', $this->cachePolicy(), 0, false );
+
+		self::assertArrayHasKey( 'custom_key', $ideal['action_parameters']['cache_key'] );
+		self::assertArrayNotHasKey( 'custom_key', $degraded['action_parameters']['cache_key'] );
+	}
+
+	public function testDriftClearsWhenComparedAgainstTheRuleShapeThePlanCanStore(): void {
+		$compiler = new RuleCompiler();
+
+		// What Cloudflare accepted on a plan that rejects a custom cache key.
+		$stored = $compiler->rule( 'example.com', $this->cachePolicy(), 0, false );
+
+		// Comparing that against the ideal rule reports drift no sync can ever clear.
+		$optimistic = $compiler->plan( 'example.com', $this->cachePolicy(), array( $stored ), RuleCompiler::FREE_RULE_LIMIT, 0, true );
+		self::assertTrue( $optimistic['drift'] );
+
+		$accurate = $compiler->plan( 'example.com', $this->cachePolicy(), array( $stored ), RuleCompiler::FREE_RULE_LIMIT, 0, false );
+		self::assertFalse( $accurate['drift'] );
+		self::assertSame( 'none', $accurate['operation'] );
+		self::assertFalse( $accurate['custom_key'] );
+	}
+
+	public function testPlanReportsACatchAllRuleThatNeverNamesTheHost(): void {
+		$plan = ( new RuleCompiler() )->plan(
+			'example.com',
+			$this->cachePolicy(),
+			array(
+				array(
+					'id'                => 'bypass-everything',
+					'description'       => 'Bypass Cache for Everything',
+					'action'            => 'set_cache_settings',
+					'expression'        => 'true',
+					'enabled'           => true,
+					'action_parameters' => array( 'cache' => false ),
+				),
+			)
+		);
+
+		self::assertCount( 1, $plan['conflicts'] );
+		self::assertSame( 'every-host', $plan['conflicts'][0]['scope'] );
+		self::assertTrue( $plan['conflicts'][0]['bypasses'] );
+	}
+
+	public function testPlanIgnoresRulesScopedToADifferentHost(): void {
+		$plan = ( new RuleCompiler() )->plan(
+			'example.com',
+			$this->cachePolicy(),
+			array(
+				array(
+					'id'          => 'other-site',
+					'description' => 'Another site in the same zone',
+					'action'      => 'set_cache_settings',
+					'expression'  => '(http.host eq "shop.example.net")',
+					'enabled'     => true,
+				),
+			)
+		);
+
+		self::assertSame( array(), $plan['conflicts'] );
+	}
+
+	public function testPlanIgnoresDisabledOverlappingRules(): void {
+		$plan = ( new RuleCompiler() )->plan(
+			'example.com',
+			$this->cachePolicy(),
+			array(
+				array(
+					'id'          => 'switched-off',
+					'description' => 'Disabled catch-all',
+					'action'      => 'set_cache_settings',
+					'expression'  => 'true',
+					'enabled'     => false,
+				),
+			)
+		);
+
+		self::assertSame( array(), $plan['conflicts'] );
+	}
 }

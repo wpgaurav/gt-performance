@@ -45,8 +45,33 @@ final class RuleExpressionTest extends TestCase {
 		);
 
 		// The boundary-anchored form must not degrade to the substring `contains "s="`,
-		// which would also exclude unrelated params such as `utms=`.
-		self::assertStringContainsString( 'concat("&", http.request.uri.query) contains "&s="', $expression );
+		// which would also exclude unrelated params such as `utms=`. Both the leading
+		// parameter and any later one have to be covered.
+		self::assertStringContainsString( 'starts_with(http.request.uri.query, "s=")', $expression );
+		self::assertStringContainsString( 'http.request.uri.query contains "&s="', $expression );
 		self::assertStringNotContainsString( 'query contains "s="', $expression );
+	}
+
+	public function test_expression_never_calls_concat(): void {
+		// Cloudflare rejects an expression that calls concat more than once (error
+		// 20127), so a rule carrying several bypass parameters could never be saved.
+		$expression = ( new RuleExpression() )->compile(
+			'www.example.com',
+			array(
+				'bypass_query_params' => array( 'add-to-cart', 'wc-ajax', 'preview', 's', 'elementor-preview', 'fluent-cart', 'customize_changeset_uuid' ),
+			)
+		);
+
+		self::assertStringNotContainsString( 'concat(', $expression );
+	}
+
+	public function test_every_bypass_parameter_survives_compilation(): void {
+		$parameters = array( 'add-to-cart', 'wc-ajax', 'preview', 's' );
+		$expression = ( new RuleExpression() )->compile( 'www.example.com', array( 'bypass_query_params' => $parameters ) );
+
+		foreach ( $parameters as $parameter ) {
+			self::assertStringContainsString( 'starts_with(http.request.uri.query, "' . $parameter . '=")', $expression );
+			self::assertStringContainsString( 'http.request.uri.query contains "&' . $parameter . '="', $expression );
+		}
 	}
 }
