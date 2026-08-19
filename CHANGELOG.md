@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-rc.5 - 2026-08-19
+
+### Fixed
+
+- Fixed the Operations cards sitting flush against the panel edge while the panel heading above them was inset, and fixed their rows sitting 40px apart against 20px columns. The grid carried no inset of its own, and each card is a panel in its own right whose 20px bottom margin stacked on the grid gap and hung a phantom band under the last row.
+- Fixed the API token permission list and the "Install drop-ins, purge, and sync Cloudflare on the dashboard" link hanging outside the panel inset. The link now uses the existing `.gtp-inline-link` treatment, matching "View release history".
+- Fixed `.gtp-inline-link` never picking up the narrow inset at the mobile breakpoint. Its override sat in a media block declared earlier in the file than the rule it was meant to override, so source order silently discarded it.
+
+### Changed
+
+- The panel inset is now a single `--gtp-inset` token, 24px normally and 20px under 782px, replacing 26 hard-coded values and five per-class media overrides. Because the token is redefined on `.gtp-admin` rather than on each block, a rule declared later in the file can no longer defeat the responsive override, which is the defect behind the mis-inset link and permission list. Adding a new block to a panel now means using the token instead of remembering to register the class in two places.
+
 ## 1.0.0-rc.4 - 2026-08-19
 
 ### Fixed

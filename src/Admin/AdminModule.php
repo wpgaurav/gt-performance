@@ -1817,7 +1817,7 @@ PHP;
 				<div><dt><?php esc_html_e( 'Redis drop-in', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->statusLabel( $redis ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Cache directory', 'gt-performance' ); ?></dt><dd><?php echo esc_html( is_writable( Paths::cacheRoot() ) ? __( 'Writable', 'gt-performance' ) : __( 'Not writable', 'gt-performance' ) ); ?></dd></div>
 			</dl>
-			<p><a href="<?php echo esc_url( $this->tabUrl( 'dashboard' ) ); ?>"><?php esc_html_e( 'Install drop-ins, purge, and sync Cloudflare on the dashboard', 'gt-performance' ); ?></a></p>
+			<div class="gtp-inline-link"><a href="<?php echo esc_url( $this->tabUrl( 'dashboard' ) ); ?>"><?php esc_html_e( 'Install drop-ins, purge, and sync Cloudflare on the dashboard', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 		</section>
 		<?php
 		$this->renderDatabaseOptimization( $settings );

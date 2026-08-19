@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc.4
+Stable tag: 1.0.0-rc.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,11 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-rc.5 =
+* Fixed the Operations cards sitting flush against the panel edge while the heading above them was inset, and fixed their rows sitting twice as far apart as their columns.
+* Fixed the API token permission list and the dashboard link at the foot of Runtime status hanging outside the panel inset.
+* Panel spacing now comes from a single token, so a block can no longer lose its narrow mobile inset depending on where its rule happens to sit in the stylesheet.
 
 = 1.0.0-rc.4 =
 * Fixed the conflicting cache rules block rendering at three different left offsets. Its heading had no styling of its own, so it hung outside the panel inset and stacked a default heading margin on top of the note below it.

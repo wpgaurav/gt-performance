@@ -15,6 +15,7 @@
 	--gtp-danger: #b32d2e;
 	--gtp-danger-soft: #fcf0f1;
 	--gtp-radius: 8px;
+	--gtp-inset: 24px;
 	margin: 0 0 0 -20px;
 	color: var(--gtp-text);
 	background: var(--gtp-bg);
@@ -280,7 +281,7 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: 24px;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 	border-bottom: 1px solid var(--gtp-border);
 }
 
@@ -297,7 +298,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-fields {
-	padding: 0 24px;
+	padding: 0 var(--gtp-inset);
 }
 
 .gtp-field {
@@ -664,7 +665,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-database-task-list {
-	padding: 0 24px;
+	padding: 0 var(--gtp-inset);
 }
 
 .gtp-database-task {
@@ -721,7 +722,7 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: center;
 	justify-content: space-between;
 	gap: 24px;
-	padding: 18px 24px;
+	padding: 18px var(--gtp-inset);
 	background: var(--gtp-danger-soft);
 	border-top: 1px solid rgba(179, 45, 46, 0.16);
 }
@@ -738,7 +739,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-database-result {
-	padding: 18px 24px 22px;
+	padding: 18px var(--gtp-inset) 22px;
 	border-top: 1px solid var(--gtp-border);
 }
 
@@ -773,8 +774,8 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-panel > .gtp-inline-link {
-	padding-right: 24px;
-	padding-left: 24px;
+	padding-right: var(--gtp-inset);
+	padding-left: var(--gtp-inset);
 }
 
 .gtp-fields > .gtp-inline-link {
@@ -788,7 +789,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-license-form {
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 }
 
 .gtp-license-form > label {
@@ -814,7 +815,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-license-actions {
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 	border-top: 1px solid #f0f0f1;
 }
 
@@ -906,9 +907,22 @@ summary.gtp-notice-pill:focus-visible {
 	gap: 20px;
 }
 
+/* The tools grid lives inside a panel, so it carries the panel inset. The
+   dashboard grid is top level and must not. */
+.gtp-tools-grid {
+	padding: 20px var(--gtp-inset);
+}
+
+/* Each card is a panel in its own right. Its bottom margin would stack on the
+   grid gap, making rows sit 40px apart against 20px columns, and would hang a
+   phantom 20px band under the final row. */
+.gtp-tools-grid > .gtp-panel {
+	margin: 0;
+}
+
 .gtp-definition-list {
 	margin: 0;
-	padding: 0 24px;
+	padding: 0 var(--gtp-inset);
 }
 
 .gtp-definition-list > div {
@@ -955,7 +969,7 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: center;
 	justify-content: space-between;
 	gap: 24px;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 }
 
 .gtp-panel__header > div,
@@ -981,7 +995,7 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: center;
 	justify-content: space-between;
 	gap: 24px;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 }
 
 .gtp-integration-list {
@@ -1045,7 +1059,7 @@ summary.gtp-notice-pill:focus-visible {
 
 .gtp-report-table th,
 .gtp-report-table td {
-	padding: 14px 24px;
+	padding: 14px var(--gtp-inset);
 	vertical-align: top;
 }
 
@@ -1085,14 +1099,14 @@ summary.gtp-notice-pill:focus-visible {
 
 .gtp-report-note {
 	margin: 0;
-	padding: 16px 24px;
+	padding: 16px var(--gtp-inset);
 	border-top: 1px solid var(--gtp-border);
 	font-size: 12px;
 }
 
 .gtp-panel-note {
 	margin: 0 !important;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 }
 
 .gtp-panel-note--stacked p {
@@ -1111,7 +1125,7 @@ summary.gtp-notice-pill:focus-visible {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 	border-bottom: 1px solid var(--gtp-border);
 }
 
@@ -1132,7 +1146,7 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: center;
 	gap: 10px;
 	margin: 0;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 	border-top: 1px solid var(--gtp-border);
 }
 
@@ -1156,7 +1170,7 @@ summary.gtp-notice-pill:focus-visible {
 .gtp-guidance-list {
 	display: grid;
 	gap: 10px;
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 	border-top: 1px solid var(--gtp-border);
 }
 
@@ -1213,7 +1227,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-code-detail {
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 	border-top: 1px solid var(--gtp-border);
 }
 
@@ -1236,7 +1250,7 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: center;
 	justify-content: space-between;
 	gap: 20px;
-	padding: 14px 24px;
+	padding: 14px var(--gtp-inset);
 	border-top: 1px solid #f0f0f1;
 }
 
@@ -1254,7 +1268,7 @@ summary.gtp-notice-pill:focus-visible {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
-	padding: 0 24px 22px;
+	padding: 0 var(--gtp-inset) 22px;
 }
 
 .gtp-token-list code {
@@ -1265,7 +1279,7 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-policy-import {
-	padding: 20px 24px;
+	padding: 20px var(--gtp-inset);
 }
 
 .gtp-policy-import textarea {
@@ -1367,6 +1381,12 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 @media screen and (max-width: 782px) {
+	/* One flip retunes every panel inset; per-class overrides here were losing
+	   to desktop rules declared later in the file. */
+	.gtp-admin {
+		--gtp-inset: 20px;
+	}
+
 	.gtp-admin {
 		margin-left: -10px;
 		min-height: calc(100vh - 46px);
@@ -1433,21 +1453,9 @@ summary.gtp-notice-pill:focus-visible {
 		padding: 20px;
 	}
 
-	.gtp-fields,
-	.gtp-definition-list,
-	.gtp-database-task-list {
-		padding-right: 20px;
-		padding-left: 20px;
-	}
-
 	.gtp-report-table th,
 	.gtp-report-table td {
 		padding: 13px 20px;
-	}
-
-	.gtp-report-note {
-		padding-right: 20px;
-		padding-left: 20px;
 	}
 
 	.gtp-inline-form {
@@ -1459,17 +1467,6 @@ summary.gtp-notice-pill:focus-visible {
 	.gtp-inline-form .button,
 	.gtp-panel-actions .button {
 		min-height: 44px;
-	}
-
-	.gtp-panel-actions,
-	.gtp-code-detail,
-	.gtp-policy-import,
-	.gtp-panel-note,
-	.gtp-guidance-list,
-	.gtp-subhead,
-	.gtp-conflict-list {
-		padding-right: 20px;
-		padding-left: 20px;
 	}
 
 	.gtp-panel-actions--split {
@@ -1557,10 +1554,6 @@ summary.gtp-notice-pill:focus-visible {
 		min-height: 44px;
 	}
 
-	.gtp-database-result {
-		padding-right: 20px;
-		padding-left: 20px;
-	}
 }
 
 @media screen and (max-width: 520px) {
@@ -1584,7 +1577,7 @@ summary.gtp-notice-pill:focus-visible {
 
 .gtp-subhead {
 	margin: 0;
-	padding: 20px 24px 0;
+	padding: 20px var(--gtp-inset) 0;
 	font-size: 14px;
 	line-height: 1.4;
 }
@@ -1596,7 +1589,7 @@ summary.gtp-notice-pill:focus-visible {
 
 .gtp-conflict-list {
 	margin: 0;
-	padding: 0 24px 8px;
+	padding: 0 var(--gtp-inset) 8px;
 	list-style: none;
 }
 
@@ -1621,9 +1614,13 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-permission-list {
-	margin: 0 0 12px;
-	padding: 0;
+	margin: 0;
+	padding: 16px var(--gtp-inset) 0;
 	list-style: none;
+}
+
+.gtp-permission-list + .gtp-panel-note {
+	padding-top: 10px;
 }
 
 .gtp-permission-list li {
