@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc.3
+Stable tag: 1.0.0-rc.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,11 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-rc.4 =
+* Fixed the conflicting cache rules block rendering at three different left offsets. Its heading had no styling of its own, so it hung outside the panel inset and stacked a default heading margin on top of the note below it.
+* Fixed the "Or create it automatically" heading in the Cloudflare token panel inheriting browser default type and spacing instead of the plugin's heading style.
+* Admin notices are now a compact status pill instead of a full-width notice bar. Failures that carry an upstream reason gain a "Why?" disclosure that opens the detail in a popover anchored to the pill, and dismissing one clears it from the address bar so a reload cannot bring it back.
 
 = 1.0.0-rc.3 =
 * Fixed Cloudflare cache rule synchronization failing outright on any site with more than one bypassed query parameter. Each one compiled to its own `concat()` call, and Cloudflare rejects an expression calling `concat` more than once, so the managed rule silently stopped updating.

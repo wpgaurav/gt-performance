@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-rc.4 - 2026-08-19
+
+### Fixed
+
+- Fixed the "Other cache rules that also match this site" block rendering at three different left offsets. The heading had no rule at all, so it fell back to the browser default and hung outside the panel inset; the note carried the standard 24px inset; and the conflict list carried none. The heading now uses `.gtp-subhead`, the list is inset to match its siblings, and both pick up the 20px inset at the mobile breakpoint. The default `1em` heading margin stacking on top of the note's own 20px padding also left an oversized gap, which is now collapsed.
+- Fixed the "Or create it automatically" heading inside `.gtp-operation-panel` inheriting browser default type and margins. It now shares the 14px heading rule already used by the preset and database-result headings.
+
+### Changed
+
+- Admin notices are now a compact status pill instead of a full-width WordPress notice bar. When a failure carries an upstream reason, the pill gains a "Why?" disclosure that opens the detail in an anchored popover rather than pushing the page down. The popover is anchored to its own pill rather than promoted to the top layer, so it lands in the right place without depending on CSS anchor positioning, and it light-dismisses on outside click or Escape. Dismissing removes the `gtp_notice` query argument instead of hiding the node, so a reload cannot resurrect a notice that has already been read.
+
 ## 1.0.0-rc.3 - 2026-08-18
 
 ### Fixed

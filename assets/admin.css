@@ -134,11 +134,132 @@
 	line-height: 1.55;
 }
 
-.gtp-notice {
+.gtp-notice-dock {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	margin: 24px 40px 0;
 }
 
-.gtp-admin > .notice:not(.gtp-notice) {
+.gtp-notice-disclosure {
+	position: relative;
+	min-width: 0;
+}
+
+.gtp-notice-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 14px;
+	border-radius: 999px;
+	background: #f0f0f1;
+	color: var(--gtp-muted);
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+summary.gtp-notice-pill {
+	cursor: pointer;
+	list-style: none;
+}
+
+summary.gtp-notice-pill::-webkit-details-marker {
+	display: none;
+}
+
+summary.gtp-notice-pill:focus-visible {
+	outline: 2px solid var(--gtp-accent);
+	outline-offset: 2px;
+}
+
+.gtp-notice-pill__dot {
+	width: 8px;
+	height: 8px;
+	flex: 0 0 auto;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.gtp-notice-pill__label {
+	min-width: 0;
+}
+
+.gtp-notice-pill__more {
+	flex: 0 0 auto;
+	padding-left: 8px;
+	border-left: 1px solid currentColor;
+	opacity: 0.75;
+	font-weight: 500;
+}
+
+.gtp-notice-pill--success {
+	color: #006b1b;
+	background: var(--gtp-success-soft);
+}
+
+.gtp-notice-pill--warning {
+	color: #7a5300;
+	background: var(--gtp-warning-soft);
+}
+
+.gtp-notice-pill--danger {
+	color: #8a2424;
+	background: var(--gtp-danger-soft);
+}
+
+.gtp-notice-pill--info {
+	color: #1c4e73;
+	background: var(--gtp-accent-soft);
+}
+
+/* Anchored to the disclosure rather than promoted to the top layer, so it lands
+   under its own pill in every browser instead of centring on the viewport. */
+.gtp-notice-popover {
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 8px);
+	left: 0;
+	width: max-content;
+	max-width: min(520px, calc(100vw - 80px));
+	padding: 12px 14px;
+	background: var(--gtp-surface);
+	border: 1px solid var(--gtp-border);
+	border-radius: var(--gtp-radius);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+	color: var(--gtp-text);
+	font-size: 13px;
+	font-weight: 400;
+}
+
+.gtp-notice-popover strong {
+	display: block;
+	margin-bottom: 4px;
+	color: var(--gtp-muted);
+	font-size: 12px;
+	text-transform: none;
+}
+
+.gtp-notice-popover p {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.gtp-notice-dock__dismiss {
+	flex: 0 0 auto;
+	padding: 0 6px;
+	color: var(--gtp-muted);
+	font-size: 18px;
+	line-height: 1;
+	text-decoration: none;
+}
+
+.gtp-notice-dock__dismiss:hover,
+.gtp-notice-dock__dismiss:focus {
+	color: var(--gtp-text);
+}
+
+.gtp-admin > .notice {
 	margin: 24px 40px 0;
 }
 
@@ -370,7 +491,8 @@
 }
 
 .gtp-presets__heading h4,
-.gtp-database-result h4 {
+.gtp-database-result h4,
+.gtp-operation-panel h4 {
 	margin: 0;
 	font-size: 14px;
 	line-height: 1.4;
@@ -1281,16 +1403,27 @@
 		padding-left: 20px;
 	}
 
-	.gtp-notice {
+	.gtp-notice-dock,
+	.gtp-admin > .notice {
 		margin-top: 20px;
 		margin-right: 20px;
 		margin-left: 20px;
 	}
 
-	.gtp-admin > .notice:not(.gtp-notice) {
-		margin-top: 20px;
-		margin-right: 20px;
-		margin-left: 20px;
+	.gtp-notice-dock {
+		align-items: flex-start;
+	}
+
+	.gtp-notice-pill {
+		align-items: flex-start;
+	}
+
+	.gtp-notice-pill__dot {
+		margin-top: 5px;
+	}
+
+	.gtp-notice-popover {
+		max-width: calc(100vw - 56px);
 	}
 
 	.gtp-panel__header,
@@ -1332,7 +1465,9 @@
 	.gtp-code-detail,
 	.gtp-policy-import,
 	.gtp-panel-note,
-	.gtp-guidance-list {
+	.gtp-guidance-list,
+	.gtp-subhead,
+	.gtp-conflict-list {
 		padding-right: 20px;
 		padding-left: 20px;
 	}
@@ -1447,14 +1582,21 @@
 	}
 }
 
-.gtp-notice__reason {
-	margin: 4px 0 0;
-	color: var(--gtp-muted);
+.gtp-subhead {
+	margin: 0;
+	padding: 20px 24px 0;
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+/* The note carries its own 20px top padding; without this the pair reads as a gap. */
+.gtp-subhead + .gtp-panel-note {
+	padding-top: 6px;
 }
 
 .gtp-conflict-list {
-	margin: 0 0 8px;
-	padding: 0;
+	margin: 0;
+	padding: 0 24px 8px;
 	list-style: none;
 }
 

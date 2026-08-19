@@ -661,14 +661,46 @@ final class AdminModule implements Module {
 
 		// The mapped sentence says which stage failed; this says what the upstream
 		// service actually reported. Without it every failure reads the same.
-		$reason = get_transient( self::ERROR_DETAIL_TRANSIENT );
+		$reason    = get_transient( self::ERROR_DETAIL_TRANSIENT );
 		delete_transient( self::ERROR_DETAIL_TRANSIENT );
+		$hasReason = is_string( $reason ) && '' !== $reason;
+
+		$tones = array(
+			'success' => 'success',
+			'error'   => 'danger',
+			'warning' => 'warning',
+		);
+		$tone  = $tones[ (string) $details['type'] ] ?? 'info';
+
+		// Dismissing drops the query argument rather than hiding the node, so a
+		// reload cannot resurrect a notice the reader has already dealt with.
+		$dismissUrl = remove_query_arg( 'gtp_notice' );
+		$dismiss    = sprintf(
+			'<a class="gtp-notice-dock__dismiss" href="%s" aria-label="%s">&times;</a>',
+			esc_url( $dismissUrl ),
+			esc_attr__( 'Dismiss this notice', 'gt-performance' )
+		);
 		?>
-		<div class="notice notice-<?php echo esc_attr( $details['type'] ); ?> is-dismissible gtp-notice">
-			<p><?php echo esc_html( $details['message'] ); ?></p>
-			<?php if ( is_string( $reason ) && '' !== $reason ) : ?>
-				<p class="gtp-notice__reason"><strong><?php esc_html_e( 'Reported reason:', 'gt-performance' ); ?></strong> <?php echo esc_html( $reason ); ?></p>
+		<div class="gtp-notice-dock" role="status">
+			<?php if ( $hasReason ) : ?>
+				<details class="gtp-notice-disclosure" data-gtp-notice>
+					<summary class="gtp-notice-pill gtp-notice-pill--<?php echo esc_attr( $tone ); ?>">
+						<span class="gtp-notice-pill__dot" aria-hidden="true"></span>
+						<span class="gtp-notice-pill__label"><?php echo esc_html( $details['message'] ); ?></span>
+						<span class="gtp-notice-pill__more"><?php esc_html_e( 'Why?', 'gt-performance' ); ?></span>
+					</summary>
+					<div class="gtp-notice-popover">
+						<strong><?php esc_html_e( 'Reported reason', 'gt-performance' ); ?></strong>
+						<p><?php echo esc_html( $reason ); ?></p>
+					</div>
+				</details>
+			<?php else : ?>
+				<span class="gtp-notice-pill gtp-notice-pill--<?php echo esc_attr( $tone ); ?>">
+					<span class="gtp-notice-pill__dot" aria-hidden="true"></span>
+					<span class="gtp-notice-pill__label"><?php echo esc_html( $details['message'] ); ?></span>
+				</span>
 			<?php endif; ?>
+			<?php echo wp_kses_post( $dismiss ); ?>
 		</div>
 		<?php
 	}
@@ -1267,7 +1299,7 @@ final class AdminModule implements Module {
 					<div><dt><?php esc_html_e( 'Last checked', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $plan['checked_at'] ?? __( 'Unknown', 'gt-performance' ) ) ); ?></dd></div>
 				</dl>
 					<?php if ( ! empty( $plan['conflicts'] ) ) : ?>
-						<h4><?php esc_html_e( 'Other cache rules that also match this site', 'gt-performance' ); ?></h4>
+						<h4 class="gtp-subhead"><?php esc_html_e( 'Other cache rules that also match this site', 'gt-performance' ); ?></h4>
 						<p class="gtp-panel-note"><?php esc_html_e( 'These rules sit in the same phase and can override the managed rule. A rule that never names a hostname applies to every hostname in the zone.', 'gt-performance' ); ?></p>
 						<ul class="gtp-conflict-list">
 							<?php foreach ( (array) $plan['conflicts'] as $conflict ) : ?>

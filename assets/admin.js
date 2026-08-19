@@ -241,8 +241,31 @@
 		window.setInterval(refresh, 3000);
 	};
 
+	// <details> has no light dismiss of its own, so the notice popover would stay
+	// open until it was clicked again. Close it on outside click and on Escape.
+	const setupNoticePopover = () => {
+		const disclosure = document.querySelector("[data-gtp-notice]");
+		if (!disclosure) {
+			return;
+		}
+
+		document.addEventListener("click", (event) => {
+			if (disclosure.open && !disclosure.contains(event.target)) {
+				disclosure.open = false;
+			}
+		});
+
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "Escape" && disclosure.open) {
+				disclosure.open = false;
+				disclosure.querySelector("summary")?.focus();
+			}
+		});
+	};
+
 	setupCachePresets();
 	setupWordPressPresets();
 	setupIntegrationDefaults();
 	setupCssReport();
+	setupNoticePopover();
 })();
