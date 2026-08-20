@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Fixed "Remove WordPress version" pinning every visitor to pre-update core assets. Dropping `ver` from a core script or stylesheet URL leaves an address that never changes across a WordPress release, so browsers and CDNs holding it under a long `max-age` keep serving the old bytes indefinitely. The version is now replaced with a stable site-specific hash instead of removed, which hides the release just as well and still busts the cache on every update. Symptom on a 7.1 upgrade: the new admin bar site icon rendered at full size because the cached stylesheet predated the `.site-icon` rules.
+
 ## 1.0.0-rc.5 - 2026-08-19
 
 ### Fixed

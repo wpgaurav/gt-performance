@@ -232,10 +232,20 @@ final class DatabaseModule implements Module {
 		$query = (string) wp_parse_url( $src, PHP_URL_QUERY );
 		parse_str( $query, $params );
 		if ( isset( $params['ver'] ) && get_bloginfo( 'version' ) === (string) $params['ver'] ) {
-			return remove_query_arg( 'ver', $src );
+			// Replace the version instead of dropping it. An unversioned URL never changes
+			// across a core update, so long-lived browser and CDN caches keep serving the
+			// pre-update copy of every core script and stylesheet.
+			return add_query_arg( 'ver', self::obfuscatedVersion( (string) $params['ver'] ), $src );
 		}
 
 		return $src;
+	}
+
+	/**
+	 * Site-specific, stable stand-in for a core version string.
+	 */
+	private static function obfuscatedVersion( string $version ): string {
+		return substr( wp_hash( 'gtp-asset-version|' . $version ), 0, 12 );
 	}
 
 	/**
