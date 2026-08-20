@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-rc.6 - 2026-08-20
 
 ### Fixed
 

@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc.5
+Stable tag: 1.0.0-rc.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
 
 == Changelog ==
+
+= 1.0.0-rc.6 =
+* Fixed "Remove WordPress version" leaving browsers and CDNs pinned to pre-update core scripts and stylesheets. Dropping the version from a core asset URL left an address that never changed across a WordPress release, so a cached copy could survive an upgrade for as long as its max-age allowed. The version is now masked rather than removed.
 
 = 1.0.0-rc.5 =
 * Fixed the Operations cards sitting flush against the panel edge while the heading above them was inset, and fixed their rows sitting twice as far apart as their columns.
