@@ -59,20 +59,19 @@ if [[ "$(gh repo view --json visibility --jq .visibility)" == "PUBLIC" ]]; then
 fi
 ```
 
-## Synchronize FluentCart
+## Deploy to WordPress.org
 
-GitHub is the package authority. Do not upload the locally built Studio ZIP to FluentCart because ZIP timestamps can produce a different checksum even when the package tree is equivalent.
+GT Performance is distributed free through the WordPress.org plugin directory, which is also the update authority. GitHub releases remain the source-of-truth archive.
 
-After the GitHub release succeeds:
+Before every deploy:
 
-1. download the release ZIP and checksum from GitHub;
-2. verify the checksum, package root, plugin header, and stable tag;
-3. copy that exact ZIP into FluentCart storage;
-4. preserve the previous product-download row and file for rollback;
-5. create a new product-download row with a unique identifier and a **relative** `file_path` inside FluentCart's local storage directory;
-6. in one transaction, assert the expected previous version/file ID, then update `license_settings.version`, `license_settings.global_update_file`, WordPress icon/banner/readme metadata, and the FluentCart changelog;
-7. confirm an unlicensed version request returns metadata without a package;
-8. create a temporary non-customer license, activate it from Studio, download the protected ZIP, and compare its size and SHA-256 with the GitHub release;
-9. deactivate and remove the temporary license, activation, and site rows.
+1. run `wp plugin check gt-performance` (Plugin Check) against the built ZIP on a Studio site and resolve any errors;
+2. verify the checksum, package root, plugin header, and stable tag of the release ZIP.
 
-The previous row and file are removed only in a later maintenance window after rollback is no longer required.
+Deploy from the release ZIP tree into the WordPress.org SVN repository:
+
+1. copy the extracted package tree over `trunk/` (the ZIP already excludes development files, tests, and build tooling, and includes `vendor/` with `composer.json`);
+2. copy `trunk/` to `tags/<version>/`;
+3. keep directory assets (banners, icons) in the top-level `assets/` SVN directory from `distribution-assets/wordpress-org/`;
+4. confirm `Stable tag` in `trunk/readme.txt` names the new tag, then commit;
+5. verify the directory page renders the new version and changelog, and that a site running the previous version sees the update.

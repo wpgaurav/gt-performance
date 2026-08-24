@@ -58,7 +58,7 @@ final class UrlRewriter {
 
 		$isRootRelative = str_starts_with( $url, '/' ) && ! str_starts_with( $url, '//' );
 		$parseTarget    = str_starts_with( $url, '//' ) ? 'https:' . $url : $url;
-		$parts          = $isRootRelative ? parse_url( 'https://gtp.invalid' . $url ) : parse_url( $parseTarget );
+		$parts          = $isRootRelative ? wp_parse_url( 'https://gtp.invalid' . $url ) : wp_parse_url( $parseTarget );
 		if ( ! is_array( $parts ) ) {
 			return $url;
 		}
@@ -160,7 +160,7 @@ final class UrlRewriter {
 	}
 
 	private static function normalizeBase( string $url ): string {
-		$parts = parse_url( trim( $url ) );
+		$parts = wp_parse_url( trim( $url ) );
 		if ( ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || empty( $parts['host'] ) ) {
 			return '';
 		}
@@ -181,7 +181,7 @@ final class UrlRewriter {
 	private static function hosts( array $urls ): array {
 		$hosts = array();
 		foreach ( $urls as $url ) {
-			$host = parse_url( $url, PHP_URL_HOST );
+			$host = wp_parse_url( $url, PHP_URL_HOST );
 			if ( is_string( $host ) && '' !== $host ) {
 				$hosts[] = strtolower( $host );
 			}

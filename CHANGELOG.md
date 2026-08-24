@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 - 2026-08-24
+
+### Changed
+
+- First stable release, distributed free through the WordPress.org plugin directory.
+- Removed FluentCart licensing and the custom updater. Plugin updates now arrive through the normal WordPress.org update flow with no license key, activation, or weekly verification cron. The License tab, its admin-post actions, and the `gt_performance_verify_license` schedule are gone; deactivation and uninstall clean up state left by earlier licensed builds.
+- Fleet Console no longer requires a license. Policy bundles are signed with a key derived from a shared fleet signing secret saved on each site (encrypted at rest) or defined as `GTP_FLEET_SIGNING_SECRET` in `wp-config.php`. The secret itself is stripped from exported bundles.
+- Uninstall now also removes the fleet site identity and event log options.
+
 ## 1.0.0-rc.6 - 2026-08-20
 
 ### Fixed

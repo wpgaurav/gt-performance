@@ -2,6 +2,12 @@
 /**
  * Reversible WP_CACHE constant management.
  *
+ * The wp-config.php file is rewritten through a temporary sibling and an
+ * atomic same-filesystem rename so a request can never load a half-written
+ * file, which WP_Filesystem cannot guarantee.
+ *
+ * phpcs:disable WordPress.WP.AlternativeFunctions
+ *
  * @package GTPerformance
  */
 
@@ -131,7 +137,7 @@ final class WpCacheConstant {
 		);
 
 		foreach ( $candidates as $candidate ) {
-			if ( is_file( $candidate ) && is_readable( $candidate ) && is_writable( $candidate ) ) {
+			if ( is_file( $candidate ) && is_readable( $candidate ) && wp_is_writable( $candidate ) ) {
 				return $candidate;
 			}
 		}

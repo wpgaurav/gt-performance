@@ -2,7 +2,11 @@
 /**
  * GT Performance Redis object-cache drop-in.
  *
- * This file intentionally has no plugin runtime dependency.
+ * This file intentionally has no plugin runtime dependency. As an
+ * object-cache.php drop-in it must define the canonical global
+ * wp_cache_*() API that WordPress core calls.
+ *
+ * phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
  *
  * @package GTPerformance
  */

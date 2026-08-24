@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.0-rc.6`. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.0`, distributed free through the WordPress.org plugin directory. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -29,9 +29,8 @@ The current release is `1.0.0-rc.6`. Origin caching uses a maximum-impact shared
 - Verified Purge receipts that compare bounded response fingerprints and cache headers after origin and edge invalidation without storing page bodies.
 - Commerce Safety Lab policy simulation and safe read-only route checks for active FluentCart, EDD, and WooCommerce adapters.
 - Opt-in Private Islands for signed, explicitly registered cart-count, account-link, and developer fragments whose responses are always private and `no-store`.
-- A 25-site Fleet Console foundation for short-lived, one-use, license-signed configuration bundles that exclude credentials and cannot execute code.
-- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, Safety Lab, CSS Reports, Fleet, License, and Tools sections.
-- Encrypted FluentCart licensing with a dedicated License tab, protected WordPress updates, weekly verification, masked credentials, and on-demand checks.
+- A Fleet Console foundation for short-lived, one-use configuration bundles signed with a shared secret that exclude credentials and cannot execute code.
+- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, Safety Lab, CSS Reports, Fleet, and Tools sections.
 - Administrator-bar actions for explaining, purging, or purge-verifying the current page, warming it, regenerating its CSS, controlling CSS Training Mode, purging page and edge caches, flushing object cache, testing Redis, and opening safety reports.
 - Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
@@ -67,7 +66,7 @@ Every fragment response sends `Cache-Control: no-store, private, max-age=0`. If 
 
 ## Fleet Console
 
-Fleet Console moves reviewed settings between activations that share the same valid GT Performance license. Exports expire after five minutes and imports are accepted only once. License keys, Cloudflare credentials, Redis credentials, updater state, and other secret fields are stripped recursively even when their parent module is selected.
+Fleet Console moves reviewed settings between your sites. Save the same fleet signing secret on every site (or define `GTP_FLEET_SIGNING_SECRET` in `wp-config.php`); bundles are signed with a key derived from it. Exports expire after five minutes and imports are accepted only once. Cloudflare credentials, Redis credentials, the signing secret itself, and other secret fields are stripped recursively even when their parent module is selected.
 
 The receiver applies only sanitized GT Performance settings. It does not install plugins, upload files, evaluate PHP, or expose a remote command channel. Sites can disable importing and remain export-only.
 
@@ -183,19 +182,13 @@ Open **GT Performance → CDN** to rewrite selected same-site static asset URLs 
 
 Only explicitly selected extensions are rewritten. Third-party URLs, extensionless routes, HTML, API responses, data URLs, and other unselected file types stay on their original URLs. Changing CDN settings purges GT Performance's origin page cache and the connected Cloudflare cache; purge the separate CDN through its provider when replacing an asset at the same URL.
 
-## License and protected updates
+## Updates
 
-Open **GT Performance → License** and activate the key from your FluentCart account. GT Performance encrypts the key and activation hash separately, checks version metadata through the normal WordPress update flow, and receives a temporary package URL only for a valid site activation.
-
-A deployment-managed key may be defined before the WordPress stop-editing comment:
-
-```php
-define( 'GTP_LICENSE_KEY', 'replace-with-your-license-key' );
-```
-
-The saved option never replaces a `GTP_LICENSE_KEY` constant. Deactivate the site from the License tab before removing or moving a deployment-managed key.
+GT Performance is free software distributed through the WordPress.org plugin directory. Updates arrive through the normal WordPress update flow with no license key or activation.
 
 ## Development
+
+Development happens in the open in this repository. Bug reports and pull requests are welcome at [github.com/wpgaurav/gt-performance](https://github.com/wpgaurav/gt-performance).
 
 ```bash
 composer install
@@ -207,6 +200,6 @@ composer check
 
 ## Status
 
-This is a release candidate for controlled staging and production validation. Cloudflare and xCloud mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, image-optimizer, and host-cache combinations still need a growing compatibility matrix before the stable release.
+Cloudflare and xCloud mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, image-optimizer, and host-cache combinations continue to grow their compatibility matrix.
 
 GT Performance is an independent implementation. It does not include or copy FlyingPress code, branding, or private protocols.

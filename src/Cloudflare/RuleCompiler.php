@@ -48,6 +48,7 @@ final class RuleCompiler {
 		if ( $ignored && $allowCustomKey ) {
 			$action['cache_key']['custom_key'] = array(
 				'query_string' => array(
+					// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- Cloudflare cache-rule schema, not a WP_Query parameter.
 					'exclude' => array( 'list' => $ignored ),
 				),
 			);
@@ -164,7 +165,7 @@ final class RuleCompiler {
 	}
 
 	private function plainText( string $value, int $limit ): string {
-		$value = preg_replace( '/[\x00-\x1F\x7F]+/', ' ', strip_tags( $value ) ) ?? '';
+		$value = preg_replace( '/[\x00-\x1F\x7F]+/', ' ', wp_strip_all_tags( $value ) ) ?? '';
 
 		return substr( trim( $value ), 0, $limit );
 	}

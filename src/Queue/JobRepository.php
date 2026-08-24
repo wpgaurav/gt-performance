@@ -2,6 +2,13 @@
 /**
  * Durable queue repository.
  *
+ * Jobs live in the plugin's own gtp_jobs table, so every access is necessarily
+ * a direct query. Rows are claimed and mutated with row-level semantics on each
+ * call; caching a work queue would serve stale claims. Table names interpolate
+ * only the trusted WordPress table prefix.
+ *
+ * phpcs:disable WordPress.DB.DirectDatabaseQuery, PluginCheck.Security.DirectDB.UnescapedDBParameter
+ *
  * @package GTPerformance
  */
 

@@ -216,7 +216,7 @@ final class ApiClient {
 	}
 
 	private function plainText( string $value ): string {
-		$value = preg_replace( '/[\x00-\x1F\x7F]+/', ' ', strip_tags( $value ) ) ?? '';
+		$value = preg_replace( '/[\x00-\x1F\x7F]+/', ' ', wp_strip_all_tags( $value ) ) ?? '';
 
 		return substr( trim( $value ), 0, 300 );
 	}

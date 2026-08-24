@@ -2,6 +2,12 @@
 /**
  * Immutable generated CSS artifacts.
  *
+ * Artifacts are content-hashed files published with an atomic same-filesystem
+ * rename so a page can never reference a half-written stylesheet, which
+ * WP_Filesystem cannot guarantee.
+ *
+ * phpcs:disable WordPress.WP.AlternativeFunctions
+ *
  * @package GTPerformance
  */
 

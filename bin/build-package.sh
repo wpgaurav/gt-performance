@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTP_PACKAGE_VERSION:-1.0.0-rc.6}"
+VERSION="${GTP_PACKAGE_VERSION:-1.0.0}"
 BUILD_ROOT="${ROOT}/build/package"
 PLUGIN_DIR="${BUILD_ROOT}/gt-performance"
 ARCHIVE="${ROOT}/dist/gt-performance-${VERSION}.zip"
@@ -14,6 +14,7 @@ mkdir -p "${PLUGIN_DIR}" "${ROOT}/dist"
 rsync -a \
 	--exclude '.git' \
 	--exclude '.github' \
+	--exclude '.claude' \
 	--exclude '.DS_Store' \
 	--exclude '.phpunit.cache' \
 	--exclude 'bin' \
@@ -41,11 +42,12 @@ composer install \
 	--classmap-authoritative
 
 rm -rf "${PLUGIN_DIR}/vendor/bin"
+# composer.json stays in the package: Plugin Check flags a bundled vendor/
+# directory whose composer.json is missing.
 rm -f \
 	"${PLUGIN_DIR}/.gitignore" \
 	"${PLUGIN_DIR}/CHANGELOG.md" \
 	"${PLUGIN_DIR}/PRODUCT-PLAN.md" \
-	"${PLUGIN_DIR}/composer.json" \
 	"${PLUGIN_DIR}/composer.lock"
 
 rm -f "${ARCHIVE}"

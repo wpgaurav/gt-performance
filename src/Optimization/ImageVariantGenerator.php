@@ -38,6 +38,7 @@ final class ImageVariantGenerator {
 		}
 
 		foreach ( $this->variantKeys( $metadata ) as $variantKey ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- ENQUEUE_HOOK is the prefixed literal 'gt_performance_enqueue_image_variants'.
 			do_action( self::ENQUEUE_HOOK, $attachmentId, $variantKey );
 		}
 

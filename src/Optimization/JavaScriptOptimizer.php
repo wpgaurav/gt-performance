@@ -114,6 +114,7 @@ final class JavaScriptOptimizer {
 			return null;
 		}
 		$file = hash( 'sha256', $code ) . '.js';
+		// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.PluginDirectoryWrite -- Writes to the plugin's own wp-content/cache/gt-performance directory, never the plugin folder; cleared on purge and uninstall.
 		if ( ! is_file( $directory . '/' . $file ) && false === file_put_contents( $directory . '/' . $file, $code, LOCK_EX ) ) {
 			return null;
 		}

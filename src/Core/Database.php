@@ -83,8 +83,10 @@ final class Database {
 		);
 
 		$legacyVitals = $wpdb->prefix . 'gtp_vitals';
-		// Remove the retired real-user measurement table during alpha upgrades.
-		$wpdb->query( "DROP TABLE IF EXISTS `{$legacyVitals}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// Remove the retired real-user measurement table during upgrades. The name
+		// interpolates only the trusted WordPress table prefix, and dropping the
+		// plugin's own retired table is the entire purpose of this statement.
+		$wpdb->query( "DROP TABLE IF EXISTS `{$legacyVitals}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		$settings = get_option( Settings::OPTION, array() );
 		if ( is_array( $settings ) && array_key_exists( 'rum', $settings ) ) {

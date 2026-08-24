@@ -88,6 +88,7 @@ final class SelectorSafelist {
 		}
 
 		$valid = false;
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Temporary guard while probing a user-supplied regular expression; restored immediately after.
 		set_error_handler(
 			static function (): bool {
 				return true;

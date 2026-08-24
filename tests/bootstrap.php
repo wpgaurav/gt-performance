@@ -232,6 +232,24 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	function wp_strip_all_tags( string $text, bool $remove_breaks = false ): string {
+		$text = preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $text ) ?? '';
+		$text = strip_tags( $text );
+		if ( $remove_breaks ) {
+			$text = preg_replace( '/[\r\n\t ]+/', ' ', $text ) ?? '';
+		}
+
+		return trim( $text );
+	}
+}
+
+if ( ! function_exists( 'wp_is_writable' ) ) {
+	function wp_is_writable( string $path ): bool {
+		return is_writable( $path );
+	}
+}
+
 if ( ! function_exists( 'home_url' ) ) {
 	function home_url( string $path = '' ): string {
 		return 'https://example.com' . $path;

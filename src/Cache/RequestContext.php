@@ -73,6 +73,7 @@ final class RequestContext {
 	 * @param array<string, string> $headers Diagnostic request headers.
 	 */
 	public static function fromUrl( string $url, array $cookies = array(), array $headers = array(), string $userAgent = '' ): ?self {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Loaded by advanced-cache.php before wp_parse_url() exists.
 		$parts = parse_url( $url );
 		if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
 			return null;

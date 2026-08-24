@@ -47,7 +47,7 @@ final class Command {
 			array(
 				'check'  => 'Cache directory',
 				'value'  => Paths::cacheRoot(),
-				'status' => is_writable( Paths::cacheRoot() ) ? 'pass' : 'fail',
+				'status' => wp_is_writable( Paths::cacheRoot() ) ? 'pass' : 'fail',
 			),
 			array(
 				'check'  => 'Page drop-in',

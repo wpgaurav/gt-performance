@@ -70,6 +70,7 @@ final class TokenProvisioner {
 		}
 
 		// Built by hand because add_query_arg() would encode these a second time.
+		// phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Link to the user's own Cloudflare dashboard; no asset is loaded from it.
 		return 'https://dash.cloudflare.com/profile/api-tokens'
 			. '?permissionGroupKeys=' . rawurlencode( (string) wp_json_encode( $keys ) )
 			. '&accountId=' . rawurlencode( '*' )

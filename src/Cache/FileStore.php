@@ -2,6 +2,13 @@
 /**
  * Atomic page cache filesystem store.
  *
+ * Cache entries are written to temporary siblings and renamed into place so the
+ * advanced-cache.php drop-in can never read a half-written page. WP_Filesystem
+ * cannot guarantee the atomic same-filesystem rename these hot paths require,
+ * and var_export() generates cache metadata PHP files, not debug output.
+ *
+ * phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DevelopmentFunctions.error_log_var_export
+ *
  * @package GTPerformance
  */
 

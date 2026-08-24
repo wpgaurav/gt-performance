@@ -2,6 +2,13 @@
 /**
  * Manual and scheduled database optimization tasks.
  *
+ * Database maintenance is the feature itself: counting and deleting revisions,
+ * spam, transients, and reclaimable space requires direct queries that no
+ * WordPress API expresses, and their one-shot results must not be cached.
+ * Table names interpolate only the trusted WordPress table prefix.
+ *
+ * phpcs:disable WordPress.DB.DirectDatabaseQuery, PluginCheck.Security.DirectDB.UnescapedDBParameter
+ *
  * @package GTPerformance
  */
 

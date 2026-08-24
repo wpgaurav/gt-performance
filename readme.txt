@@ -2,9 +2,9 @@
 Contributors: gauravtiwari
 Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc.6
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,9 +22,11 @@ Unused CSS can be delivered as an immutable file, fully inline, or as critical C
 
 Perfmatters ownership coordination, Akismet and Jetpack safeguards, automatic analytics-plugin script protection, Redis credentials, and administrator-bar cache actions are built in.
 
-Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a 25-site policy console add deterministic diagnostics and safer deployment controls.
+Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a Fleet policy console add deterministic diagnostics and safer deployment controls.
 
-This is a release candidate. Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
+Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
+
+Development happens in the open on [GitHub](https://github.com/wpgaurav/gt-performance), where bug reports and pull requests are welcome.
 
 == Installation ==
 
@@ -34,7 +36,6 @@ This is a release candidate. Origin caching uses the maximum-impact lifetime pro
 4. Enable only the modules you have tested for your theme and plugins.
 5. Optionally connect a scoped Cloudflare API token or a legacy Global API Key with account email, then synchronize the managed cache rule.
 6. Optionally configure an origin-pull asset CDN and choose the exact file extensions it should serve.
-7. Activate your FluentCart license on the License tab to receive protected updates in WordPress.
 
 == Frequently Asked Questions ==
 
@@ -64,199 +65,44 @@ GT Performance compiles dynamic paths, session cookies, and query parameters fro
 
 = Does Fleet Console provide remote access? =
 
-No. It accepts only short-lived, one-use, license-signed GT Performance setting bundles. Secrets are stripped, settings are sanitized again on import, and no file upload, plugin installation, PHP evaluation, or remote command path exists.
+No. It accepts only short-lived, one-use GT Performance setting bundles signed with a secret you save on each of your sites. Secrets are stripped, settings are sanitized again on import, and no file upload, plugin installation, PHP evaluation, or remote command path exists.
 
 = Can Redis credentials be configured in wp-config.php? =
 
 Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTP_REDIS_*` constants remain supported and take highest precedence. The Integrations screen provides a copy-ready example.
 
-= How are plugin updates delivered? =
+== External Services ==
 
-Activate a FluentCart license on the License tab. GT Performance checks version metadata through the normal WordPress update flow and receives the protected package only when the site activation is valid.
+GT Performance works entirely on your server by default and sends no data anywhere. Each integration below contacts a third-party service only after you enable it and, where credentials are involved, only with credentials you supply. There is no telemetry, no account requirement, and the plugin never contacts servers of its own.
+
+= Cloudflare API (api.cloudflare.com) =
+
+Contacted only when you connect your own Cloudflare account to manage its cache rule and purge its cache. Requests carry the API token or Global API Key and account email you saved, your zone identifier or domain, the compiled cache-rule expression, and the exact URLs being purged. They are sent when you connect, synchronize, run diagnostics, or purge, and automatically when a content change requires an edge purge. Provider: Cloudflare, Inc. — [Terms of Service](https://www.cloudflare.com/terms/), [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
+
+= xCloud hosting API (app.xcloud.host) =
+
+Contacted only when you connect a site hosted on xCloud using your own xCloud API token. Requests carry that token and your site's domain or xCloud identifier, and are sent when you connect or refresh the integration and when host-level caches are purged. Provider: xCloud by WPDeveloper — [Privacy Policy](https://xcloud.host/privacy-policy/).
+
+= Google Fonts (fonts.googleapis.com, fonts.gstatic.com) =
+
+Contacted only when you enable local Google Fonts hosting on a site whose theme or plugins already load Google Fonts. Your server downloads the stylesheet and font files once and serves them from your own domain afterward. The download is a server-side request that carries no visitor data, and the feature removes visitors' browser requests to Google entirely. Provider: Google LLC — [Privacy Policy](https://policies.google.com/privacy), [Google Fonts privacy notes](https://developers.google.com/fonts/faq/privacy).
+
+= YouTube (i.ytimg.com, www.youtube-nocookie.com) =
+
+Involved only on pages where you have already embedded a YouTube video and the lightweight embed option is enabled. The visitor's browser loads the video thumbnail from i.ytimg.com, and the player loads from the privacy-enhanced youtube-nocookie.com domain only after the visitor clicks play. Your server sends nothing to YouTube; without this option the standard YouTube embed would contact YouTube earlier and more broadly. Provider: Google LLC — [Terms of Service](https://www.youtube.com/t/terms), [Privacy Policy](https://policies.google.com/privacy).
+
+GT Performance also sends requests to your own site's URLs for cache warming, purge verification, and Safety Lab checks. Those requests never leave your domain.
 
 == Changelog ==
 
-= 1.0.0-rc.6 =
-* Fixed "Remove WordPress version" leaving browsers and CDNs pinned to pre-update core scripts and stylesheets. Dropping the version from a core asset URL left an address that never changed across a WordPress release, so a cached copy could survive an upgrade for as long as its max-age allowed. The version is now masked rather than removed.
-
-= 1.0.0-rc.5 =
-* Fixed the Operations cards sitting flush against the panel edge while the heading above them was inset, and fixed their rows sitting twice as far apart as their columns.
-* Fixed the API token permission list and the dashboard link at the foot of Runtime status hanging outside the panel inset.
-* Panel spacing now comes from a single token, so a block can no longer lose its narrow mobile inset depending on where its rule happens to sit in the stylesheet.
-
-= 1.0.0-rc.4 =
-* Fixed the conflicting cache rules block rendering at three different left offsets. Its heading had no styling of its own, so it hung outside the panel inset and stacked a default heading margin on top of the note below it.
-* Fixed the "Or create it automatically" heading in the Cloudflare token panel inheriting browser default type and spacing instead of the plugin's heading style.
-* Admin notices are now a compact status pill instead of a full-width notice bar. Failures that carry an upstream reason gain a "Why?" disclosure that opens the detail in a popover anchored to the pill, and dismissing one clears it from the address bar so a reload cannot bring it back.
-
-= 1.0.0-rc.3 =
-* Fixed Cloudflare cache rule synchronization failing outright on any site with more than one bypassed query parameter. Each one compiled to its own `concat()` call, and Cloudflare rejects an expression calling `concat` more than once, so the managed rule silently stopped updating.
-* Fixed the managed rule always reporting configuration drift on plans without custom cache keys. Drift was measured against a rule shape those plans cannot store, so reconciliation never finished no matter how often it ran.
-* Cache rule conflicts now include rules that never name a hostname. A catch-all rule applies to every hostname in the zone and previously went unreported.
-* Cloudflare failures now show the reason Cloudflare gave, including its numeric error code, instead of one generic message for every kind of failure. Unreachable-API failures are reported separately from rejected requests.
-* Added a Cloudflare connection check that walks credentials, authentication, zone lookup, and cache rule read and write in order and names the stage that fails. The write stage rewrites the managed rule with its own current contents, so it changes nothing.
-* Added an API token panel listing the exact permissions required, a Cloudflare token-creation link, and optional automatic creation of a zone-scoped token when a Global API Key is available. New tokens are exercised before they replace working credentials.
-* A failed synchronization now still records the live rule plan, so the screen shows the current state instead of appearing to have never run.
-
-= 1.0.0-rc.2 =
-* Fixed a fatal "Allowed memory size exhausted" error when updating the plugin. Clearing the update cache ran inside WordPress's own update-transient deletion hook and could be re-entered by any other plugin listening for deleted transients or options, recursing until PHP ran out of stack.
-* Stopped the updater from repeating the license-server request when WordPress rebuilds the plugin update transient before the first response is cached.
-* Fixed the Redis object-cache drop-in reporting a successful delete for a key it never held, which is what kept the recursion above from settling on sites running the drop-in without a reachable Redis server.
-
-= 1.0.0-rc.1 =
-* Moved WebP and AVIF generation out of media-upload requests and split each source and registered image size into its own durable background job, preventing large uploads from exhausting one PHP execution window.
-* Added automatic EWWW Image Optimizer ownership for next-generation formats, Easy IO, lazy loading, and missing dimensions without disabling complementary upload compression.
-* Added xCloud site discovery, host-cache status and purge routing, independent Cloudflare Enterprise detection, explicit edge ownership, and fail-closed Enterprise purge behavior.
-* Added safe enable-time profiles for Cloudflare, xCloud, static CDN rewriting, Redis, compatibility safeguards, Private Islands, and Fleet while preserving credentials and custom provider values.
-* Added generic CDN and Cloudflare-specific no-store headers to private, commerce, feed, preview, and fragment responses.
-
-= 1.0.0-beta-9 =
-* Added recommended enable-time profiles for Cloudflare, xCloud, static CDN rewriting, Redis, compatibility safeguards, Private Islands, and Fleet.
-* Recommended profiles fill missing provider values and arm safe dependent options without replacing saved credentials, endpoints, or other non-empty custom settings.
-
-= 1.0.0-beta-8 =
-* Added xCloud Public API site discovery, encrypted token storage, host page-cache status and purge routing, and WP-CLI controls.
-* Added independent Cloudflare Enterprise add-on detection and 12-hour edge traffic reporting without conflating it with xCloud's free Edge Full Page Cache.
-* Made xCloud the sole edge owner when its Enterprise add-on is active, blocking direct Cloudflare rule synchronization and duplicate purge routing.
-* Enterprise purge fails closed because xCloud's current Public API token does not authenticate the dashboard-only purge mutation; GT Performance never substitutes the unrelated broad host purge-all endpoint.
-* Added generic CDN and Cloudflare-specific no-store headers to private and bypassed responses as defense in depth. Live testing found xCloud Enterprise Edge Page Caching overrides these directives, so commerce sites must leave that page-cache option off unless equivalent request-level bypass rules are available; static caching and the other Enterprise features can remain enabled.
-
-= 1.0.0-beta-7 =
-* Added URL-specific and site-wide used-CSS regeneration controls to CSS Reports. Regeneration invalidates reports, purges origin and connected edge caches, and warms the selected URL immediately.
-* Added exclusions for inline WordPress style IDs as well as external stylesheet URLs, plus automatic protection for active FluentCart, Easy Digital Downloads, and WooCommerce application styles.
-* Fixed icon fonts and other escaped CSS content values rendering as literal numeric entities in Inline all used CSS mode.
-* Preserved stylesheet source order, asynchronous all-media behavior, custom-property dependencies, dynamic attribute states, and independently parsed stylesheet boundaries during pruning.
-* Made authorized CSS previews private and non-cacheable while still running the real optimization pipeline, and expanded trained compound selectors into reusable ID and class safeguards.
-
-= 1.0.0-beta-6 =
-* Fixed Redis request-local cache coherence so successful writes immediately replace stale values in the same request, including WordPress option aggregates and cron state.
-* Made object-cache add and replace operations atomic with Redis NX and XX writes, including expiration, and made forced reads refresh from Redis.
-* Versioned and automatically refreshed GT Performance-owned object-cache drop-ins after plugin updates without overwriting foreign drop-ins. Upgrades clear only the alloptions, notoptions, and cron entries.
-* Added a Doctor warning and host-specific five-minute flock runner when request-driven WP-Cron is disabled and scheduled events are materially overdue.
-* Fixed the Cloudflare WP-CLI purge command, exact-URL purging, invalid action handling, URL validation, and queue-limit validation.
-
-= 1.0.0-beta-5 =
-* Fixed cached pages never being rebuilt once they went stale. Between the fresh and stale lifetimes nothing regenerated an entry, so a page could keep serving content as old as both lifetimes combined. Stale pages are now swept and rebuilt in the background.
-* Fixed the Redis object cache clearing nothing when the cache key prefix contained a pattern character such as [, ? or *. WordPress security salts routinely contain these, so "Purge GT cache" and wp cache flush could report success while leaving every entry in place.
-* Fixed a Redis disconnect during a group flush taking the page down with a fatal error instead of degrading to a cache miss.
-* Fixed the background queue stopping permanently and silently if its scheduled event was ever lost. It is now restored automatically.
-* Fixed a just-rebuilt page briefly reporting as stale because its metadata was still held by the PHP opcode cache.
-* Moved purge, Cloudflare sync, and the drop-in installers from Tools onto the dashboard, and each now returns to the screen it was run from.
-
-= 1.0.0-beta-4 =
-* Added configurable automatic cache clearing after public content is published or updated, with related-page, post-only, entire-cache, and disabled modes.
-* Expanded related-page clearing to author and public taxonomy archives, and stopped revision cleanup from triggering unintended homepage purges.
-
-= 1.0.0-beta-3 =
-* Added automatic compatibility detection and JavaScript exclusions for Independent Analytics, Burst Statistics, Koko Analytics, Matomo Analytics, WP Statistics, Site Kit by Google, MonsterInsights, ExactMetrics, and PixelYourSite.
-
-= 1.0.0-beta-2 =
-* Fixed cache eligibility when a server exposes an empty Authorization header, while preserving the bypass for real authorization credentials.
-* Added an optional origin-pull CDN URL with exact static-file extension controls, same-site URL safeguards, and cache invalidation when CDN settings change.
-* Added official Cloudflare links for creating a scoped token, finding a Global API Key, and locating a Zone ID.
-* Improved settings spacing, field grouping, labels, help text, and mobile layout consistency.
-
-= 1.0.0-beta-1 =
-* Fixed a cache-safety gap where the public Cache-Control header was sent before the response was validated; private responses (Set-Cookie, non-200, or DONOTCACHEPAGE) can no longer be stored by a shared or edge cache.
-* Fixed scheduled database-cleanup task selections so deselected destructive tasks are no longer silently restored on save.
-* Fixed commerce bypass paths so checkout, cart, and account stay uncacheable on no-trailing-slash permalink sites, at the origin and the Cloudflare edge.
-* Fixed inline script, JSON-LD, and stray XML-node corruption in the server-side CSS, font, and embed optimizers.
-* Fixed CSS Training Mode to keep escaped utility-class selectors, root-relative url() rebasing, and Cloudflare drift detection and query-parameter matching.
-* Fixed comment lifecycle invalidation, batched related URL purges, and cleared both desktop and mobile origin variants.
-* Fixed deferred response validation so eligible pages can progress from MISS to HIT, and renamed the WP-CLI target option to --page-url.
-* Wired the Cloudflare edge lifetime control into the managed Cache Rule.
-* Added Vary: User-Agent for mobile cache variants, honored the stale-on-error setting, bounded queue growth, hardened cache directories, and auto-refreshed the drop-in after updates.
-* Added same-origin sitemap-driven cache warming after a full purge, with a wp gt-performance cache warm command.
-* Clarified technical labels, added accessible brief tooltips for risky settings, and removed unsupported placeholder controls.
-
-= 0.1.0-alpha.12 =
-* Added Explain This Page and verified purge receipts for deterministic cache diagnostics.
-* Added the Cloudflare Free rule compiler and Commerce Safety Lab.
-* Added unused-CSS training, staged rollout, review, publishing, and rollback controls.
-* Added signed Private Islands for dynamic commerce fragments.
-* Added the secure 25-site Fleet policy-console foundation.
-* Made release publication compatible with private GitHub repositories.
-
-= 0.1.0-alpha.11 =
-
-* Added Explain This Page cache-decision diagnostics and redacted verified-purge receipts.
-* Added a Cloudflare Free rule compiler with exact-expression preview, drift, overlap, operation, and ten-rule budget reporting.
-* Added Commerce Safety Lab policy simulation and safe read-only checks for FluentCart, EDD, and WooCommerce.
-* Added administrator-only unused-CSS Training Mode, candidate review, publication, rollback, and stable percentage rollout cohorts.
-* Added opt-in signed Private Islands with private no-store delivery and conservative fallbacks.
-* Added a 25-site Fleet Console foundation using expiring one-use configuration bundles with recursive secret removal.
-* Added matching standalone admin, admin-bar, WP-CLI, tests, and documentation.
-
-= 0.1.0-alpha.10 =
-
-* Added port-safe license identities for Studio and other local WordPress sites so protected FluentCart updates work on localhost URLs with ports.
-
-= 0.1.0-alpha.9 =
-
-* Moved manual database scanning and selectable cleanup to Tools while keeping scheduled maintenance in Optimization.
-* Made manual cleanup return to Tools and removed the redundant cleanup shortcut.
-* Added compatible Till Krüss Redis Object Cache `WP_REDIS_*` constants, including ACL arrays, TLS, Unix sockets, and emergency disable.
-* Published the $199 product page with verified direct-checkout links and responsive purchase details.
-
-= 0.1.0-alpha.8 =
-
-* Added encrypted FluentCart license activation, verification, deactivation, and protected WordPress updates.
-* Added a dedicated License tab with masked credentials, plan and expiration details, on-demand checks, and friendly notices.
-* Fixed activation-time registration of the queue and weekly license-verification schedules.
-* Added a FluentCart product identity and update contract for GT Performance.
-* Added a Magnific-led marketing asset system with real WordPress Studio screenshots for directory and storefront listings.
-
-= 0.1.0-alpha.7 =
-
-* Added partial and regular-expression unused-CSS selector safelists.
-* Added Perfmatters ownership coordination and common plugin compatibility reporting.
-* Added Akismet and Jetpack CSS, JavaScript, and visitor-state cache safeguards.
-* Added encrypted Redis credentials, TLS, ACL, database, prefix, timeouts, testing, and guarded installation.
-* Added documented wp-config.php constants for every Redis connection setting.
-* Added admin-bar cache, CSS, object-cache, Redis, report, and settings actions.
-* Added a GitHub Actions release pipeline with version validation, checksums, provenance, and automatic prereleases.
-
-= 0.1.0-alpha.6 =
-
-* Replaced the CSS delivery dropdown with explicit Generated file, Inline all used CSS, and Critical inline + remaining file choices.
-* Made the dynamic-state preservation setting control hover, focus, open, checked, and related selector retention.
-* Changed Hybrid mode to fall back to a generated file when critical CSS exceeds the inline budget.
-
-= 0.1.0-alpha.5 =
-
-* Added one-click cache lifetime presets and a default one-hour fresh, 24-hour retained, five-minute browser profile.
-* Added a one-click WordPress optimization baseline derived from the active gauravtiwari.org configuration.
-* Added the complete manual database cleanup set: revisions, drafts, spam, trash, transients, and table optimization.
-* Added saved daily, weekly, and monthly database schedules with selectable tasks.
-* Added Perfmatters-style WordPress request, metadata, editor, comments, REST, Heartbeat, revision, and autosave controls.
-* Removed Core Web Vitals collection, its frontend measurement script, REST endpoint, settings, and storage table.
-
-= 0.1.0-alpha.4 =
-
-* Added a standalone top-level settings app with focused Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, CSS Reports, and Tools tabs.
-* Exposed the full cache, optimization, Cloudflare, commerce, cleanup, and exception configuration.
-* Added live server-side unused CSS generation reports with processing, ready, stale, skipped, and failed states.
-* Added generated output size, savings, delivery mode, error, and refresh indicators for unused CSS.
-* Added friendly action notices so internal error codes are never shown to administrators.
-* Refined desktop and mobile spacing with thin card boundaries.
-
-= 0.1.0-alpha.3 =
-
-* Added Core Forms poll-cookie compatibility so non-poll pages can be cached safely.
-* Real poll pages retain voter cookies and remain uncached.
-
-= 0.1.0-alpha.2 =
-
-* Added legacy Cloudflare Global API Key, account email, domain, and automatic zone discovery support.
-* Kept scoped API tokens as the recommended authentication mode.
-* Fixed WP_CACHE detection so comments no longer trigger a false custom-declaration error.
-* Restores the exact single-line WP_CACHE declaration changed during installation.
-
-= 0.1.0-alpha.1 =
-
-* Initial integrated alpha.
-* Added atomic origin caching and durable preload/purge queue.
-* Added Cloudflare Free rule management and cache purge.
-* Added server-side unused CSS file, inline, and hybrid modes.
-* Added FluentCart, EDD, and WooCommerce cache-safety adapters.
-* Added JavaScript, media, font, database, bloat, Redis, admin, CLI, and diagnostics modules.
+= 1.0.0 =
+* First stable release, and the first release distributed free through the WordPress.org plugin directory.
+* Atomic origin page caching with an owned advanced-cache.php drop-in, background stale rebuilds, sitemap-driven warming, and verified purge receipts.
+* Server-side unused-CSS optimization with file, inline, and hybrid delivery, CSS Training Mode, staged rollout, and per-URL regeneration.
+* Cloudflare Free cache-rule compiler, exact-URL purging, connection diagnostics, and scoped-token provisioning.
+* Optional origin-pull static-asset CDN rewriting with exact extension controls.
+* FluentCart, Easy Digital Downloads, and WooCommerce cache-safety adapters plus Commerce Safety Lab checks.
+* JavaScript, media, font, embed, database, bloat, and Redis object-cache modules with encrypted credentials.
+* xCloud host integration with explicit edge ownership, Perfmatters ownership coordination, and automatic analytics-plugin protection.
+* Fleet Console for moving signed, credential-free setting bundles between your sites using a shared signing secret.
+* Explain This Page diagnostics, admin-bar actions, and WP-CLI commands.

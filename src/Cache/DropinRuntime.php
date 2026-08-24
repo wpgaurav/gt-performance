@@ -134,9 +134,11 @@ final class DropinRuntime {
 		$proto  = isset( $server['HTTP_X_FORWARDED_PROTO'] ) ? strtolower( (string) $server['HTTP_X_FORWARDED_PROTO'] ) : '';
 		$scheme = $https || 'https' === $proto ? 'https' : 'http';
 		$uri    = (string) ( $server['REQUEST_URI'] ?? '/' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Runs inside advanced-cache.php before wp_parse_url() exists.
 		$parsedPath = parse_url( $uri, PHP_URL_PATH );
 		$path       = false === $parsedPath || null === $parsedPath ? '/' : (string) $parsedPath;
 		$query  = array();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Runs inside advanced-cache.php before wp_parse_url() exists.
 		$parsedQuery = parse_url( $uri, PHP_URL_QUERY );
 		parse_str( false === $parsedQuery || null === $parsedQuery ? '' : (string) $parsedQuery, $query );
 

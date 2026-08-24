@@ -32,8 +32,6 @@ use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Fleet\FleetRepository;
 use GTPerformance\Fleet\PolicyService;
 use GTPerformance\Integrations\RecommendedDefaults;
-use GTPerformance\Licensing\Configuration as LicenseConfiguration;
-use GTPerformance\Licensing\LicenseRepository;
 use GTPerformance\Optimization\Css\ReportRepository;
 use GTPerformance\Optimization\Css\SelectorSafelist;
 use GTPerformance\Optimization\Css\TrainingRepository;
@@ -65,7 +63,6 @@ final class AdminModule implements Module {
 		'safety',
 		'css-reports',
 		'fleet',
-		'license',
 		'tools',
 	);
 
@@ -75,6 +72,7 @@ final class AdminModule implements Module {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_init', array( $this, 'settings' ) );
 		add_action( 'admin_init', array( $this, 'legacyRedirect' ) );
+		add_filter( 'plugin_action_links_' . GTP_BASENAME, array( $this, 'actionLinks' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'afterSettingsUpdate' ), 10, 2 );
 		add_action( 'admin_post_gtp_install_dropin', array( $this, 'installDropin' ) );
@@ -120,9 +118,25 @@ final class AdminModule implements Module {
 		);
 	}
 
+	/**
+	 * @param array<string, string> $links Plugin action links.
+	 * @return array<string, string>
+	 */
+	public function actionLinks( array $links ): array {
+		$url = add_query_arg( array( 'page' => self::PAGE_SLUG ), admin_url( 'admin.php' ) );
+
+		array_unshift(
+			$links,
+			'<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'gt-performance' ) . '</a>'
+		);
+
+		return $links;
+	}
+
 	public function legacyRedirect(): void {
 		global $pagenow;
 
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only redirect of sanitized routing parameters; no state changes.
 		if (
 			'options-general.php' !== $pagenow ||
 			! isset( $_GET['page'] ) ||
@@ -140,6 +154,7 @@ final class AdminModule implements Module {
 		}
 
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		exit;
 	}
 
@@ -211,6 +226,14 @@ final class AdminModule implements Module {
 			$input['xcloud']['api_token'] = (string) $current['xcloud']['api_token'];
 		} elseif ( ! str_starts_with( $xcloudToken, 'sodium:' ) && ! str_starts_with( $xcloudToken, 'openssl:' ) ) {
 			$input['xcloud']['api_token'] = ( new SecretCipher( 'xcloud' ) )->encrypt( $xcloudToken );
+		}
+
+		$input['fleet'] = isset( $input['fleet'] ) && is_array( $input['fleet'] ) ? $input['fleet'] : array();
+		$fleetSecret    = trim( (string) ( $input['fleet']['signing_secret'] ?? '' ) );
+		if ( '' === $fleetSecret ) {
+			$input['fleet']['signing_secret'] = (string) ( $current['fleet']['signing_secret'] ?? '' );
+		} elseif ( ! str_starts_with( $fleetSecret, 'sodium:' ) && ! str_starts_with( $fleetSecret, 'openssl:' ) ) {
+			$input['fleet']['signing_secret'] = ( new SecretCipher( 'fleet' ) )->encrypt( $fleetSecret );
 		}
 
 		$patterns   = SelectorSafelist::split( $input['css']['safelist'] ?? array() );
@@ -292,9 +315,6 @@ final class AdminModule implements Module {
 						break;
 					case 'fleet':
 						$this->renderFleet( $settings );
-						break;
-					case 'license':
-						$this->renderLicense();
 						break;
 					case 'tools':
 						$this->renderTools( $settings );
@@ -629,7 +649,6 @@ final class AdminModule implements Module {
 			'safety'       => __( 'Safety Lab', 'gt-performance' ),
 			'css-reports'  => __( 'CSS Reports', 'gt-performance' ),
 			'fleet'        => __( 'Fleet', 'gt-performance' ),
-			'license'      => __( 'License', 'gt-performance' ),
 			'tools'        => __( 'Tools', 'gt-performance' ),
 		);
 		?>
@@ -652,6 +671,7 @@ final class AdminModule implements Module {
 	}
 
 	private function renderNotice(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display of a sanitized notice key; no state changes.
 		$notice = isset( $_GET['gtp_notice'] ) ? sanitize_key( wp_unslash( $_GET['gtp_notice'] ) ) : '';
 		if ( '' === $notice ) {
 			return;
@@ -741,7 +761,7 @@ final class AdminModule implements Module {
 					<div><dt><?php esc_html_e( 'Stale retention', 'gt-performance' ); ?></dt><dd><?php echo esc_html( human_time_diff( 0, (int) $settings['cache']['stale_ttl'] ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'CSS delivery', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->cssModeLabel( (string) $settings['css']['mode'] ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Redis drop-in', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->statusLabel( $redis ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Cache directory', 'gt-performance' ); ?></dt><dd><?php echo esc_html( is_writable( Paths::cacheRoot() ) ? __( 'Writable', 'gt-performance' ) : __( 'Not writable', 'gt-performance' ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Cache directory', 'gt-performance' ); ?></dt><dd><?php echo esc_html( wp_is_writable( Paths::cacheRoot() ) ? __( 'Writable', 'gt-performance' ) : __( 'Not writable', 'gt-performance' ) ); ?></dd></div>
 				</dl>
 			</section>
 			<section class="gtp-panel">
@@ -1030,7 +1050,7 @@ final class AdminModule implements Module {
 			__( 'Leave blank to keep the encrypted token already saved.', 'gt-performance' ),
 			! empty( $settings['cloudflare']['api_token'] ),
 			'',
-			'https://developers.cloudflare.com/fundamentals/api/get-started/create-token/',
+			'https://developers.cloudflare.com/fundamentals/api/get-started/create-token/', // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Documentation help link; no asset is loaded from it.
 			__( 'Create a Cloudflare API token', 'gt-performance' )
 		);
 		$this->password(
@@ -1040,7 +1060,7 @@ final class AdminModule implements Module {
 			__( 'Requires the Cloudflare account email below. Leave blank to keep the saved key.', 'gt-performance' ),
 			! empty( $settings['cloudflare']['global_api_key'] ),
 			'',
-			'https://developers.cloudflare.com/fundamentals/api/get-started/keys/',
+			'https://developers.cloudflare.com/fundamentals/api/get-started/keys/', // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Documentation help link; no asset is loaded from it.
 			__( 'Find your Global API Key', 'gt-performance' )
 		);
 		$this->text( 'cloudflare', 'email', __( 'Cloudflare account email', 'gt-performance' ), __( 'Required only for Global API Key authentication.', 'gt-performance' ), $settings, 'email' );
@@ -1054,7 +1074,7 @@ final class AdminModule implements Module {
 			'text',
 			'',
 			'',
-			'https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/',
+			'https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/', // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Documentation help link; no asset is loaded from it.
 			__( 'Find your Zone ID', 'gt-performance' )
 		);
 		$this->number( 'cloudflare', 'edge_ttl', __( 'Cloudflare edge cache lifetime', 'gt-performance' ), __( 'How long eligible public HTML remains fresh at Cloudflare.', 'gt-performance' ), $settings, 0, 31536000, __( 'seconds', 'gt-performance' ), '1', __( 'A positive value overrides the origin freshness value in the managed Cache Rule. Use 0 to respect the origin Cache-Control header instead.', 'gt-performance' ) );
@@ -1460,6 +1480,7 @@ final class AdminModule implements Module {
 	}
 
 	private function renderSafetyLab(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display of a sanitized diagnostic URL; no state changes.
 		$url = isset( $_GET['gtp_url'] ) ? esc_url_raw( wp_unslash( $_GET['gtp_url'] ) ) : home_url( '/' );
 		$url = '' !== $url ? $url : home_url( '/' );
 		$inspection = ( new CacheInspector() )->inspect( $url );
@@ -1747,21 +1768,21 @@ PHP;
 	private function renderFleet( array $settings ): void {
 		$repository = new FleetRepository();
 		$events     = $repository->events();
-		$license    = ( new LicenseRepository() )->state();
+		$hasSecret  = '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) || defined( 'GTP_FLEET_SIGNING_SECRET' );
 
-		$this->pageIntro( __( '25-site Fleet Console', 'gt-performance' ), __( 'Move a reviewed GT Performance policy between licensed sites without copying credentials or opening a remote code channel.', 'gt-performance' ) );
+		$this->pageIntro( __( 'Fleet Console', 'gt-performance' ), __( 'Move a reviewed GT Performance policy between your sites without copying credentials or opening a remote code channel.', 'gt-performance' ) );
 		$this->settingsFormOpen();
-		$this->panelOpen( __( 'Fleet policy receiver', 'gt-performance' ), __( 'Policies are signed with a key derived from the shared GT Performance license, expire after five minutes, and are accepted only once.', 'gt-performance' ) );
-		$this->checkbox( 'fleet', 'enabled', __( 'Enable Fleet Console', 'gt-performance' ), __( 'Allow this licensed site to create and receive signed configuration-only policy bundles.', 'gt-performance' ), $settings );
+		$this->panelOpen( __( 'Fleet policy receiver', 'gt-performance' ), __( 'Policies are signed with a key derived from the shared signing secret, expire after five minutes, and are accepted only once.', 'gt-performance' ) );
+		$this->checkbox( 'fleet', 'enabled', __( 'Enable Fleet Console', 'gt-performance' ), __( 'Allow this site to create and receive signed configuration-only policy bundles.', 'gt-performance' ), $settings );
 		$this->checkbox( 'fleet', 'allow_imports', __( 'Allow signed policy imports', 'gt-performance' ), __( 'Disable this to make the site export-only while keeping its current configuration.', 'gt-performance' ), $settings );
-		$this->textarea( 'fleet', 'policy_modules', __( 'Included policy modules', 'gt-performance' ), __( 'One module per line. Credentials and license data are removed even if their parent module is selected.', 'gt-performance' ), $settings, "cache\ncss\ncommerce\nintegrations" );
+		$this->password( 'fleet', 'signing_secret', __( 'Fleet signing secret', 'gt-performance' ), __( 'Choose one long passphrase and save the same value on every site in the fleet. Encrypted in WordPress; leave blank to keep the saved secret. GTP_FLEET_SIGNING_SECRET in wp-config.php takes precedence.', 'gt-performance' ), '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) );
+		$this->textarea( 'fleet', 'policy_modules', __( 'Included policy modules', 'gt-performance' ), __( 'One module per line. Credentials and secrets are removed even if their parent module is selected.', 'gt-performance' ), $settings, "cache\ncss\ncommerce\nintegrations" );
 		$this->panelClose();
 		$this->settingsFormClose();
 		?>
 
 		<section class="gtp-stat-grid" aria-label="<?php esc_attr_e( 'Fleet status', 'gt-performance' ); ?>">
-			<?php $this->stat( __( 'License', 'gt-performance' ), 'valid' === (string) $license['status'] ? __( 'Valid', 'gt-performance' ) : __( 'Required', 'gt-performance' ), 'valid' === (string) $license['status'] ? 'success' : 'warning' ); ?>
-			<?php $this->stat( __( 'Activation limit', 'gt-performance' ), number_format_i18n( (int) $license['activation_limit'] ), 'neutral' ); ?>
+			<?php $this->stat( __( 'Signing secret', 'gt-performance' ), $hasSecret ? __( 'Saved', 'gt-performance' ) : __( 'Required', 'gt-performance' ), $hasSecret ? 'success' : 'warning' ); ?>
 			<?php $this->stat( __( 'Applied policies', 'gt-performance' ), number_format_i18n( count( $events ) ), $events ? 'success' : 'neutral' ); ?>
 			<?php $this->stat( __( 'Site identity', 'gt-performance' ), substr( $repository->siteId(), 0, 8 ), 'neutral' ); ?>
 		</section>
@@ -1772,7 +1793,7 @@ PHP;
 				<?php $this->actionButton( 'gtp_fleet_export', __( 'Download policy', 'gt-performance' ) ); ?>
 			</section>
 			<section class="gtp-panel">
-				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Import signed policy', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Paste a fresh bundle from another activation using the same valid license.', 'gt-performance' ); ?></p></div></div>
+				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Import signed policy', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Paste a fresh bundle from another site that uses the same signing secret.', 'gt-performance' ); ?></p></div></div>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gtp-policy-import">
 					<input type="hidden" name="action" value="gtp_fleet_import">
 					<?php wp_nonce_field( 'gtp_fleet_import' ); ?>
@@ -1815,7 +1836,7 @@ PHP;
 				<div><dt><?php esc_html_e( 'Page-cache drop-in', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->statusLabel( $dropin ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'WP_CACHE', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->statusLabel( $wpCache ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Redis drop-in', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->statusLabel( $redis ) ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'Cache directory', 'gt-performance' ); ?></dt><dd><?php echo esc_html( is_writable( Paths::cacheRoot() ) ? __( 'Writable', 'gt-performance' ) : __( 'Not writable', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Cache directory', 'gt-performance' ); ?></dt><dd><?php echo esc_html( wp_is_writable( Paths::cacheRoot() ) ? __( 'Writable', 'gt-performance' ) : __( 'Not writable', 'gt-performance' ) ); ?></dd></div>
 			</dl>
 			<div class="gtp-inline-link"><a href="<?php echo esc_url( $this->tabUrl( 'dashboard' ) ); ?>"><?php esc_html_e( 'Install drop-ins, purge, and sync Cloudflare on the dashboard', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 		</section>
@@ -1847,82 +1868,6 @@ PHP;
 				<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtp_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
 				<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
 			</div>
-		</section>
-		<?php
-	}
-
-	private function renderLicense(): void {
-		$repository    = new LicenseRepository();
-		$configuration = new LicenseConfiguration();
-		$state         = $repository->state();
-		$status        = (string) $state['status'];
-		$tone          = match ( $status ) {
-			'valid' => 'success',
-			'invalid' => 'danger',
-			default => 'neutral',
-		};
-		$statusLabel   = match ( $status ) {
-			'valid' => __( 'Active', 'gt-performance' ),
-			'invalid' => __( 'Needs attention', 'gt-performance' ),
-			default => __( 'Not activated', 'gt-performance' ),
-		};
-
-		$this->pageIntro(
-			__( 'License and updates', 'gt-performance' ),
-			__( 'Connect this site to your FluentCart license for protected plugin downloads and WordPress update notices.', 'gt-performance' )
-		);
-		?>
-		<section class="gtp-panel">
-			<div class="gtp-panel__header">
-				<div>
-					<h3><?php esc_html_e( 'GT Performance license', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'The license key and activation hash are encrypted before WordPress saves them.', 'gt-performance' ); ?></p>
-				</div>
-				<span class="gtp-status gtp-status--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $statusLabel ); ?></span>
-			</div>
-			<?php if ( $repository->hasCredentials() ) : ?>
-				<dl class="gtp-definition-list">
-					<div><dt><?php esc_html_e( 'License', 'gt-performance' ); ?></dt><dd><?php echo esc_html( '' !== $repository->maskedKey() ? $repository->maskedKey() : __( 'Activation stored', 'gt-performance' ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'License source', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $repository->isConstantManaged() ? __( 'wp-config.php', 'gt-performance' ) : __( 'Encrypted database option', 'gt-performance' ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Plan', 'gt-performance' ); ?></dt><dd><?php echo esc_html( '' !== (string) $state['variation_title'] ? (string) $state['variation_title'] : __( 'GT Performance', 'gt-performance' ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Expiration', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->licenseExpiration( (string) $state['expiration_date'] ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Last verified', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->licenseLastChecked( (string) $state['last_checked_at'] ) ); ?></dd></div>
-				</dl>
-				<div class="gtp-license-actions">
-					<?php $this->actionButton( 'gtp_license_check', __( 'Check license and updates', 'gt-performance' ) ); ?>
-					<?php $this->actionButton( 'gtp_license_deactivate', __( 'Deactivate on this site', 'gt-performance' ) ); ?>
-				</div>
-				<?php if ( $repository->isConstantManaged() ) : ?>
-					<p class="gtp-license-note"><?php esc_html_e( 'GTP_LICENSE_KEY is defined in wp-config.php. Remove that constant after deactivating if this site should stop using the key.', 'gt-performance' ); ?></p>
-				<?php endif; ?>
-			<?php else : ?>
-				<form class="gtp-license-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="gtp_license_activate">
-					<?php wp_nonce_field( 'gtp_license_activate' ); ?>
-					<label for="gtp-license-key"><?php esc_html_e( 'License key', 'gt-performance' ); ?></label>
-					<p><?php esc_html_e( 'Paste the license key from your FluentCart account. GT Performance never displays the full key again after activation.', 'gt-performance' ); ?></p>
-					<div>
-						<input id="gtp-license-key" class="regular-text" type="password" name="license_key" value="" autocomplete="off" required>
-						<?php submit_button( __( 'Activate license', 'gt-performance' ), 'primary', 'submit', false ); ?>
-					</div>
-				</form>
-			<?php endif; ?>
-		</section>
-		<section class="gtp-panel">
-			<div class="gtp-panel__header">
-				<div>
-					<h3><?php esc_html_e( 'Protected updates', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'WordPress checks FluentCart for version metadata and receives a temporary download only when this site has a valid activation.', 'gt-performance' ); ?></p>
-				</div>
-			</div>
-			<dl class="gtp-definition-list">
-				<div><dt><?php esc_html_e( 'Product', 'gt-performance' ); ?></dt><dd><?php esc_html_e( 'GT Performance', 'gt-performance' ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'FluentCart product ID', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) $configuration->itemId() ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'Installed version', 'gt-performance' ); ?></dt><dd><?php echo esc_html( GTP_VERSION ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'Automatic checks', 'gt-performance' ); ?></dt><dd><?php esc_html_e( 'Every 3 hours through WordPress', 'gt-performance' ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'License verification', 'gt-performance' ); ?></dt><dd><?php esc_html_e( 'Weekly and on demand', 'gt-performance' ); ?></dd></div>
-			</dl>
-			<div class="gtp-inline-link"><a href="<?php echo esc_url( $configuration->releasesUrl() ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View release history', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 		</section>
 		<?php
 	}
@@ -2612,6 +2557,7 @@ PHP;
 	}
 
 	private function currentTab(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab routing against a fixed allowlist; no state changes.
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
 
 		return in_array( $tab, self::TABS, true ) ? $tab : 'dashboard';
@@ -2693,19 +2639,6 @@ PHP;
 			'css-regenerated-all'       => array( __( 'All used CSS was invalidated and the page cache was purged for regeneration.', 'gt-performance' ), 'success' ),
 			'css-regenerate-invalid'    => array( __( 'Enter a valid public URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'fleet-policy-applied'      => array( __( 'The signed fleet policy was verified and applied.', 'gt-performance' ), 'success' ),
-			'license-activated'         => array( __( 'The GT Performance license was activated for this site.', 'gt-performance' ), 'success' ),
-			'license-deactivated'       => array( __( 'The GT Performance license was deactivated for this site.', 'gt-performance' ), 'success' ),
-			'license-checked'           => array( __( 'The license and available plugin update were checked.', 'gt-performance' ), 'success' ),
-			'gtp_license_key'           => array( __( 'Enter a GT Performance license key, then activate again.', 'gt-performance' ), 'error' ),
-			'gtp_license_missing'       => array( __( 'Activate a GT Performance license before checking for updates.', 'gt-performance' ), 'warning' ),
-			'gtp_license_invalid'       => array( __( 'The saved license is not valid for this site. Check the key or activation limit in your account.', 'gt-performance' ), 'error' ),
-			'gtp_license_connection'    => array( __( 'The license server could not be reached. Your saved license was left unchanged.', 'gt-performance' ), 'error' ),
-			'gtp_license_response'      => array( __( 'The license server returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
-			'gtp_license_rejected'      => array( __( 'FluentCart rejected the license request. Check the key, site activation, or product access.', 'gt-performance' ), 'error' ),
-			'gtp_license_product'       => array( __( 'The GT Performance FluentCart product is not configured.', 'gt-performance' ), 'error' ),
-			'gtp_license_save'          => array( __( 'GT Performance could not encrypt and save the license on this site.', 'gt-performance' ), 'error' ),
-			'gtp_license_deactivate'    => array( __( 'FluentCart did not confirm deactivation, so the saved license was kept.', 'gt-performance' ), 'error' ),
-			'gtp_license_update_response' => array( __( 'The license server returned incomplete update information.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_token'      => array( __( 'Enter a Cloudflare API token, save the settings, then connect again.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_email'      => array( __( 'Enter the Cloudflare account email used with the Global API Key.', 'gt-performance' ), 'error' ),
 			'gtp_cloudflare_global_key' => array( __( 'Enter a Cloudflare Global API Key, save the settings, then connect again.', 'gt-performance' ), 'error' ),
@@ -2727,7 +2660,7 @@ PHP;
 			'xcloud-edge-conflict'     => array( __( 'xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules.', 'gt-performance' ), 'warning' ),
 			'gtp_diagnostic_url'        => array( __( 'Enter a valid URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'gtp_purge_verification_http' => array( __( 'The purge ran, but GT Performance could not fetch the public page for verification.', 'gt-performance' ), 'warning' ),
-			'gtp_fleet_license'         => array( __( 'Activate a valid GT Performance license before creating or applying fleet policies.', 'gt-performance' ), 'warning' ),
+			'gtp_fleet_secret'          => array( __( 'Save the same fleet signing secret on every site before creating or applying fleet policies.', 'gt-performance' ), 'warning' ),
 			'gtp_fleet_disabled'        => array( __( 'Enable Fleet Console and signed policy imports before applying a bundle.', 'gt-performance' ), 'warning' ),
 			'gtp_fleet_json'            => array( __( 'The pasted fleet policy is not valid JSON.', 'gt-performance' ), 'error' ),
 			'gtp_fleet_signature'       => array( __( 'The fleet policy signature is invalid or the five-minute import window expired.', 'gt-performance' ), 'error' ),
@@ -2772,35 +2705,6 @@ PHP;
 		);
 
 		return $labels[ $mode ] ?? $mode;
-	}
-
-	private function licenseExpiration( string $date ): string {
-		if ( '' === $date || 'lifetime' === strtolower( $date ) ) {
-			return __( 'Lifetime or not limited', 'gt-performance' );
-		}
-
-		$timestamp = strtotime( $date . ' UTC' );
-
-		return false !== $timestamp
-			? wp_date( get_option( 'date_format' ), $timestamp )
-			: __( 'Not reported', 'gt-performance' );
-	}
-
-	private function licenseLastChecked( string $date ): string {
-		if ( '' === $date ) {
-			return __( 'Not checked yet', 'gt-performance' );
-		}
-
-		$timestamp = strtotime( $date . ' UTC' );
-		if ( false === $timestamp ) {
-			return __( 'Not checked yet', 'gt-performance' );
-		}
-
-		return sprintf(
-			/* translators: %s: human-readable time difference. */
-			__( '%s ago', 'gt-performance' ),
-			human_time_diff( $timestamp, time() )
-		);
 	}
 
 	private function statusTone( string $status ): string {

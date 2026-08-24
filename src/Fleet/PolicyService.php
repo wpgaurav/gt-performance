@@ -1,6 +1,6 @@
 <?php
 /**
- * Licensed fleet policy export, verification, and application.
+ * Signed fleet policy export, verification, and application.
  *
  * @package GTPerformance
  */
@@ -9,12 +9,11 @@ declare(strict_types=1);
 
 namespace GTPerformance\Fleet;
 
+use GTPerformance\Core\SecretCipher;
 use GTPerformance\Core\Settings;
-use GTPerformance\Licensing\LicenseRepository;
 
 final class PolicyService {
 	public function __construct(
-		private readonly LicenseRepository $license = new LicenseRepository(),
 		private readonly FleetRepository $repository = new FleetRepository(),
 	) {
 	}
@@ -89,12 +88,14 @@ final class PolicyService {
 	 * @return PolicyBundle|\WP_Error
 	 */
 	private function bundler(): PolicyBundle|\WP_Error {
-		$state = $this->license->state();
-		$key   = $this->license->licenseKey();
-		if ( 'valid' !== (string) $state['status'] || '' === $key ) {
-			return new \WP_Error( 'gtp_fleet_license', __( 'A valid GT Performance license is required for fleet policies.', 'gt-performance' ) );
+		$secret = ( new SecretCipher( 'fleet' ) )->decrypt(
+			(string) Settings::get( 'fleet.signing_secret', '' ),
+			'GTP_FLEET_SIGNING_SECRET'
+		);
+		if ( '' === $secret ) {
+			return new \WP_Error( 'gtp_fleet_secret', __( 'Set the same fleet signing secret on every site before creating or applying fleet policies.', 'gt-performance' ) );
 		}
 
-		return new PolicyBundle( hash( 'sha256', 'gt-performance-fleet|' . $key, true ) );
+		return new PolicyBundle( hash( 'sha256', 'gt-performance-fleet|' . $secret, true ) );
 	}
 }

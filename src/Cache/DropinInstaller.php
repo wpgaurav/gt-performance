@@ -2,6 +2,12 @@
 /**
  * Advanced-cache drop-in ownership and installation.
  *
+ * The drop-in must be published with an atomic same-filesystem rename so a
+ * request can never include a half-written file, which WP_Filesystem cannot
+ * guarantee. var_export() generates the drop-in's PHP source, not debug output.
+ *
+ * phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DevelopmentFunctions.error_log_var_export
+ *
  * @package GTPerformance
  */
 

@@ -2,6 +2,13 @@
 /**
  * Persistent unused CSS generation reports.
  *
+ * Reports live in the plugin's own gtp_artifacts table, so every access is
+ * necessarily a direct query, and invalidation must be immediately visible to
+ * the next request rather than served from a stale object cache. Table names
+ * interpolate only the trusted WordPress table prefix.
+ *
+ * phpcs:disable WordPress.DB.DirectDatabaseQuery, PluginCheck.Security.DirectDB.UnescapedDBParameter
+ *
  * @package GTPerformance
  */
 
@@ -124,8 +131,9 @@ final class ReportRepository {
 			array( 'file', 'inline', 'hybrid' )
 		);
 		$placeholders = implode( ', ', array_fill( 0, count( $fingerprints ), '%s' ) );
-		// The table name is built from the trusted WordPress prefix and the placeholder count is generated internally.
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// The table name is built from the trusted WordPress prefix and the placeholder count is generated internally,
+		// so the sniff cannot see that the interpolated IN () list carries one %s per fingerprint argument.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$query = $wpdb->prepare(
 			"UPDATE {$table} SET status = %s, last_used_at = %s WHERE type = %s AND fingerprint IN ({$placeholders})",
 			'stale',
@@ -133,7 +141,7 @@ final class ReportRepository {
 			self::TYPE,
 			...$fingerprints
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		$result = $wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 

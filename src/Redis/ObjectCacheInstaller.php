@@ -2,6 +2,11 @@
 /**
  * Redis object-cache drop-in ownership.
  *
+ * The drop-in is published with an atomic same-filesystem rename so a request
+ * can never include a half-written file, which WP_Filesystem cannot guarantee.
+ *
+ * phpcs:disable WordPress.WP.AlternativeFunctions
+ *
  * @package GTPerformance
  */
 
