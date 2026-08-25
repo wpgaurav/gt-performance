@@ -124,6 +124,8 @@ GT Performance stores a list of script hostname patterns such as `connect.facebo
 * Every output buffer this plugin opens is now closed explicitly on shutdown.
 * Renamed the `GTP_` and `gtp_` prefixes to `GTPERF_` and `gtperf_`. Constants set in `wp-config.php`, the Private Islands shortcode, and stored transients all use the new prefix and the old names are no longer read.
 * Updated the bundled CSS parser to 9.4.0. The new version pulls in a required library that makes the plugin about 2.4 MB larger; pages served from the cache are unaffected.
+* This is the build distributed from gauravtiwari.org. It keeps the FluentCart update channel so store-installed sites continue receiving updates. The WordPress.org build is identical apart from that channel.
+* If you pin your license with a constant in `wp-config.php`, rename `GTP_LICENSE_KEY` to `GTPERF_LICENSE_KEY`. Licenses saved in the dashboard need no action.
 
 = 1.0.0 =
 * First stable release, and the first release distributed free through the WordPress.org plugin directory.

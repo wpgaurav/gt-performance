@@ -29,6 +29,14 @@ define( 'GTPERF_FILE', __FILE__ );
 define( 'GTPERF_DIR', __DIR__ );
 define( 'GTPERF_BASENAME', plugin_basename( __FILE__ ) );
 
+if ( ! defined( 'GTPERF_FLUENTCART_ITEM_ID' ) ) {
+	define( 'GTPERF_FLUENTCART_ITEM_ID', 1170147 );
+}
+
+if ( ! defined( 'GTPERF_LICENSE_SERVER_URL' ) ) {
+	define( 'GTPERF_LICENSE_SERVER_URL', 'https://gauravtiwari.org/' );
+}
+
 $gt_performance_vendor = GTPERF_DIR . '/vendor/autoload.php';
 if ( is_readable( $gt_performance_vendor ) ) {
 	require_once $gt_performance_vendor;
