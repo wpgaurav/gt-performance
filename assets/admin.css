@@ -788,6 +788,47 @@ summary.gtp-notice-pill:focus-visible {
 	text-decoration: none;
 }
 
+.gtp-license-form {
+	padding: 20px var(--gtp-inset);
+}
+
+.gtp-license-form > label {
+	font-weight: 600;
+}
+
+.gtp-license-form > p,
+.gtp-license-note {
+	max-width: 720px;
+}
+
+.gtp-license-form > div,
+.gtp-license-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 16px;
+}
+
+.gtp-license-form input.regular-text {
+	min-height: 36px;
+}
+
+.gtp-license-actions {
+	padding: 20px var(--gtp-inset);
+	border-top: 1px solid #f0f0f1;
+}
+
+.gtp-license-actions form,
+.gtp-license-actions .submit {
+	margin: 0;
+}
+
+.gtp-license-note {
+	margin: 0 24px 20px !important;
+	font-size: 13px;
+}
+
 .gtp-save-bar {
 	display: flex;
 	justify-content: flex-end;

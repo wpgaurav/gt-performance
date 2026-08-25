@@ -44,6 +44,8 @@
 - Updated `sabberworm/php-css-parser` from 8.9.0 to 9.4.0. Version 9 requires `thecodingmachine/safe` at runtime, which adds about 2.4 MB to the package and eagerly loads 79 function-definition files when the plugin bootstraps. That cost lands only on full WordPress requests, measured at roughly 5 ms; requests served from the page cache never load the plugin autoloader and are unaffected.
 - The compiled configuration files are now `config.json.php` and `redis-config.json.php`. The names deliberately differ from the `config.php` and `redis-config.php` used up to 1.0.0: a drop-in left over from that release reads those paths with `require`, so pointing the new guarded files at the old names could have blanked every front-end response if the drop-in swap did not complete. Compiling also deletes the old files.
 - `dropins/` is now covered by the coding-standards run.
+- Store-distribution build on the `fluentcart-dist` branch. Identical to the WordPress.org 1.0.1 build except the FluentCart updater and License tab are restored, so sites installed from gauravtiwari.org keep receiving updates through FluentCart.
+- The store build's licensing constants follow the same rename: `GTPERF_LICENSE_KEY`, `GTPERF_FLUENTCART_ITEM_ID`, and `GTPERF_LICENSE_SERVER_URL`. A site pinning its key through the old `GTP_LICENSE_KEY` constant must rename it. Keys already saved in the database are unaffected and keep decrypting.
 
 ## 1.0.0 - 2026-08-24
 
