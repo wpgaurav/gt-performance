@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0.1 - 2026-08-25
+
+### Changed
+
+- Store-distribution build on the `fluentcart-dist` branch. Identical to 1.0.0 except the FluentCart updater and License tab are restored, so sites installed from gauravtiwari.org keep receiving updates through FluentCart until the WordPress.org listing goes live. The WordPress.org build on `main` stays updater-free; a future WordPress.org release with a higher version supersedes this build automatically.
+
 ## 1.0.0 - 2026-08-24
 
 ### Changed

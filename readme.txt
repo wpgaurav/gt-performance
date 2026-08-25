@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,9 @@ Involved only on pages where you have already embedded a YouTube video and the l
 GT Performance also sends requests to your own site's URLs for cache warming, purge verification, and Safety Lab checks. Those requests never leave your domain.
 
 == Changelog ==
+
+= 1.0.0.1 =
+* Same free plugin as 1.0.0, in the build distributed from gauravtiwari.org. It keeps the FluentCart update channel so sites installed from the store keep receiving updates until the WordPress.org listing is live.
 
 = 1.0.0 =
 * First stable release, and the first release distributed free through the WordPress.org plugin directory.
