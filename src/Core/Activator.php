@@ -40,6 +40,10 @@ final class Activator {
 			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtperf_every_minute', 'gt_performance_run_queue' );
 		}
 
+		if ( ! wp_next_scheduled( 'gt_performance_verify_license' ) ) {
+			wp_schedule_event( time() + DAY_IN_SECONDS, 'gtperf_weekly', 'gt_performance_verify_license' );
+		}
+
 		remove_filter( 'cron_schedules', array( Plugin::class, 'cronSchedules' ) );
 	}
 }
