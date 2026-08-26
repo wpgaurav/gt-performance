@@ -15,14 +15,14 @@ use PHPUnit\Framework\TestCase;
 
 final class XCloudEdgeOwnershipTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['gtp_test_options'] = array();
+		$GLOBALS['gtperf_test_options'] = array();
 	}
 
 	public function testEnterpriseBecomesTheEdgeOwnerWhenIntegrationIsEnabled(): void {
 		$settings = Settings::defaults();
 		$settings['xcloud']['enabled'] = true;
 		$settings['xcloud']['enterprise_available'] = true;
-		$GLOBALS['gtp_test_options']['gt_performance_settings'] = $settings;
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = $settings;
 
 		self::assertTrue( ( new EdgeOwnership() )->xcloudOwnsEdge() );
 	}
@@ -32,7 +32,7 @@ final class XCloudEdgeOwnershipTest extends TestCase {
 		$settings['cloudflare']['enabled'] = true;
 		$settings['xcloud']['enabled'] = true;
 		$settings['xcloud']['enterprise_available'] = true;
-		$GLOBALS['gtp_test_options']['gt_performance_settings'] = $settings;
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = $settings;
 
 		self::assertTrue( ( new EdgeOwnership() )->hasDirectCloudflareConflict() );
 	}
@@ -40,7 +40,7 @@ final class XCloudEdgeOwnershipTest extends TestCase {
 	public function testDetectedEnterpriseDoesNotOwnEdgeWhileIntegrationIsDisabled(): void {
 		$settings = Settings::defaults();
 		$settings['xcloud']['enterprise_available'] = true;
-		$GLOBALS['gtp_test_options']['gt_performance_settings'] = $settings;
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = $settings;
 
 		self::assertFalse( ( new EdgeOwnership() )->xcloudOwnsEdge() );
 	}

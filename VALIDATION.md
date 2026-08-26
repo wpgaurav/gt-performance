@@ -267,7 +267,7 @@ Verified:
 - Desktop and 390px mobile layouts have no page-level horizontal overflow. Tabs and the CSS report table use intentional local horizontal scrolling.
 - Mobile gutters, panel padding, and control heights resolve to 20px, 20px, and 44px respectively.
 - Rounded status cards use only 1px borders; state is communicated with text color and soft background contrast.
-- Known and unknown operation failures render friendly notices without exposing internal codes such as `gtp_cloudflare_token`.
+- Known and unknown operation failures render friendly notices without exposing internal codes such as `gtperf_cloudflare_token`.
 - A settings save persisted the CSS safelist without resetting settings on other tabs and correctly marked older CSS reports stale.
 - File, inline, and hybrid unused-CSS delivery all returned HTTP 200 with `X-GT-Cache: MISS`.
 - A known unused selector was removed in every mode; used, hover-state, below-fold, and safelisted selectors were preserved.

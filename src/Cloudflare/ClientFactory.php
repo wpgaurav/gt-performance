@@ -30,7 +30,7 @@ final class ClientFactory {
 
 		$token = $cipher->decrypt( (string) ( $cloudflare['api_token'] ?? '' ) );
 		if ( '' === $token ) {
-			return new \WP_Error( 'gtp_cloudflare_token', __( 'Cloudflare API token is unavailable.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_cloudflare_token', __( 'Cloudflare API token is unavailable.', 'gt-performance' ) );
 		}
 
 		return new ApiClient( ApiCredentials::apiToken( $token ) );
@@ -51,21 +51,21 @@ final class ClientFactory {
 			? $settings['cloudflare']
 			: array();
 
-		$email = $this->constant( 'GTP_CLOUDFLARE_EMAIL' );
+		$email = $this->constant( 'GTPERF_CLOUDFLARE_EMAIL' );
 		if ( '' === $email ) {
 			$email = trim( (string) ( $cloudflare['email'] ?? '' ) );
 		}
 
 		$key = ( new TokenCipher() )->decrypt(
 			(string) ( $cloudflare['global_api_key'] ?? '' ),
-			'GTP_CLOUDFLARE_GLOBAL_API_KEY'
+			'GTPERF_CLOUDFLARE_GLOBAL_API_KEY'
 		);
 
 		if ( '' === $email || false === filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
-			return new \WP_Error( 'gtp_cloudflare_email', __( 'A valid Cloudflare account email is required for Global API Key authentication.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_cloudflare_email', __( 'A valid Cloudflare account email is required for Global API Key authentication.', 'gt-performance' ) );
 		}
 		if ( '' === $key ) {
-			return new \WP_Error( 'gtp_cloudflare_global_key', __( 'Cloudflare Global API Key is unavailable.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_cloudflare_global_key', __( 'Cloudflare Global API Key is unavailable.', 'gt-performance' ) );
 		}
 
 		return new ApiClient( ApiCredentials::globalKey( $email, $key ) );
@@ -79,7 +79,7 @@ final class ClientFactory {
 		$cloudflare = isset( $settings['cloudflare'] ) && is_array( $settings['cloudflare'] )
 			? $settings['cloudflare']
 			: array();
-		$domain     = $this->constant( 'GTP_CLOUDFLARE_DOMAIN' );
+		$domain     = $this->constant( 'GTPERF_CLOUDFLARE_DOMAIN' );
 		if ( '' === $domain ) {
 			$domain = (string) ( $cloudflare['domain'] ?? '' );
 		}
@@ -94,12 +94,12 @@ final class ClientFactory {
 	 * @param array<string, mixed> $cloudflare Cloudflare settings.
 	 */
 	private function authMode( array $cloudflare ): string {
-		if ( '' !== $this->constant( 'GTP_CLOUDFLARE_API_TOKEN' ) ) {
+		if ( '' !== $this->constant( 'GTPERF_CLOUDFLARE_API_TOKEN' ) ) {
 			return 'token';
 		}
 		if (
-			'' !== $this->constant( 'GTP_CLOUDFLARE_GLOBAL_API_KEY' )
-			&& '' !== $this->constant( 'GTP_CLOUDFLARE_EMAIL' )
+			'' !== $this->constant( 'GTPERF_CLOUDFLARE_GLOBAL_API_KEY' )
+			&& '' !== $this->constant( 'GTPERF_CLOUDFLARE_EMAIL' )
 		) {
 			return 'global';
 		}

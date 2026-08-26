@@ -89,7 +89,8 @@ final class StaleRevalidationTest extends TestCase {
 		if ( ! is_dir( $directory ) ) {
 			mkdir( $directory, 0o777, true );
 		}
-		file_put_contents( $directory . '/ff66.meta.php', "<?php\nreturn 'not-an-array';\n" );
+		file_put_contents( $directory . '/ff66.meta.json', '"not-an-array"' );
+		file_put_contents( $directory . '/ff67.meta.json', '{ this is not json' );
 		$this->writeEntry( 'ff77', 'https://example.com/ok/', $now - 7200, $now - 3600, $now + 3600 );
 
 		self::assertSame(

@@ -76,7 +76,7 @@ final class SafetyLab {
 			array(
 				'timeout'     => 15,
 				'redirection' => 0,
-				'user-agent'  => 'GT-Performance-Commerce-Safety-Lab/' . GTP_VERSION,
+				'user-agent'  => 'GT-Performance-Commerce-Safety-Lab/' . GTPERF_VERSION,
 				'headers'     => array( 'Accept' => 'text/html' ),
 			)
 		);

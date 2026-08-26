@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.0`, distributed free through the WordPress.org plugin directory. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.1`, distributed free through the WordPress.org plugin directory. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -60,13 +60,13 @@ Commerce Safety Lab first simulates every registered dynamic path, cookie prefix
 
 ## Private Islands
 
-Private Islands is disabled by default. When enabled in **Integrations**, the shortcode `[gtp_private_island id="commerce_cart_count"]` renders a public fallback that is replaced through a signed private request. `commerce_account_link` is also registered by default. Developers can add explicit fragments through `gt_performance_private_fragments`; arbitrary callbacks or markup requested by a visitor are never executed.
+Private Islands is disabled by default. When enabled in **Integrations**, the shortcode `[gtperf_private_island id="commerce_cart_count"]` renders a public fallback that is replaced through a signed private request. `commerce_account_link` is also registered by default. Developers can add explicit fragments through `gt_performance_private_fragments`; arbitrary callbacks or markup requested by a visitor are never executed.
 
 Every fragment response sends `Cache-Control: no-store, private, max-age=0`. If JavaScript, signature validation, or the endpoint fails, the public fallback remains in place.
 
 ## Fleet Console
 
-Fleet Console moves reviewed settings between your sites. Save the same fleet signing secret on every site (or define `GTP_FLEET_SIGNING_SECRET` in `wp-config.php`); bundles are signed with a key derived from it. Exports expire after five minutes and imports are accepted only once. Cloudflare credentials, Redis credentials, the signing secret itself, and other secret fields are stripped recursively even when their parent module is selected.
+Fleet Console moves reviewed settings between your sites. Save the same fleet signing secret on every site (or define `GTPERF_FLEET_SIGNING_SECRET` in `wp-config.php`); bundles are signed with a key derived from it. Exports expire after five minutes and imports are accepted only once. Cloudflare credentials, Redis credentials, the signing secret itself, and other secret fields are stripped recursively even when their parent module is selected.
 
 The receiver applies only sanitized GT Performance settings. It does not install plugins, upload files, evaluate PHP, or expose a remote command channel. Sites can disable importing and remain export-only.
 
@@ -92,12 +92,12 @@ define( 'WP_REDIS_HOST', '127.0.0.1' );
 define( 'WP_REDIS_PORT', 6379 );
 define( 'WP_REDIS_DATABASE', 0 );
 define( 'WP_REDIS_PASSWORD', array( 'username', 'replace-with-a-secret' ) );
-define( 'WP_REDIS_PREFIX', 'gtp:site:' );
+define( 'WP_REDIS_PREFIX', 'gtperf:site:' );
 define( 'WP_REDIS_TIMEOUT', 0.5 );
 define( 'WP_REDIS_READ_TIMEOUT', 0.5 );
 ```
 
-`WP_REDIS_PATH` with `WP_REDIS_SCHEME` set to `unix` is supported for sockets; `tls` and `rediss` schemes enable TLS. `WP_REDIS_DISABLED` is honored as the emergency switch. Existing `GTP_REDIS_*` constants remain supported and take highest precedence over compatible constants and saved settings.
+`WP_REDIS_PATH` with `WP_REDIS_SCHEME` set to `unix` is supported for sockets; `tls` and `rediss` schemes enable TLS. `WP_REDIS_DISABLED` is honored as the emergency switch. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence over compatible constants and saved settings.
 
 ## Safe defaults
 
@@ -121,7 +121,7 @@ Select **Preview rule plan** before synchronization to inspect the exact managed
 
 Legacy Global API Key authentication is also supported. Select **Global API Key**, then enter the account email, Global API Key, and domain. The key is encrypted at rest with the same site-keyed cipher used for scoped tokens. A scoped token remains safer because its permissions can be limited to one zone.
 
-Credentials may instead be supplied in `wp-config.php` through `GTP_CLOUDFLARE_API_TOKEN`, or through `GTP_CLOUDFLARE_GLOBAL_API_KEY` with `GTP_CLOUDFLARE_EMAIL`. `GTP_CLOUDFLARE_DOMAIN` can provide the zone name. Constants take precedence over saved values.
+Credentials may instead be supplied in `wp-config.php` through `GTPERF_CLOUDFLARE_API_TOKEN`, or through `GTPERF_CLOUDFLARE_GLOBAL_API_KEY` with `GTPERF_CLOUDFLARE_EMAIL`. `GTPERF_CLOUDFLARE_DOMAIN` can provide the zone name. Constants take precedence over saved values.
 
 GT Performance uses the normal Cloudflare CDN fetch path and Cache Rules; it does not require APO, Workers, Cache Reserve, Argo, or an Enterprise plan.
 
@@ -155,7 +155,7 @@ Private and commerce responses send browser `Cache-Control`, standard `CDN-Cache
 
 xCloud's current Public API does not publish a token-authenticated purge operation for the Enterprise add-on. The dashboard's Enterprise purge action requires an interactive xCloud session, so GT Performance deliberately fails closed instead of calling xCloud's unrelated broad host `purge-all` endpoint. Use the Purge control on the site's Cloudflare Enterprise page until xCloud adds that operation to the Public API.
 
-The token is encrypted in the WordPress option. It may instead be supplied with `GTP_XCLOUD_API_TOKEN` in `wp-config.php`; the constant takes precedence over the saved value.
+The token is encrypted in the WordPress option. It may instead be supplied with `GTPERF_XCLOUD_API_TOKEN` in `wp-config.php`; the constant takes precedence over the saved value.
 
 ```bash
 wp gt-performance xcloud status

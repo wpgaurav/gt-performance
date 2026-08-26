@@ -49,7 +49,7 @@ final class CssPruner {
 	 * @return array{css:string,escapes:array<string,string>}
 	 */
 	private function protectUnicodeEscapes( string $css ): array {
-		$prefix = '__GTP_CSS_ESCAPE_' . substr( hash( 'sha256', $css ), 0, 12 ) . '_';
+		$prefix = '__GTPERF_CSS_ESCAPE_' . substr( hash( 'sha256', $css ), 0, 12 ) . '_';
 		while ( str_contains( $css, $prefix ) ) {
 			$prefix .= '_';
 		}
@@ -106,9 +106,7 @@ final class CssPruner {
 
 				$kept = array();
 				foreach ( $item->getSelectors() as $selectorObject ) {
-					$selector = method_exists( $selectorObject, 'getSelector' )
-						? (string) $selectorObject->getSelector()
-						: (string) $selectorObject;
+					$selector = $selectorObject->getSelector();
 
 					$match = $this->matches( $selector, $xpath, $critical, $safelist, $preserveDynamicStates );
 					if ( 'used' === $segment && $match['used'] ) {
@@ -210,9 +208,19 @@ final class CssPruner {
 		);
 	}
 
+	/**
+	 * Remove interaction-state pseudo-classes so a rule is tested against the
+	 * element it decorates rather than a state the captured DOM never shows.
+	 *
+	 * The alternation lists longer names before the shorter names they extend and
+	 * is closed with a negative lookahead. Without both, `:focus-visible` matches
+	 * the leading `focus` alternative and leaves `-visible` fused to the class
+	 * name, producing a selector that matches nothing — which quietly pruned
+	 * every keyboard focus style out of the generated CSS.
+	 */
 	private function stripDynamicStates( string $selector ): string {
 		$selector = preg_replace(
-			'/:((?:hover|focus|focus-visible|focus-within|active|visited|checked|disabled|enabled|required|optional|valid|invalid|user-valid|user-invalid|indeterminate|read-only|read-write|target|placeholder-shown|autofill|open|closed|popover-open))(?:\\([^)]*\\))?/i',
+			'/:((?:focus-visible|focus-within|user-invalid|user-valid|placeholder-shown|indeterminate|popover-open|read-write|read-only|disabled|required|optional|invalid|visited|checked|enabled|active|target|autofill|closed|hover|focus|valid|open))(?![\w-])(?:\\([^)]*\\))?/i',
 			'',
 			$selector
 		) ?? $selector;

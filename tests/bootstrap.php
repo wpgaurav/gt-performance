@@ -9,12 +9,12 @@ declare(strict_types=1);
 
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
-if ( ! defined( 'GTP_VERSION' ) ) {
-	define( 'GTP_VERSION', 'test' );
+if ( ! defined( 'GTPERF_VERSION' ) ) {
+	define( 'GTPERF_VERSION', 'test' );
 }
 
-if ( ! defined( 'GTP_DIR' ) ) {
-	define( 'GTP_DIR', dirname( __DIR__ ) );
+if ( ! defined( 'GTPERF_DIR' ) ) {
+	define( 'GTPERF_DIR', dirname( __DIR__ ) );
 }
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,46 +29,46 @@ if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
 	define( 'HOUR_IN_SECONDS', 3600 );
 }
 
-if ( ! defined( 'GTP_BASENAME' ) ) {
-	define( 'GTP_BASENAME', 'gt-performance/gt-performance.php' );
+if ( ! defined( 'GTPERF_BASENAME' ) ) {
+	define( 'GTPERF_BASENAME', 'gt-performance/gt-performance.php' );
 }
 
-if ( ! function_exists( 'gtp_test_site_transients' ) ) {
+if ( ! function_exists( 'gtperf_test_site_transients' ) ) {
 	/**
 	 * Shared store behind the site-transient stubs.
 	 *
 	 * @return array<string, mixed>
 	 */
-	function &gtp_test_site_transients(): array {
+	function &gtperf_test_site_transients(): array {
 		static $store = array();
 
 		return $store;
 	}
 
 	function get_site_transient( string $transient ): mixed {
-		$store = &gtp_test_site_transients();
+		$store = &gtperf_test_site_transients();
 
 		return $store[ $transient ] ?? false;
 	}
 
 	function set_site_transient( string $transient, mixed $value, int $expiration = 0 ): bool {
 		unset( $expiration );
-		$store               = &gtp_test_site_transients();
+		$store               = &gtperf_test_site_transients();
 		$store[ $transient ] = $value;
 
 		return true;
 	}
 
 	function delete_site_transient( string $transient ): bool {
-		$store = &gtp_test_site_transients();
+		$store = &gtperf_test_site_transients();
 		unset( $store[ $transient ] );
 
-		$GLOBALS['gtp_test_transient_deletions'][] = $transient;
+		$GLOBALS['gtperf_test_transient_deletions'][] = $transient;
 
 		// Stands in for any listener on the generic deleted_site_transient /
 		// deleted_option hooks that refreshes the plugin update cache, which is
 		// what re-enters the deletion hook on a live site.
-		$listener = $GLOBALS['gtp_test_deleted_site_transient_listener'] ?? null;
+		$listener = $GLOBALS['gtperf_test_deleted_site_transient_listener'] ?? null;
 		if ( is_callable( $listener ) ) {
 			$listener( $transient );
 		}
@@ -164,26 +164,26 @@ if ( ! function_exists( 'is_wp_error' ) ) {
 
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( string $name, mixed $default = false ): mixed {
-		return $GLOBALS['gtp_test_options'][ $name ] ?? $default;
+		return $GLOBALS['gtperf_test_options'][ $name ] ?? $default;
 	}
 }
 
 if ( ! function_exists( 'is_multisite' ) ) {
 	function is_multisite(): bool {
-		return (bool) ( $GLOBALS['gtp_test_is_multisite'] ?? false );
+		return (bool) ( $GLOBALS['gtperf_test_is_multisite'] ?? false );
 	}
 }
 
 if ( ! function_exists( 'get_site_option' ) ) {
 	function get_site_option( string $name, mixed $default = false ): mixed {
-		return $GLOBALS['gtp_test_site_options'][ $name ] ?? $default;
+		return $GLOBALS['gtperf_test_site_options'][ $name ] ?? $default;
 	}
 }
 
 if ( ! function_exists( 'update_option' ) ) {
 	function update_option( string $name, mixed $value, bool $autoload = false ): bool {
 		unset( $autoload );
-		$GLOBALS['gtp_test_options'][ $name ] = $value;
+		$GLOBALS['gtperf_test_options'][ $name ] = $value;
 
 		return true;
 	}
@@ -191,7 +191,7 @@ if ( ! function_exists( 'update_option' ) ) {
 
 if ( ! function_exists( 'apply_filters' ) ) {
 	function apply_filters( string $hook, mixed $value, mixed ...$args ): mixed {
-		$callbacks = $GLOBALS['gtp_test_filters'][ $hook ] ?? array();
+		$callbacks = $GLOBALS['gtperf_test_filters'][ $hook ] ?? array();
 		foreach ( $callbacks as $callback ) {
 			$value = $callback( $value, ...$args );
 		}
@@ -202,7 +202,7 @@ if ( ! function_exists( 'apply_filters' ) ) {
 
 if ( ! function_exists( 'do_action' ) ) {
 	function do_action( string $hook, mixed ...$args ): void {
-		$GLOBALS['gtp_test_actions'][] = array(
+		$GLOBALS['gtperf_test_actions'][] = array(
 			'hook' => $hook,
 			'args' => $args,
 		);
@@ -212,7 +212,7 @@ if ( ! function_exists( 'do_action' ) ) {
 if ( ! function_exists( 'wp_cache_delete' ) ) {
 	function wp_cache_delete( mixed $key, string $group = '', bool $deprecated = false ): bool {
 		unset( $deprecated );
-		$GLOBALS['gtp_test_cache_deletions'][] = array( $key, $group );
+		$GLOBALS['gtperf_test_cache_deletions'][] = array( $key, $group );
 
 		return true;
 	}
@@ -223,6 +223,12 @@ if ( ! function_exists( 'esc_url_raw' ) ) {
 		$sanitized = filter_var( $url, FILTER_SANITIZE_URL );
 
 		return is_string( $sanitized ) ? $sanitized : '';
+	}
+}
+
+if ( ! function_exists( 'wp_unslash' ) ) {
+	function wp_unslash( mixed $value ): mixed {
+		return is_array( $value ) ? array_map( 'wp_unslash', $value ) : ( is_string( $value ) ? stripslashes( $value ) : $value );
 	}
 }
 
@@ -280,12 +286,12 @@ if ( ! function_exists( 'wp_safe_remote_get' ) ) {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	function wp_safe_remote_get( string $url, array $args = array() ): array|WP_Error {
-		$GLOBALS['gtp_test_http_requests'][] = array(
+		$GLOBALS['gtperf_test_http_requests'][] = array(
 			'url'  => $url,
 			'args' => $args,
 		);
 
-		return $GLOBALS['gtp_test_http_response'] ?? array(
+		return $GLOBALS['gtperf_test_http_response'] ?? array(
 			'response' => array( 'code' => 200 ),
 			'headers'  => array( 'content-type' => 'text/css' ),
 			'body'     => '.remote{}',
@@ -312,12 +318,12 @@ if ( ! function_exists( 'wp_remote_request' ) ) {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	function wp_remote_request( string $url, array $args ): array|WP_Error {
-		$GLOBALS['gtp_test_http_requests'][] = array(
+		$GLOBALS['gtperf_test_http_requests'][] = array(
 			'url'  => $url,
 			'args' => $args,
 		);
 
-		return $GLOBALS['gtp_test_http_response'] ?? array(
+		return $GLOBALS['gtperf_test_http_response'] ?? array(
 			'response' => array( 'code' => 200 ),
 			'body'     => '{"success":true,"result":{}}',
 		);
@@ -341,11 +347,11 @@ if ( ! function_exists( 'wp_remote_retrieve_body' ) ) {
 // Paths::cacheRoot() derives every cache directory from WP_CONTENT_DIR. Point it
 // at a scratch directory so filesystem-backed tests never touch a real site.
 if ( ! defined( 'WP_CONTENT_DIR' ) ) {
-	$gtp_test_content = sys_get_temp_dir() . '/gt-performance-tests-' . getmypid();
-	if ( ! is_dir( $gtp_test_content ) ) {
-		mkdir( $gtp_test_content, 0o777, true );
+	$gtperf_test_content = sys_get_temp_dir() . '/gt-performance-tests-' . getmypid();
+	if ( ! is_dir( $gtperf_test_content ) ) {
+		mkdir( $gtperf_test_content, 0o777, true );
 	}
-	define( 'WP_CONTENT_DIR', $gtp_test_content );
+	define( 'WP_CONTENT_DIR', $gtperf_test_content );
 }
 
 if ( ! defined( 'AUTH_KEY' ) ) {

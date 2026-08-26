@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,7 +69,7 @@ No. It accepts only short-lived, one-use GT Performance setting bundles signed w
 
 = Can Redis credentials be configured in wp-config.php? =
 
-Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTP_REDIS_*` constants remain supported and take highest precedence. The Integrations screen provides a copy-ready example.
+Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence. The Integrations screen provides a copy-ready example.
 
 == External Services ==
 
@@ -93,7 +93,20 @@ Involved only on pages where you have already embedded a YouTube video and the l
 
 GT Performance also sends requests to your own site's URLs for cache warming, purge verification, and Safety Lab checks. Those requests never leave your domain.
 
+= Hostnames that are matched, not contacted =
+
+GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
+
 == Changelog ==
+
+= 1.0.1 =
+* Configuration and page-cache metadata are now inert JSON data files. Nothing generates or executes PHP at runtime.
+* advanced-cache.php now ships as a bundled file that is copied into place instead of being generated, and resolves its own paths, so a renamed or relocated plugin directory keeps working.
+* The early cache drop-in and WordPress now sanitize every request value through one shared implementation, so cache keys and bypass decisions can no longer diverge between them.
+* Fixed keyboard focus styles being pruned from generated CSS. `:focus-visible` and `:focus-within` rules were dropped as unused.
+* Every output buffer this plugin opens is now closed explicitly on shutdown.
+* Renamed the `GTP_` and `gtp_` prefixes to `GTPERF_` and `gtperf_`. Constants set in `wp-config.php`, the Private Islands shortcode, and stored transients all use the new prefix and the old names are no longer read.
+* Updated the bundled CSS parser to 9.4.0. The new version pulls in a required library that makes the plugin about 2.4 MB larger; pages served from the cache are unaffected.
 
 = 1.0.0 =
 * First stable release, and the first release distributed free through the WordPress.org plugin directory.

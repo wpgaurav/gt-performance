@@ -4,6 +4,7 @@
 	<file>gt-performance.php</file>
 	<file>uninstall.php</file>
 	<file>src</file>
+	<file>dropins</file>
 	<exclude-pattern>vendor/*</exclude-pattern>
 	<arg name="basepath" value="."/>
 	<arg name="colors"/>

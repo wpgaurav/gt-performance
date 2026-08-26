@@ -24,11 +24,11 @@ final class ClientFactory {
 			: array();
 		$token    = ( new SecretCipher( 'xcloud' ) )->decrypt(
 			(string) ( $xcloud['api_token'] ?? '' ),
-			'GTP_XCLOUD_API_TOKEN'
+			'GTPERF_XCLOUD_API_TOKEN'
 		);
 
 		if ( '' === trim( $token ) ) {
-			return new \WP_Error( 'gtp_xcloud_token', __( 'xCloud API token is unavailable.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_xcloud_token', __( 'xCloud API token is unavailable.', 'gt-performance' ) );
 		}
 
 		return new ApiClient( trim( $token ), $this->baseUrl() );
@@ -54,11 +54,11 @@ final class ClientFactory {
 	}
 
 	private function baseUrl(): string {
-		if ( ! defined( 'GTP_XCLOUD_API_BASE_URL' ) ) {
+		if ( ! defined( 'GTPERF_XCLOUD_API_BASE_URL' ) ) {
 			return 'https://app.xcloud.host';
 		}
 
-		$value = constant( 'GTP_XCLOUD_API_BASE_URL' );
+		$value = constant( 'GTPERF_XCLOUD_API_BASE_URL' );
 
 		return is_string( $value ) && '' !== trim( $value )
 			? rtrim( trim( $value ), '/' )

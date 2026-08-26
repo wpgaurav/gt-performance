@@ -11,7 +11,7 @@ namespace GTPerformance\Core;
 
 final class Paths {
 	public static function cacheRoot(): string {
-		$content = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( GTP_DIR );
+		$content = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : dirname( GTPERF_DIR );
 
 		return rtrim( $content, '/\\' ) . '/cache/gt-performance';
 	}

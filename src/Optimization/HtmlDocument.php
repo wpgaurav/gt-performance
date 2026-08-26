@@ -66,7 +66,7 @@ final class HtmlDocument {
 					return $matches[0];
 				}
 
-				$token                       = '/*gtp:mask:' . ( $this->maskIndex++ ) . '*/';
+				$token                       = '/*gtperf:mask:' . ( $this->maskIndex++ ) . '*/';
 				$this->scriptMasks[ $token ] = $matches[2];
 
 				return $matches[1] . $token . $matches[3];

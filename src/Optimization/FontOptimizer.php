@@ -64,7 +64,7 @@ final class FontOptimizer {
 			$url,
 			array(
 				'timeout'    => 10,
-				'user-agent' => 'Mozilla/5.0 GT-Performance/' . GTP_VERSION,
+				'user-agent' => 'Mozilla/5.0 GT-Performance/' . GTPERF_VERSION,
 			)
 		);
 		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {

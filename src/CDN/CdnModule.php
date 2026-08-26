@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\CDN;
 
 use GTPerformance\Contracts\Module;
+use GTPerformance\Core\OutputBuffer;
 use GTPerformance\Core\Settings;
 
 final class CdnModule implements Module {
@@ -28,7 +29,7 @@ final class CdnModule implements Module {
 		// Start before the page-cache buffer. When origin caching is active, its
 		// optimizer pipeline runs first as the inner buffer and this final pass is
 		// idempotent. When origin caching is bypassed, CDN delivery still works.
-		ob_start( array( $this, 'rewriteHtml' ) );
+		OutputBuffer::start( array( $this, 'rewriteHtml' ) );
 	}
 
 	public function rewriteHtml( string $html ): string {

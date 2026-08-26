@@ -76,7 +76,7 @@ jobs:
 
       - name: Build production ZIP
         env:
-          GTP_PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
+          GTPERF_PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
         run: ./bin/build-package.sh
 
       - name: Verify packaged version

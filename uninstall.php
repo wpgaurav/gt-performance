@@ -36,16 +36,16 @@ delete_option( 'gt_performance_fleet_events' );
 // Written by builds distributed before the WordPress.org release.
 delete_option( 'gt_performance_license' );
 delete_option( 'gt_performance_remove_data_on_uninstall' );
-delete_transient( 'gtp_warm_pending' );
-delete_transient( 'gtp_revalidate_pending' );
+delete_transient( 'gtperf_warm_pending' );
+delete_transient( 'gtperf_revalidate_pending' );
 
 global $wpdb;
 
 $gt_performance_tables = array(
-	$wpdb->prefix . 'gtp_jobs',
-	$wpdb->prefix . 'gtp_dependencies',
-	$wpdb->prefix . 'gtp_artifacts',
-	$wpdb->prefix . 'gtp_vitals',
+	$wpdb->prefix . 'gtperf_jobs',
+	$wpdb->prefix . 'gtperf_dependencies',
+	$wpdb->prefix . 'gtperf_artifacts',
+	$wpdb->prefix . 'gtperf_vitals',
 );
 
 foreach ( $gt_performance_tables as $gt_performance_table ) {

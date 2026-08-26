@@ -37,7 +37,11 @@ final class CommercePolicyAuditTest extends TestCase {
 	public function testAuditFailsAnUnprotectedPath(): void {
 		$checks = ( new PolicyAudit() )->audit(
 			'fluentcart',
-			array( 'paths' => array( '/receipt/' ), 'cookies' => array(), 'query' => array() ),
+			array(
+				'paths' => array( '/receipt/' ),
+				'cookies' => array(),
+				'query' => array(),
+			),
 			array(
 				'enabled'             => true,
 				'bypass_paths'        => array(),

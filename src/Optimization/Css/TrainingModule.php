@@ -27,9 +27,9 @@ final class TrainingModule implements Module {
 
 		wp_enqueue_script(
 			'gt-performance-css-training',
-			plugins_url( 'assets/css-training.js', GTP_FILE ),
+			plugins_url( 'assets/css-training.js', GTPERF_FILE ),
 			array(),
-			GTP_VERSION,
+			GTPERF_VERSION,
 			true
 		);
 		wp_localize_script(
@@ -37,7 +37,7 @@ final class TrainingModule implements Module {
 			'gtPerformanceCssTraining',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'gtp_css_training_observe' ),
+				'nonce'   => wp_create_nonce( 'gtperf_css_training_observe' ),
 			)
 		);
 	}
@@ -46,7 +46,7 @@ final class TrainingModule implements Module {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'CSS training is restricted to administrators.', 'gt-performance' ) ), 403 );
 		}
-		check_ajax_referer( 'gtp_css_training_observe', 'nonce' );
+		check_ajax_referer( 'gtperf_css_training_observe', 'nonce' );
 		// Capability and nonce checks above authorize this explicit request field.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$selectors = isset( $_POST['selectors'] ) && is_array( $_POST['selectors'] )

@@ -58,9 +58,9 @@ final class ObjectCacheInstaller {
 			return;
 		}
 
-		if ( GTP_VERSION === $installer->installedVersion() ) {
-			if ( GTP_VERSION !== (string) get_option( self::VERSION_OPTION, '' ) ) {
-				update_option( self::VERSION_OPTION, GTP_VERSION, false );
+		if ( GTPERF_VERSION === $installer->installedVersion() ) {
+			if ( GTPERF_VERSION !== (string) get_option( self::VERSION_OPTION, '' ) ) {
+				update_option( self::VERSION_OPTION, GTPERF_VERSION, false );
 			}
 			return;
 		}
@@ -70,7 +70,7 @@ final class ObjectCacheInstaller {
 			return;
 		}
 
-		update_option( self::VERSION_OPTION, GTP_VERSION, false );
+		update_option( self::VERSION_OPTION, GTPERF_VERSION, false );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
 		wp_cache_delete( 'cron', 'options' );
@@ -78,10 +78,10 @@ final class ObjectCacheInstaller {
 
 	public function install(): bool|\WP_Error {
 		if ( ! class_exists( '\\Redis' ) ) {
-			return new \WP_Error( 'gtp_redis_extension', __( 'The PHP Redis extension is not installed.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_extension', __( 'The PHP Redis extension is not installed.', 'gt-performance' ) );
 		}
 		if ( 'conflict' === $this->status() ) {
-			return new \WP_Error( 'gtp_redis_conflict', __( 'Another object-cache.php drop-in is already installed.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_conflict', __( 'Another object-cache.php drop-in is already installed.', 'gt-performance' ) );
 		}
 		$connection = ( new ConnectionTester() )->test();
 		if ( is_wp_error( $connection ) ) {
@@ -92,22 +92,22 @@ final class ObjectCacheInstaller {
 	}
 
 	private function publish(): bool|\WP_Error {
-		$source = GTP_DIR . '/dropins/object-cache.php';
+		$source = GTPERF_DIR . '/dropins/object-cache.php';
 		$content = file_get_contents( $source );
 		if ( ! is_string( $content ) ) {
-			return new \WP_Error( 'gtp_redis_source', __( 'Unable to read the Redis object-cache drop-in.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_source', __( 'Unable to read the Redis object-cache drop-in.', 'gt-performance' ) );
 		}
 
 		$content = (string) preg_replace(
 			'/' . preg_quote( self::SIGNATURE, '/' ) . '/',
-			self::SIGNATURE . ' v' . GTP_VERSION,
+			self::SIGNATURE . ' v' . GTPERF_VERSION,
 			$content,
 			1
 		);
 		$temp = $this->target() . '.' . wp_generate_uuid4() . '.tmp';
 		if ( false === file_put_contents( $temp, $content, LOCK_EX ) || ! rename( $temp, $this->target() ) ) {
 			@unlink( $temp );
-			return new \WP_Error( 'gtp_redis_install', __( 'Unable to install the Redis object-cache drop-in.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_install', __( 'Unable to install the Redis object-cache drop-in.', 'gt-performance' ) );
 		}
 
 		return true;
@@ -115,7 +115,7 @@ final class ObjectCacheInstaller {
 
 	public function remove(): bool|\WP_Error {
 		if ( 'owned' !== $this->status() ) {
-			return new \WP_Error( 'gtp_redis_not_owned', __( 'GT Performance does not own the object-cache drop-in.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_not_owned', __( 'GT Performance does not own the object-cache drop-in.', 'gt-performance' ) );
 		}
 
 		return @unlink( $this->target() );

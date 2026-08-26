@@ -14,24 +14,24 @@ use GTPerformance\Core\Settings;
 final class ConnectionTester {
 	public function test(): bool|\WP_Error {
 		if ( ! class_exists( '\\Redis' ) ) {
-			return new \WP_Error( 'gtp_redis_extension', __( 'The PHP Redis extension is not installed.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_extension', __( 'The PHP Redis extension is not installed.', 'gt-performance' ) );
 		}
 
 		$configuration = new Configuration();
 		$config        = $configuration->runtime( (array) Settings::get( 'redis', array() ) );
 		$config        = $configuration->constantOverrides( $config );
 		if ( ! (bool) $config['enabled'] ) {
-			return new \WP_Error( 'gtp_redis_disabled', __( 'Enable Redis object caching and save the settings first.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_disabled', __( 'Enable Redis object caching and save the settings first.', 'gt-performance' ) );
 		}
 
 		try {
 			$redis = $this->connect( $config );
 			if ( ! $redis->ping() ) {
-				return new \WP_Error( 'gtp_redis_ping', __( 'Redis accepted the connection but did not answer the health check.', 'gt-performance' ) );
+				return new \WP_Error( 'gtperf_redis_ping', __( 'Redis accepted the connection but did not answer the health check.', 'gt-performance' ) );
 			}
 			$redis->close();
 		} catch ( \Throwable ) {
-			return new \WP_Error( 'gtp_redis_connect', __( 'Redis could not be reached with the saved credentials.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_redis_connect', __( 'Redis could not be reached with the saved credentials.', 'gt-performance' ) );
 		}
 
 		return true;

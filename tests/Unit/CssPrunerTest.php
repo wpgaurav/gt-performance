@@ -34,6 +34,71 @@ final class CssPrunerTest extends TestCase {
 		self::assertStringNotContainsString( '.unused', $output );
 	}
 
+	/**
+	 * @return array<string, array{0: string}>
+	 */
+	public static function dynamicStateProvider(): array {
+		$states = array(
+			'hover',
+			'focus',
+			'focus-visible',
+			'focus-within',
+			'active',
+			'visited',
+			'target',
+			'disabled',
+			'enabled',
+			'required',
+			'optional',
+			'valid',
+			'invalid',
+			'user-valid',
+			'user-invalid',
+			'checked',
+			'indeterminate',
+			'read-only',
+			'read-write',
+			'placeholder-shown',
+			'autofill',
+			'open',
+			'closed',
+			'popover-open',
+		);
+
+		$cases = array();
+		foreach ( $states as $state ) {
+			$cases[ $state ] = array( $state );
+		}
+
+		return $cases;
+	}
+
+	/**
+	 * A state pseudo-class must be stripped whole. Leaving a fragment such as
+	 * `-visible` fused to the class name produces a selector that matches
+	 * nothing, which silently removes the rule from the generated CSS.
+	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'dynamicStateProvider' )]
+	public function test_dynamic_state_rules_survive_pruning( string $state ): void {
+		$output = ( new CssPruner() )->prune(
+			'.button:' . $state . '{color:red}',
+			$this->document()
+		);
+
+		self::assertStringContainsString( '.button:' . $state, $output );
+	}
+
+	public function test_focus_states_in_a_selector_list_all_survive(): void {
+		$output = ( new CssPruner() )->prune(
+			'.button:hover,.button:focus-visible,.button:focus-within{outline:2px solid}',
+			$this->document()
+		);
+
+		self::assertStringContainsString( '.button:hover', $output );
+		self::assertStringContainsString( '.button:focus-visible', $output );
+		self::assertStringContainsString( '.button:focus-within', $output );
+	}
+
 	public function test_hybrid_segments_do_not_duplicate_normal_rules(): void {
 		$pruner    = new CssPruner();
 		$critical  = $pruner->prune( '.hero{display:block}.missing{display:none}', $this->document(), 'critical' );

@@ -17,8 +17,8 @@ final class ObjectCacheInstallerTest extends TestCase {
 
 	protected function setUp(): void {
 		$this->installer                         = new ObjectCacheInstaller();
-		$GLOBALS['gtp_test_options']             = array();
-		$GLOBALS['gtp_test_cache_deletions']     = array();
+		$GLOBALS['gtperf_test_options']             = array();
+		$GLOBALS['gtperf_test_cache_deletions']     = array();
 		$target                                  = $this->installer->target();
 		is_file( $target ) && unlink( $target );
 	}
@@ -36,8 +36,8 @@ final class ObjectCacheInstallerTest extends TestCase {
 
 		ObjectCacheInstaller::syncVersion();
 
-		self::assertSame( GTP_VERSION, $this->installer->installedVersion() );
-		self::assertSame( GTP_VERSION, $GLOBALS['gtp_test_options']['gt_performance_object_cache_dropin_version'] );
+		self::assertSame( GTPERF_VERSION, $this->installer->installedVersion() );
+		self::assertSame( GTPERF_VERSION, $GLOBALS['gtperf_test_options']['gt_performance_object_cache_dropin_version'] );
 	}
 
 	public function testForeignDropinRemainsUntouched(): void {
@@ -47,7 +47,7 @@ final class ObjectCacheInstallerTest extends TestCase {
 		ObjectCacheInstaller::syncVersion();
 
 		self::assertSame( $foreign, file_get_contents( $this->installer->target() ) );
-		self::assertSame( array(), $GLOBALS['gtp_test_cache_deletions'] );
+		self::assertSame( array(), $GLOBALS['gtperf_test_cache_deletions'] );
 	}
 
 	public function testUpdatingOwnedDropinClearsExactAggregateOptionCaches(): void {
@@ -64,7 +64,7 @@ final class ObjectCacheInstallerTest extends TestCase {
 				array( 'notoptions', 'options' ),
 				array( 'cron', 'options' ),
 			),
-			$GLOBALS['gtp_test_cache_deletions']
+			$GLOBALS['gtperf_test_cache_deletions']
 		);
 	}
 }

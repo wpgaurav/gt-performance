@@ -16,7 +16,7 @@ final class TokenCipher {
 		return ( new SecretCipher( 'cloudflare' ) )->encrypt( $plain );
 	}
 
-	public function decrypt( string $stored, string $constantName = 'GTP_CLOUDFLARE_API_TOKEN' ): string {
+	public function decrypt( string $stored, string $constantName = 'GTPERF_CLOUDFLARE_API_TOKEN' ): string {
 		return ( new SecretCipher( 'cloudflare' ) )->decrypt( $stored, $constantName );
 	}
 }

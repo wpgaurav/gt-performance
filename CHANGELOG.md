@@ -1,12 +1,34 @@
 # Changelog
 
+## 1.0.1 - 2026-08-26
+
+### Security
+
+- The compiled cache configuration and the Redis runtime configuration are no longer executable PHP. Both are stored as JSON behind a fixed `<?php exit; ?>` guard line and are read with `file_get_contents()` and `json_decode()`, never included. The guard keeps a direct web request from disclosing the Redis credentials on servers that do not honour `.htaccess`.
+- The early cache drop-in and `RequestContext::fromGlobals()` now sanitize the request through one shared implementation. Control characters are stripped and every name and value is bounded before any of it reaches the `gt_performance_html` filter.
+
+### Fixed
+
+- Keyboard focus styles were pruned out of generated CSS. `:focus-visible` and `:focus-within` matched the shorter `focus` alternative in the dynamic-state pattern, leaving `-visible` and `-within` fused to the class name, so the rules matched nothing and were removed as unused.
+- `RequestContext::fromGlobals()` did not unslash the superglobals, so any URL, query value, or cookie containing a quote hashed differently in WordPress than in the drop-in and could never produce a cache hit.
+- `DropinInstaller::installedVersion()` captured the trailing period after the drop-in signature, which made every version comparison unequal and reinstalled the drop-in on each request.
+
+### Changed
+
+- Page-cache entry metadata is now `<hash>.meta.json` instead of a generated `<hash>.meta.php`. Because metadata no longer passes through opcache, the opcode-invalidation workaround is gone along with the stale-metadata window it covered on hosts running `opcache.validate_timestamps=0`.
+- `advanced-cache.php` is a bundled file copied verbatim from `dropins/`, with only its version stamped in. It resolves the cache root from `WP_CONTENT_DIR` and the plugin directory from the compiled configuration, so no path is baked into the published drop-in.
+- Every output buffer the plugin opens is closed explicitly through `Core\OutputBuffer`, on `shutdown` at priority 0, ahead of core's own `wp_ob_end_flush_all()`.
+- Renamed the `GTP_` and `gtp_` prefixes to `GTPERF_` and `gtperf_` across constants, transients, AJAX actions, the cron schedule, the Private Islands shortcode, and the Redis key prefix. There is no compatibility shim: `wp-config.php` constants and any stored shortcode must use the new names.
+- Updated `sabberworm/php-css-parser` from 8.9.0 to 9.4.0. Version 9 requires `thecodingmachine/safe` at runtime, which adds about 2.4 MB to the package and eagerly loads 79 function-definition files when the plugin bootstraps. That cost lands only on full WordPress requests, measured at roughly 5 ms; requests served from the page cache never load the plugin autoloader and are unaffected.
+- `dropins/` is now covered by the coding-standards run.
+
 ## 1.0.0 - 2026-08-24
 
 ### Changed
 
 - First stable release, distributed free through the WordPress.org plugin directory.
 - Removed FluentCart licensing and the custom updater. Plugin updates now arrive through the normal WordPress.org update flow with no license key, activation, or weekly verification cron. The License tab, its admin-post actions, and the `gt_performance_verify_license` schedule are gone; deactivation and uninstall clean up state left by earlier licensed builds.
-- Fleet Console no longer requires a license. Policy bundles are signed with a key derived from a shared fleet signing secret saved on each site (encrypted at rest) or defined as `GTP_FLEET_SIGNING_SECRET` in `wp-config.php`. The secret itself is stripped from exported bundles.
+- Fleet Console no longer requires a license. Policy bundles are signed with a key derived from a shared fleet signing secret saved on each site (encrypted at rest) or defined as `GTPERF_FLEET_SIGNING_SECRET` in `wp-config.php`. The secret itself is stripped from exported bundles.
 - Uninstall now also removes the fleet site identity and event log options.
 
 ## 1.0.0-rc.6 - 2026-08-20
@@ -36,7 +58,7 @@
 
 ### Changed
 
-- Admin notices are now a compact status pill instead of a full-width WordPress notice bar. When a failure carries an upstream reason, the pill gains a "Why?" disclosure that opens the detail in an anchored popover rather than pushing the page down. The popover is anchored to its own pill rather than promoted to the top layer, so it lands in the right place without depending on CSS anchor positioning, and it light-dismisses on outside click or Escape. Dismissing removes the `gtp_notice` query argument instead of hiding the node, so a reload cannot resurrect a notice that has already been read.
+- Admin notices are now a compact status pill instead of a full-width WordPress notice bar. When a failure carries an upstream reason, the pill gains a "Why?" disclosure that opens the detail in an anchored popover rather than pushing the page down. The popover is anchored to its own pill rather than promoted to the top layer, so it lands in the right place without depending on CSS anchor positioning, and it light-dismisses on outside click or Escape. Dismissing removes the `gtperf_notice` query argument instead of hiding the node, so a reload cannot resurrect a notice that has already been read.
 
 ## 1.0.0-rc.3 - 2026-08-18
 
@@ -232,7 +254,7 @@
 - Moved the live manual database scan and selectable cleanup interface from Optimization to Tools while keeping scheduled database maintenance in Optimization.
 - Returned completed manual cleanup actions to the Tools tab and removed the redundant one-click cleanup card.
 - Added compatible `WP_REDIS_*` configuration for Till Krüss Redis Object Cache, including ACL credential arrays, TCP/TLS and Unix sockets, database, prefix, timeouts, legacy key salt, and the emergency disable constant.
-- Kept `GTP_REDIS_*` constants as highest-precedence overrides and added isolated configuration coverage for compatibility and precedence.
+- Kept `GTPERF_REDIS_*` constants as highest-precedence overrides and added isolated configuration coverage for compatibility and precedence.
 - Published the $199 FluentCart product page with verified direct-checkout links, one-site lifetime-license details, and responsive purchase sections.
 
 ## 0.1.0-alpha.8 - 2026-07-19

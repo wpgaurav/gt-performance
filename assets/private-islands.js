@@ -12,7 +12,7 @@
 		signature: island.dataset.gtpSignature,
 	}));
 	const body = new URLSearchParams({
-		action: "gtp_private_fragments",
+		action: "gtperf_private_fragments",
 		fragments: JSON.stringify(requested),
 	});
 

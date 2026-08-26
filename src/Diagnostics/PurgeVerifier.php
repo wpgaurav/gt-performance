@@ -39,7 +39,7 @@ final class PurgeVerifier {
 		$edgeTwo = $this->fetch( $url );
 		if ( is_wp_error( $edgeOne ) || is_wp_error( $edgeTwo ) ) {
 			$error = is_wp_error( $edgeOne ) ? $edgeOne : $edgeTwo;
-			return new \WP_Error( 'gtp_purge_verification_http', $error->get_error_message() );
+			return new \WP_Error( 'gtperf_purge_verification_http', $error->get_error_message() );
 		}
 
 		$originRemoved = 'missing' === (string) ( $afterPurge['origin']['state'] ?? '' );
@@ -82,7 +82,7 @@ final class PurgeVerifier {
 			array(
 				'timeout'     => 20,
 				'redirection' => 3,
-				'user-agent'  => 'GT-Performance-Purge-Verifier/' . GTP_VERSION,
+				'user-agent'  => 'GT-Performance-Purge-Verifier/' . GTPERF_VERSION,
 				'headers'     => array( 'Accept' => 'text/html' ),
 			)
 		);

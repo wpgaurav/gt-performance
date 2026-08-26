@@ -58,7 +58,7 @@ final class UrlRewriter {
 
 		$isRootRelative = str_starts_with( $url, '/' ) && ! str_starts_with( $url, '//' );
 		$parseTarget    = str_starts_with( $url, '//' ) ? 'https:' . $url : $url;
-		$parts          = $isRootRelative ? wp_parse_url( 'https://gtp.invalid' . $url ) : wp_parse_url( $parseTarget );
+		$parts          = $isRootRelative ? wp_parse_url( 'https://gtperf.invalid' . $url ) : wp_parse_url( $parseTarget );
 		if ( ! is_array( $parts ) ) {
 			return $url;
 		}

@@ -10,13 +10,20 @@ declare(strict_types=1);
 namespace GTPerformance\Cache;
 
 final class DropinRuntime {
-	public static function serve( string $configFile, string $pagesRoot ): void {
-		if ( ! is_readable( $configFile ) ) {
-			return;
-		}
+	/**
+	 * The only request headers that change a cache decision. Collecting just
+	 * these keeps the drop-in cheap and keeps untrusted header values out of
+	 * the context entirely.
+	 */
+	private const ELIGIBILITY_HEADERS = array(
+		'HTTP_AUTHORIZATION'             => 'authorization',
+		'HTTP_X_GT_PERFORMANCE_BYPASS'   => 'x-gt-performance-bypass',
+		'HTTP_X_GT_PRELOAD'              => 'x-gt-preload',
+	);
 
-		$config = require $configFile;
-		if ( ! is_array( $config ) || ! isset( $config['cache'] ) || ! is_array( $config['cache'] ) ) {
+	public static function serve( string $configFile, string $pagesRoot ): void {
+		$config = ConfigFile::read( $configFile );
+		if ( null === $config || ! isset( $config['cache'] ) || ! is_array( $config['cache'] ) ) {
 			return;
 		}
 
@@ -35,7 +42,7 @@ final class DropinRuntime {
 		$hash                      = ( new CacheKey() )->hash( ( new CacheKey() )->make( $request, $cacheConfig ) );
 		$directory                 = rtrim( $pagesRoot, '/\\' ) . '/' . substr( $hash, 0, 2 );
 		$page                      = $directory . '/' . $hash . '.html';
-		$metaFile                  = $directory . '/' . $hash . '.meta.php';
+		$metaFile                  = $directory . '/' . $hash . '.meta.json';
 
 		clearstatcache( true, $page );
 		clearstatcache( true, $metaFile );
@@ -44,14 +51,16 @@ final class DropinRuntime {
 			return;
 		}
 
-		// Include is intentionally non-fatal because another worker may purge between the stat and read.
-		$meta = @include $metaFile;
+		// Reads are intentionally non-fatal because another worker may purge
+		// between the stat and the read. Metadata is inert JSON, never executed.
+		$rawMeta = @file_get_contents( $metaFile ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions -- Runs before WordPress loads; a concurrent purge is expected.
+		$meta    = is_string( $rawMeta ) ? json_decode( $rawMeta, true ) : null;
 		if ( ! is_array( $meta ) ) {
 			header( 'X-GT-Cache: MISS' );
 			return;
 		}
 
-		$html = file_get_contents( $page );
+		$html = @file_get_contents( $page ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions -- Runs before WordPress loads; a concurrent purge is expected.
 		if ( ! is_string( $html ) ) {
 			header( 'X-GT-Cache: MISS' );
 			return;
@@ -74,9 +83,10 @@ final class DropinRuntime {
 		}
 
 		$etag = '"' . hash( 'sha256', $html ) . '"';
-		// WordPress is not loaded in advanced-cache.php, so wp_unslash()/sanitize_text_field() are unavailable.
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$ifNoneMatch = isset( $_SERVER['HTTP_IF_NONE_MATCH'] ) ? trim( (string) $_SERVER['HTTP_IF_NONE_MATCH'] ) : '';
+		// WordPress is not loaded here, so the shared RequestContext helper does
+		// the sanitizing that wp_unslash()/sanitize_text_field() would.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized on the same line; wp_unslash() does not exist yet.
+		$ifNoneMatch = isset( $_SERVER['HTTP_IF_NONE_MATCH'] ) ? trim( RequestContext::sanitizeValue( (string) $_SERVER['HTTP_IF_NONE_MATCH'], 256 ) ) : '';
 		if ( hash_equals( $etag, $ifNoneMatch ) ) {
 			http_response_code( 304 );
 			header( 'ETag: ' . $etag );
@@ -128,54 +138,52 @@ final class DropinRuntime {
 		return '' !== trim( (string) ( $headers['x-gt-preload'] ?? '' ) );
 	}
 
+	/**
+	 * Build the request context before WordPress loads.
+	 *
+	 * Every untrusted value goes through the same RequestContext helpers that
+	 * RequestContext::fromGlobals() uses once WordPress is available. The two
+	 * must stay byte-identical: a divergence would make cache keys miss forever,
+	 * or let this drop-in reach a different bypass decision than WordPress and
+	 * serve a cached page to a signed-in visitor. WordPress has not yet added
+	 * slashes at this point, so nothing is unslashed here.
+	 */
 	private static function request(): RequestContext {
-		$server = $_SERVER;
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Sanitized below through the shared RequestContext helpers; wp_unslash() does not exist yet.
+		$server = array_filter( $_SERVER, 'is_scalar' );
 		$https  = isset( $server['HTTPS'] ) && 'off' !== strtolower( (string) $server['HTTPS'] );
-		$proto  = isset( $server['HTTP_X_FORWARDED_PROTO'] ) ? strtolower( (string) $server['HTTP_X_FORWARDED_PROTO'] ) : '';
+		$proto  = isset( $server['HTTP_X_FORWARDED_PROTO'] ) ? strtolower( RequestContext::sanitizeValue( (string) $server['HTTP_X_FORWARDED_PROTO'] ) ) : '';
 		$scheme = $https || 'https' === $proto ? 'https' : 'http';
-		$uri    = (string) ( $server['REQUEST_URI'] ?? '/' );
+		$uri    = RequestContext::sanitizeValue( (string) ( $server['REQUEST_URI'] ?? '/' ), 2048 );
+
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Runs inside advanced-cache.php before wp_parse_url() exists.
 		$parsedPath = parse_url( $uri, PHP_URL_PATH );
 		$path       = false === $parsedPath || null === $parsedPath ? '/' : (string) $parsedPath;
-		$query  = array();
+
+		$query = array();
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Runs inside advanced-cache.php before wp_parse_url() exists.
 		$parsedQuery = parse_url( $uri, PHP_URL_QUERY );
 		parse_str( false === $parsedQuery || null === $parsedQuery ? '' : (string) $parsedQuery, $query );
 
-		$scalarQuery = array();
-		foreach ( $query as $key => $value ) {
-			if ( is_scalar( $value ) ) {
-				$scalarQuery[ (string) $key ] = (string) $value;
-			}
-		}
-
-		$cookies = array();
-		foreach ( $_COOKIE as $key => $value ) {
-			if ( is_scalar( $value ) ) {
-				$cookies[ (string) $key ] = (string) $value;
-			}
-		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- sanitizeMap() strips control characters and bounds every name and value.
+		$cookies = RequestContext::sanitizeMap( array_filter( $_COOKIE, 'is_scalar' ) );
 
 		$headers = array();
-		if ( isset( $server['HTTP_AUTHORIZATION'] ) ) {
-			$headers['authorization'] = (string) $server['HTTP_AUTHORIZATION'];
-		}
-		if ( isset( $server['HTTP_X_GT_PERFORMANCE_BYPASS'] ) ) {
-			$headers['x-gt-performance-bypass'] = (string) $server['HTTP_X_GT_PERFORMANCE_BYPASS'];
-		}
-		if ( isset( $server['HTTP_X_GT_PRELOAD'] ) ) {
-			$headers['x-gt-preload'] = (string) $server['HTTP_X_GT_PRELOAD'];
+		foreach ( self::ELIGIBILITY_HEADERS as $key => $name ) {
+			if ( isset( $server[ $key ] ) ) {
+				$headers[ $name ] = RequestContext::sanitizeValue( (string) $server[ $key ] );
+			}
 		}
 
 		return new RequestContext(
-			strtoupper( (string) ( $server['REQUEST_METHOD'] ?? 'GET' ) ),
+			RequestContext::sanitizeMethod( (string) ( $server['REQUEST_METHOD'] ?? 'GET' ) ),
 			$scheme,
-			strtolower( (string) ( $server['HTTP_HOST'] ?? $server['SERVER_NAME'] ?? '' ) ),
-			'/' . ltrim( preg_replace( '#/+#', '/', $path ) ?? '/', '/' ),
-			$scalarQuery,
+			RequestContext::sanitizeHost( (string) ( $server['HTTP_HOST'] ?? $server['SERVER_NAME'] ?? '' ) ),
+			RequestContext::normalizePath( RequestContext::sanitizeValue( $path, 2048 ) ),
+			RequestContext::sanitizeMap( $query ),
 			$cookies,
 			$headers,
-			(string) ( $server['HTTP_USER_AGENT'] ?? '' ),
+			RequestContext::sanitizeUserAgent( (string) ( $server['HTTP_USER_AGENT'] ?? '' ) ),
 		);
 	}
 }

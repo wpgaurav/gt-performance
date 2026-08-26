@@ -125,7 +125,7 @@ final class TokenProvisioner {
 		}
 
 		if ( '' === $zoneId ) {
-			return new \WP_Error( 'gtp_cloudflare_zone', __( 'The Cloudflare zone for this site could not be resolved, so a scoped token cannot be created.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_cloudflare_zone', __( 'The Cloudflare zone for this site could not be resolved, so a scoped token cannot be created.', 'gt-performance' ) );
 		}
 
 		$groups = array();
@@ -154,7 +154,7 @@ final class TokenProvisioner {
 
 		$token = trim( (string) ( $created['result']['value'] ?? '' ) );
 		if ( '' === $token ) {
-			return new \WP_Error( 'gtp_cloudflare_token', __( 'Cloudflare created a token but did not return its secret, so it cannot be saved.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_cloudflare_token', __( 'Cloudflare created a token but did not return its secret, so it cannot be saved.', 'gt-performance' ) );
 		}
 
 		$unusable = $this->verify( $token, $zoneId );

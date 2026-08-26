@@ -2,7 +2,7 @@
 /**
  * Persistent unused CSS generation reports.
  *
- * Reports live in the plugin's own gtp_artifacts table, so every access is
+ * Reports live in the plugin's own gtperf_artifacts table, so every access is
  * necessarily a direct query, and invalidation must be immediately visible to
  * the next request rather than served from a stale object cache. Table names
  * interpolate only the trusted WordPress table prefix.
@@ -25,7 +25,7 @@ final class ReportRepository {
 		global $wpdb;
 
 		$fingerprint = hash( 'sha256', $url . '|' . $mode );
-		$table       = $wpdb->prefix . 'gtp_artifacts';
+		$table       = $wpdb->prefix . 'gtperf_artifacts';
 		$now         = current_time( 'mysql', true );
 		$metadata    = wp_json_encode(
 			array(
@@ -92,7 +92,7 @@ final class ReportRepository {
 		$metadata['ended_at']   = current_time( 'mysql', true );
 
 		$wpdb->update(
-			$wpdb->prefix . 'gtp_artifacts',
+			$wpdb->prefix . 'gtperf_artifacts',
 			array(
 				'path'         => $path,
 				'metadata'     => wp_json_encode( $metadata ),
@@ -125,7 +125,7 @@ final class ReportRepository {
 	public function invalidateUrl( string $url ): int {
 		global $wpdb;
 
-		$table        = $wpdb->prefix . 'gtp_artifacts';
+		$table        = $wpdb->prefix . 'gtperf_artifacts';
 		$fingerprints = array_map(
 			static fn( string $mode ): string => hash( 'sha256', $url . '|' . $mode ),
 			array( 'file', 'inline', 'hybrid' )
@@ -154,7 +154,7 @@ final class ReportRepository {
 	public function recent( int $limit = 50 ): array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'gtp_artifacts';
+		$table = $wpdb->prefix . 'gtperf_artifacts';
 		$limit = max( 1, min( 200, $limit ) );
 
 		// The table name is built from the trusted WordPress prefix.

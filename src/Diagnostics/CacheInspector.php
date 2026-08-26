@@ -28,12 +28,12 @@ final class CacheInspector {
 	public function inspect( string $url ): array|\WP_Error {
 		$url = esc_url_raw( $url );
 		if ( ! $this->sameSite( $url ) ) {
-			return new \WP_Error( 'gtp_diagnostic_url', __( 'Use a URL from this WordPress site.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_diagnostic_url', __( 'Use a URL from this WordPress site.', 'gt-performance' ) );
 		}
 
 		$request = RequestContext::fromUrl( $url );
 		if ( null === $request ) {
-			return new \WP_Error( 'gtp_diagnostic_url', __( 'The URL could not be inspected.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_diagnostic_url', __( 'The URL could not be inspected.', 'gt-performance' ) );
 		}
 
 		$cachePolicy               = (array) Settings::get( 'cache', array() );

@@ -205,7 +205,7 @@
 			}
 
 			const body = new URLSearchParams({
-				action: "gtp_css_report",
+				action: "gtperf_css_report",
 				nonce: window.gtPerformanceAdmin.nonce,
 			});
 

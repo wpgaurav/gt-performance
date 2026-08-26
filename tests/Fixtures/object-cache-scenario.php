@@ -17,8 +17,8 @@ $store    = (string) ( $argv[3] ?? '' );
 
 define( 'ABSPATH', sys_get_temp_dir() . '/gtp-object-cache-wordpress/' );
 define( 'WP_CONTENT_DIR', sys_get_temp_dir() . '/gtp-object-cache-content-' . getmypid() );
-define( 'GTP_REDIS_ENABLED', true );
-define( 'GTP_REDIS_PERSISTENT', false );
+define( 'GTPERF_REDIS_ENABLED', true );
+define( 'GTPERF_REDIS_PERSISTENT', false );
 
 final class Redis {
 	public const OPT_READ_TIMEOUT = 3;
@@ -151,7 +151,10 @@ final class Redis {
 	private static function readFileStore( bool $barrier ): array {
 		$handle = fopen( self::$storeFile, 'c+' );
 		if ( false === $handle ) {
-			return array( 'reads' => 0, 'values' => array() );
+			return array(
+				'reads' => 0,
+				'values' => array(),
+			);
 		}
 
 		flock( $handle, LOCK_EX );
@@ -229,8 +232,14 @@ if ( 'conditional-options' === $scenario ) {
 		array(
 			'ok' => $added
 				&& $replaced
-				&& array( 'nx', 'ex' => 30 ) === $options[0]
-				&& array( 'xx', 'ex' => 45 ) === $options[2],
+				&& array(
+					'nx',
+					'ex' => 30,
+				) === $options[0]
+				&& array(
+					'xx',
+					'ex' => 45,
+				) === $options[2],
 		)
 	);
 	exit;

@@ -2,11 +2,13 @@
 /**
  * Advanced-cache drop-in ownership and installation.
  *
- * The drop-in must be published with an atomic same-filesystem rename so a
+ * The drop-in ships as a static file in the plugin's dropins directory and is
+ * copied verbatim; only the version in its signature is stamped in. No PHP
+ * source is generated. Publication uses an atomic same-filesystem rename so a
  * request can never include a half-written file, which WP_Filesystem cannot
- * guarantee. var_export() generates the drop-in's PHP source, not debug output.
+ * guarantee.
  *
- * phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DevelopmentFunctions.error_log_var_export
+ * phpcs:disable WordPress.WP.AlternativeFunctions
  *
  * @package GTPerformance
  */
@@ -15,7 +17,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\Cache;
 
-use GTPerformance\Core\Paths;
+use GTPerformance\Core\Settings;
 
 final class DropinInstaller {
 	private const SIGNATURE      = 'GT Performance advanced-cache drop-in';
@@ -49,7 +51,9 @@ final class DropinInstaller {
 		}
 
 		$contents = (string) file_get_contents( $target );
-		if ( preg_match( '/' . preg_quote( self::SIGNATURE, '/' ) . ' v([0-9A-Za-z.\\-]+)/', $contents, $matches ) ) {
+		// Each separator must be followed by more version characters, so the
+		// sentence-ending period after the signature is not captured.
+		if ( preg_match( '/' . preg_quote( self::SIGNATURE, '/' ) . ' v([0-9A-Za-z]+(?:[.\\-][0-9A-Za-z]+)*)/', $contents, $matches ) ) {
 			return $matches[1];
 		}
 
@@ -63,55 +67,52 @@ final class DropinInstaller {
 	 * request. Option-gated so the file is touched at most once per version.
 	 */
 	public static function syncVersion(): void {
-		if ( GTP_VERSION === (string) get_option( self::VERSION_OPTION, '' ) ) {
+		if ( GTPERF_VERSION === (string) get_option( self::VERSION_OPTION, '' ) ) {
 			return;
 		}
 
 		$installer = new self();
-		if ( 'owned' === $installer->status() && GTP_VERSION !== $installer->installedVersion() ) {
+		if ( 'owned' === $installer->status() && GTPERF_VERSION !== $installer->installedVersion() ) {
 			$installer->install();
 		}
 
-		update_option( self::VERSION_OPTION, GTP_VERSION, false );
+		update_option( self::VERSION_OPTION, GTPERF_VERSION, false );
 	}
 
 	public function install(): bool|\WP_Error {
 		$status = $this->status();
 		if ( 'conflict' === $status ) {
-			return new \WP_Error( 'gtp_dropin_conflict', __( 'Another plugin owns advanced-cache.php. Disable or migrate it first.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_dropin_conflict', __( 'Another plugin owns advanced-cache.php. Disable or migrate it first.', 'gt-performance' ) );
 		}
 
 		if ( ! wp_mkdir_p( WP_CONTENT_DIR ) ) {
-			return new \WP_Error( 'gtp_dropin_directory', __( 'The WordPress content directory is not writable.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_dropin_directory', __( 'The WordPress content directory is not writable.', 'gt-performance' ) );
 		}
 
-		$files = array(
-			GTP_DIR . '/src/Cache/Decision.php',
-			GTP_DIR . '/src/Cache/RequestContext.php',
-			GTP_DIR . '/src/Cache/Eligibility.php',
-			GTP_DIR . '/src/Cache/CacheKey.php',
-			GTP_DIR . '/src/Cache/DropinRuntime.php',
-		);
+		// The compiled configuration carries the plugin directory the drop-in
+		// loads its runtime from, so it must exist before the drop-in is live.
+		Settings::compile();
 
-		$content  = "<?php\n/** " . self::SIGNATURE . ' v' . GTP_VERSION . " */\n";
-		$content .= "defined( 'ABSPATH' ) || exit;\n";
-		$content .= '$gtp_files = ' . var_export( $files, true ) . ";\n";
-		$content .= "foreach ( \$gtp_files as \$gtp_file ) {\n";
-		$content .= "\tif ( ! is_readable( \$gtp_file ) ) {\n\t\treturn;\n\t}\n";
-		$content .= "}\n";
-		$content .= "foreach ( \$gtp_files as \$gtp_file ) {\n\trequire_once \$gtp_file;\n}\n";
-		$content .= '\\GTPerformance\\Cache\\DropinRuntime::serve( ' .
-			var_export( Paths::config(), true ) . ', ' .
-			var_export( Paths::pages(), true ) . " );\n";
+		$content = file_get_contents( GTPERF_DIR . '/dropins/advanced-cache.php' );
+		if ( ! is_string( $content ) ) {
+			return new \WP_Error( 'gtperf_dropin_source', __( 'Unable to read the bundled cache drop-in.', 'gt-performance' ) );
+		}
+
+		$content = (string) preg_replace(
+			'/' . preg_quote( self::SIGNATURE, '/' ) . '/',
+			self::SIGNATURE . ' v' . GTPERF_VERSION,
+			$content,
+			1
+		);
 
 		$temp = $this->target() . '.' . wp_generate_uuid4() . '.tmp';
 		if ( false === file_put_contents( $temp, $content, LOCK_EX ) ) {
-			return new \WP_Error( 'gtp_dropin_write', __( 'Unable to write the cache drop-in.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_dropin_write', __( 'Unable to write the cache drop-in.', 'gt-performance' ) );
 		}
 
 		if ( ! rename( $temp, $this->target() ) ) {
 			@unlink( $temp );
-			return new \WP_Error( 'gtp_dropin_move', __( 'Unable to publish the cache drop-in atomically.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_dropin_move', __( 'Unable to publish the cache drop-in atomically.', 'gt-performance' ) );
 		}
 
 		$constant = ( new WpCacheConstant() )->enable();
@@ -125,11 +126,11 @@ final class DropinInstaller {
 
 	public function remove(): bool|\WP_Error {
 		if ( 'owned' !== $this->status() ) {
-			return new \WP_Error( 'gtp_dropin_not_owned', __( 'GT Performance does not own the current cache drop-in.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_dropin_not_owned', __( 'GT Performance does not own the current cache drop-in.', 'gt-performance' ) );
 		}
 
 		if ( ! @unlink( $this->target() ) ) {
-			return new \WP_Error( 'gtp_dropin_remove', __( 'GT Performance could not remove its page-cache drop-in.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_dropin_remove', __( 'GT Performance could not remove its page-cache drop-in.', 'gt-performance' ) );
 		}
 
 		return ( new WpCacheConstant() )->restore();

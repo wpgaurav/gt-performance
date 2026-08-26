@@ -17,15 +17,15 @@ use RuntimeException;
 
 final class ImageVariantGeneratorTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['gtp_test_actions'] = array();
-		$GLOBALS['gtp_test_filters'] = array();
-		$GLOBALS['gtp_test_options'] = array( Settings::OPTION => Settings::defaults() );
+		$GLOBALS['gtperf_test_actions'] = array();
+		$GLOBALS['gtperf_test_filters'] = array();
+		$GLOBALS['gtperf_test_options'] = array( Settings::OPTION => Settings::defaults() );
 	}
 
 	public function testUploadMetadataReturnsImmediatelyAndQueuesAttachment(): void {
 		$settings                              = Settings::defaults();
 		$settings['media']['optimize_uploads'] = true;
-		$GLOBALS['gtp_test_options']           = array( Settings::OPTION => $settings );
+		$GLOBALS['gtperf_test_options']           = array( Settings::OPTION => $settings );
 		$metadata                              = array(
 			'file'  => '2026/08/example.png',
 			'width' => 1254,
@@ -41,14 +41,14 @@ final class ImageVariantGeneratorTest extends TestCase {
 					'args' => array( 42, 'full' ),
 				),
 			),
-			$GLOBALS['gtp_test_actions']
+			$GLOBALS['gtperf_test_actions']
 		);
 	}
 
 	public function testUploadQueuesOneJobPerUniqueImageFile(): void {
 		$settings                              = Settings::defaults();
 		$settings['media']['optimize_uploads'] = true;
-		$GLOBALS['gtp_test_options']           = array( Settings::OPTION => $settings );
+		$GLOBALS['gtperf_test_options']           = array( Settings::OPTION => $settings );
 		$metadata                              = array(
 			'file'  => '2026/08/example.png',
 			'sizes' => array(
@@ -75,7 +75,7 @@ final class ImageVariantGeneratorTest extends TestCase {
 					'args' => array( 42, 'large' ),
 				),
 			),
-			$GLOBALS['gtp_test_actions']
+			$GLOBALS['gtperf_test_actions']
 		);
 	}
 
@@ -85,26 +85,26 @@ final class ImageVariantGeneratorTest extends TestCase {
 		$result = ( new ImageVariantGenerator( new Logger() ) )->enqueue( $metadata, 42 );
 
 		self::assertSame( $metadata, $result );
-		self::assertSame( array(), $GLOBALS['gtp_test_actions'] );
+		self::assertSame( array(), $GLOBALS['gtperf_test_actions'] );
 	}
 
 	public function testCompatibilityFilterCanYieldVariantGeneration(): void {
 		$settings                              = Settings::defaults();
 		$settings['media']['optimize_uploads'] = true;
-		$GLOBALS['gtp_test_options']           = array( Settings::OPTION => $settings );
-		$GLOBALS['gtp_test_filters']['gt_performance_generate_image_variants'][] = static fn(): bool => false;
+		$GLOBALS['gtperf_test_options']           = array( Settings::OPTION => $settings );
+		$GLOBALS['gtperf_test_filters']['gt_performance_generate_image_variants'][] = static fn(): bool => false;
 		$metadata = array( 'file' => '2026/08/example.png' );
 
 		$result = ( new ImageVariantGenerator( new Logger() ) )->enqueue( $metadata, 42 );
 
 		self::assertSame( $metadata, $result );
-		self::assertSame( array(), $GLOBALS['gtp_test_actions'] );
+		self::assertSame( array(), $GLOBALS['gtperf_test_actions'] );
 	}
 
 	public function testQueuedJobRequiresAnAttachmentId(): void {
 		$settings                              = Settings::defaults();
 		$settings['media']['optimize_uploads'] = true;
-		$GLOBALS['gtp_test_options']           = array( Settings::OPTION => $settings );
+		$GLOBALS['gtperf_test_options']           = array( Settings::OPTION => $settings );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'Missing image attachment ID.' );

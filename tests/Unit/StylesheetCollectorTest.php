@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 
 final class StylesheetCollectorTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['gtp_test_http_response'] = array(
+		$GLOBALS['gtperf_test_http_response'] = array(
 			'response' => array( 'code' => 200 ),
 			'headers'  => array( 'content-type' => 'text/css' ),
 			'body'     => '.middle{color:green}',

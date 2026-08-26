@@ -11,6 +11,7 @@ namespace GTPerformance\Cache;
 
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Logger;
+use GTPerformance\Core\OutputBuffer;
 use GTPerformance\Core\Settings;
 
 final class PageCacheModule implements Module {
@@ -59,7 +60,7 @@ final class PageCacheModule implements Module {
 		if ( $this->isCssPreview() ) {
 			nocache_headers();
 			SharedCacheHeaders::noStore();
-			ob_start( array( $this, 'capturePreview' ) );
+			OutputBuffer::start( array( $this, 'capturePreview' ) );
 			return;
 		}
 
@@ -85,7 +86,7 @@ final class PageCacheModule implements Module {
 		if ( ! self::hasCacheStatus( 'REVALIDATE' ) ) {
 			header( 'X-GT-Cache: MISS' );
 		}
-		ob_start( array( $this, 'capture' ) );
+		OutputBuffer::start( array( $this, 'capture' ) );
 	}
 
 	/**
@@ -273,13 +274,13 @@ final class PageCacheModule implements Module {
 	}
 
 	private function isCssPreview(): bool {
-		if ( ! current_user_can( 'manage_options' ) || ! isset( $_GET['gtp_css_preview'] ) ) {
+		if ( ! current_user_can( 'manage_options' ) || ! isset( $_GET['gtperf_css_preview'] ) ) {
 			return false;
 		}
 
-		$nonce = sanitize_text_field( wp_unslash( $_GET['gtp_css_preview'] ) );
+		$nonce = sanitize_text_field( wp_unslash( $_GET['gtperf_css_preview'] ) );
 
-		return (bool) wp_verify_nonce( $nonce, 'gtp_css_preview' );
+		return (bool) wp_verify_nonce( $nonce, 'gtperf_css_preview' );
 	}
 
 	private function purgeCommentPost( int $postId ): void {

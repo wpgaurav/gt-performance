@@ -17,7 +17,7 @@ use ReflectionProperty;
 
 final class PageCacheModuleTest extends TestCase {
 	protected function tearDown(): void {
-		unset( $GLOBALS['gtp_test_filters'] );
+		unset( $GLOBALS['gtperf_test_filters'] );
 	}
 
 	public function testPreviewCaptureRequiresARequestContext(): void {
@@ -28,13 +28,13 @@ final class PageCacheModuleTest extends TestCase {
 
 	public function testPreviewCaptureOptimizesWithoutWritingToThePageCache(): void {
 		$module  = new PageCacheModule( new Logger() );
-		$request = RequestContext::fromUrl( 'https://example.com/?gtp_css_preview=valid' );
+		$request = RequestContext::fromUrl( 'https://example.com/?gtperf_css_preview=valid' );
 		self::assertNotNull( $request );
 
 		$property = new ReflectionProperty( $module, 'request' );
 		$property->setValue( $module, $request );
 
-		$GLOBALS['gtp_test_filters']['gt_performance_html'][] = static function ( string $html, RequestContext $context ): string {
+		$GLOBALS['gtperf_test_filters']['gt_performance_html'][] = static function ( string $html, RequestContext $context ): string {
 			return str_replace( '</body>', '<link data-gt-performance="used" href="/used.css"></body>', $html ) . $context->path;
 		};
 
@@ -46,12 +46,12 @@ final class PageCacheModuleTest extends TestCase {
 
 	public function testPreviewCaptureFallsBackWhenThePipelineReturnsEmptyOutput(): void {
 		$module  = new PageCacheModule( new Logger() );
-		$request = RequestContext::fromUrl( 'https://example.com/?gtp_css_preview=valid' );
+		$request = RequestContext::fromUrl( 'https://example.com/?gtperf_css_preview=valid' );
 		self::assertNotNull( $request );
 
 		$property = new ReflectionProperty( $module, 'request' );
 		$property->setValue( $module, $request );
-		$GLOBALS['gtp_test_filters']['gt_performance_html'][] = static fn(): string => '';
+		$GLOBALS['gtperf_test_filters']['gt_performance_html'][] = static fn(): string => '';
 
 		self::assertSame( '<html>original</html>', $module->capturePreview( '<html>original</html>' ) );
 	}

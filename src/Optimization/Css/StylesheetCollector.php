@@ -120,11 +120,11 @@ final class StylesheetCollector {
 		if ( null !== $local && is_readable( $local ) ) {
 			$size = filesize( $local );
 			if ( is_int( $size ) && $size > 2 * MB_IN_BYTES ) {
-				return new \WP_Error( 'gtp_css_size', __( 'A stylesheet exceeded the 2 MB safety limit.', 'gt-performance' ) );
+				return new \WP_Error( 'gtperf_css_size', __( 'A stylesheet exceeded the 2 MB safety limit.', 'gt-performance' ) );
 			}
 			$contents = file_get_contents( $local );
 
-			return is_string( $contents ) ? $contents : new \WP_Error( 'gtp_css_read', __( 'A local stylesheet could not be read.', 'gt-performance' ) );
+			return is_string( $contents ) ? $contents : new \WP_Error( 'gtperf_css_read', __( 'A local stylesheet could not be read.', 'gt-performance' ) );
 		}
 
 		$response = wp_safe_remote_get(
@@ -133,19 +133,19 @@ final class StylesheetCollector {
 				'timeout'             => 8,
 				'redirection'         => 2,
 				'limit_response_size' => 2 * MB_IN_BYTES,
-				'user-agent'          => 'GT-Performance-CSS/' . GTP_VERSION,
+				'user-agent'          => 'GT-Performance-CSS/' . GTPERF_VERSION,
 			)
 		);
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 		if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-			return new \WP_Error( 'gtp_css_http', __( 'A stylesheet returned a non-200 response.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_css_http', __( 'A stylesheet returned a non-200 response.', 'gt-performance' ) );
 		}
 
 		$contentType = strtolower( wp_remote_retrieve_header( $response, 'content-type' ) );
 		if ( '' !== $contentType && ! str_contains( $contentType, 'text/css' ) ) {
-			return new \WP_Error( 'gtp_css_type', __( 'A stylesheet returned an unexpected content type.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_css_type', __( 'A stylesheet returned an unexpected content type.', 'gt-performance' ) );
 		}
 
 		return wp_remote_retrieve_body( $response );

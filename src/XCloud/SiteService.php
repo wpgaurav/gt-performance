@@ -40,7 +40,7 @@ final class SiteService {
 
 		$uuid = trim( (string) ( $site['uuid'] ?? '' ) );
 		if ( '' === $uuid ) {
-			return new \WP_Error( 'gtp_xcloud_site', __( 'xCloud did not return a UUID for this site.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_xcloud_site', __( 'xCloud did not return a UUID for this site.', 'gt-performance' ) );
 		}
 
 		$cache = $client->cacheSettings( $uuid );
@@ -103,14 +103,14 @@ final class SiteService {
 
 		if ( (bool) ( $xcloud['enterprise_available'] ?? false ) ) {
 			return new \WP_Error(
-				'gtp_xcloud_enterprise_purge_unavailable',
+				'gtperf_xcloud_enterprise_purge_unavailable',
 				__( 'Cloudflare Enterprise is active, but xCloud does not expose its purge action through token-authenticated Public API. Purge it from the xCloud Enterprise dashboard.', 'gt-performance' )
 			);
 		}
 
 		$uuid = trim( (string) ( $xcloud['site_uuid'] ?? '' ) );
 		if ( '' === $uuid ) {
-			return new \WP_Error( 'gtp_xcloud_site', __( 'Connect the xCloud site before enabling automatic purges.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_xcloud_site', __( 'Connect the xCloud site before enabling automatic purges.', 'gt-performance' ) );
 		}
 
 		if ( (bool) ( $xcloud['free_edge_cache_enabled'] ?? false ) ) {

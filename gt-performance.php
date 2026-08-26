@@ -3,7 +3,7 @@
 Plugin Name: GT Performance
 Plugin URI: https://gauravtiwari.org/product/gt-performance/
 Description: Safe WordPress page caching, server-side optimization, Cloudflare orchestration, and commerce-aware performance controls.
-Version: 1.0.0
+Version: 1.0.1
 Requires at least: 6.6
 Requires PHP: 8.1
 Author: Gaurav Tiwari
@@ -24,12 +24,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'GTP_VERSION', '1.0.0' );
-define( 'GTP_FILE', __FILE__ );
-define( 'GTP_DIR', __DIR__ );
-define( 'GTP_BASENAME', plugin_basename( __FILE__ ) );
+define( 'GTPERF_VERSION', '1.0.1' );
+define( 'GTPERF_FILE', __FILE__ );
+define( 'GTPERF_DIR', __DIR__ );
+define( 'GTPERF_BASENAME', plugin_basename( __FILE__ ) );
 
-$gt_performance_vendor = GTP_DIR . '/vendor/autoload.php';
+$gt_performance_vendor = GTPERF_DIR . '/vendor/autoload.php';
 if ( is_readable( $gt_performance_vendor ) ) {
 	require_once $gt_performance_vendor;
 }
@@ -42,7 +42,7 @@ spl_autoload_register(
 		}
 
 		$relative = substr( $class, strlen( $prefix ) );
-		$file     = GTP_DIR . '/src/' . str_replace( '\\', '/', $relative ) . '.php';
+		$file     = GTPERF_DIR . '/src/' . str_replace( '\\', '/', $relative ) . '.php';
 
 		if ( is_readable( $file ) ) {
 			require_once $file;

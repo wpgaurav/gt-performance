@@ -14,12 +14,12 @@ use PHPUnit\Framework\TestCase;
 
 final class XCloudApiClientTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['gtp_test_http_requests'] = array();
-		unset( $GLOBALS['gtp_test_http_response'] );
+		$GLOBALS['gtperf_test_http_requests'] = array();
+		unset( $GLOBALS['gtperf_test_http_response'] );
 	}
 
 	public function testPublicSiteRequestUsesBearerTokenAndV1Route(): void {
-		$GLOBALS['gtp_test_http_response'] = $this->response(
+		$GLOBALS['gtperf_test_http_response'] = $this->response(
 			array(
 				'success' => true,
 				'data'    => array( 'uuid' => 'site-uuid' ),
@@ -27,7 +27,7 @@ final class XCloudApiClientTest extends TestCase {
 		);
 
 		$result  = ( new ApiClient( 'secret', 'https://xcloud.test' ) )->site( 'site-uuid' );
-		$request = $GLOBALS['gtp_test_http_requests'][0];
+		$request = $GLOBALS['gtperf_test_http_requests'][0];
 
 		self::assertSame( array( 'uuid' => 'site-uuid' ), $result );
 		self::assertSame( 'https://xcloud.test/api/v1/sites/site-uuid', $request['url'] );
@@ -36,7 +36,7 @@ final class XCloudApiClientTest extends TestCase {
 	}
 
 	public function testEnterpriseIdsUseLegacyCapabilityRoute(): void {
-		$GLOBALS['gtp_test_http_response'] = $this->response(
+		$GLOBALS['gtperf_test_http_response'] = $this->response(
 			array(
 				'data' => array(
 					array(
@@ -50,12 +50,18 @@ final class XCloudApiClientTest extends TestCase {
 
 		$result = ( new ApiClient( 'secret', 'https://xcloud.test' ) )->enterpriseIdsByDomain( 'gauravtiwari.org' );
 
-		self::assertSame( array( 'server_id' => 45794, 'site_id' => 221938 ), $result );
-		self::assertStringContainsString( '/api/site-list?search=gauravtiwari.org', $GLOBALS['gtp_test_http_requests'][0]['url'] );
+		self::assertSame(
+			array(
+				'server_id' => 45794,
+				'site_id' => 221938,
+			),
+			$result
+		);
+		self::assertStringContainsString( '/api/site-list?search=gauravtiwari.org', $GLOBALS['gtperf_test_http_requests'][0]['url'] );
 	}
 
 	public function testEnterpriseAnalyticsAcceptsNonV1Payload(): void {
-		$GLOBALS['gtp_test_http_response'] = $this->response(
+		$GLOBALS['gtperf_test_http_response'] = $this->response(
 			array(
 				'available' => true,
 				'totals'    => array(
@@ -71,7 +77,7 @@ final class XCloudApiClientTest extends TestCase {
 		self::assertSame( 60, $result['totals']['served_by_cloudflare'] );
 		self::assertSame(
 			'https://xcloud.test/addons/server/45794/site/221938/cloudflare-enterprise/analytics?range=12h',
-			$GLOBALS['gtp_test_http_requests'][0]['url']
+			$GLOBALS['gtperf_test_http_requests'][0]['url']
 		);
 	}
 
@@ -79,8 +85,8 @@ final class XCloudApiClientTest extends TestCase {
 		$result = ( new ApiClient( 'secret', 'https://xcloud.test' ) )->enterpriseAnalytics( 0, 0 );
 
 		self::assertInstanceOf( \WP_Error::class, $result );
-		self::assertSame( 'gtp_xcloud_enterprise_ids', $result->get_error_code() );
-		self::assertSame( array(), $GLOBALS['gtp_test_http_requests'] );
+		self::assertSame( 'gtperf_xcloud_enterprise_ids', $result->get_error_code() );
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 
 	/**

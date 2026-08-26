@@ -16,8 +16,8 @@ use PHPUnit\Framework\TestCase;
 
 final class XCloudSiteServiceTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['gtp_test_http_requests'] = array();
-		$GLOBALS['gtp_test_options']       = array();
+		$GLOBALS['gtperf_test_http_requests'] = array();
+		$GLOBALS['gtperf_test_options']       = array();
 	}
 
 	public function testEnterprisePurgeFailsClosedWithoutCallingHostPurgeAll(): void {
@@ -26,12 +26,12 @@ final class XCloudSiteServiceTest extends TestCase {
 		$settings['xcloud']['enterprise_available'] = true;
 		$settings['xcloud']['site_uuid'] = 'f8edfab2-3d0f-47cb-b947-84116dbe5e69';
 		$settings['xcloud']['api_token'] = ( new SecretCipher( 'xcloud' ) )->encrypt( 'secret' );
-		$GLOBALS['gtp_test_options']['gt_performance_settings'] = $settings;
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = $settings;
 
 		$result = ( new SiteService() )->purgeAutomatic();
 
 		self::assertInstanceOf( \WP_Error::class, $result );
-		self::assertSame( 'gtp_xcloud_enterprise_purge_unavailable', $result->get_error_code() );
-		self::assertSame( array(), $GLOBALS['gtp_test_http_requests'] );
+		self::assertSame( 'gtperf_xcloud_enterprise_purge_unavailable', $result->get_error_code() );
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 }

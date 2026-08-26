@@ -47,7 +47,7 @@ final class AdminModule implements Module {
 	 * Carries the upstream failure text across the post-then-redirect hop, so the
 	 * notice can name the real cause instead of only the stage that failed.
 	 */
-	private const ERROR_DETAIL_TRANSIENT = 'gtp_admin_error_detail';
+	private const ERROR_DETAIL_TRANSIENT = 'gtperf_admin_error_detail';
 
 	/**
 	 * @var list<string>
@@ -72,7 +72,7 @@ final class AdminModule implements Module {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_init', array( $this, 'settings' ) );
 		add_action( 'admin_init', array( $this, 'legacyRedirect' ) );
-		add_filter( 'plugin_action_links_' . GTP_BASENAME, array( $this, 'actionLinks' ) );
+		add_filter( 'plugin_action_links_' . GTPERF_BASENAME, array( $this, 'actionLinks' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'afterSettingsUpdate' ), 10, 2 );
 		add_action( 'admin_post_gtp_install_dropin', array( $this, 'installDropin' ) );
@@ -147,7 +147,7 @@ final class AdminModule implements Module {
 		}
 
 		$args = array( 'page' => self::PAGE_SLUG );
-		foreach ( array( 'tab', 'gtp_notice' ) as $key ) {
+		foreach ( array( 'tab', 'gtperf_notice' ) as $key ) {
 			if ( isset( $_GET[ $key ] ) ) {
 				$args[ $key ] = sanitize_key( wp_unslash( $_GET[ $key ] ) );
 			}
@@ -165,15 +165,15 @@ final class AdminModule implements Module {
 
 		wp_enqueue_style(
 			'gt-performance-admin',
-			plugins_url( 'assets/admin.css', GTP_FILE ),
+			plugins_url( 'assets/admin.css', GTPERF_FILE ),
 			array( 'dashicons' ),
-			GTP_VERSION
+			GTPERF_VERSION
 		);
 		wp_enqueue_script(
 			'gt-performance-admin',
-			plugins_url( 'assets/admin.js', GTP_FILE ),
+			plugins_url( 'assets/admin.js', GTPERF_FILE ),
 			array(),
-			GTP_VERSION,
+			GTPERF_VERSION,
 			true
 		);
 		wp_localize_script(
@@ -181,7 +181,7 @@ final class AdminModule implements Module {
 			'gtPerformanceAdmin',
 			array(
 				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
-				'nonce'               => wp_create_nonce( 'gtp_css_report' ),
+				'nonce'               => wp_create_nonce( 'gtperf_css_report' ),
 				'integrationProfiles' => RecommendedDefaults::profiles( home_url( '/' ) ),
 			)
 		);
@@ -241,7 +241,7 @@ final class AdminModule implements Module {
 		if ( $validation['invalid'] ) {
 			add_settings_error(
 				Settings::OPTION,
-				'gtp_invalid_css_regex',
+				'gtperf_invalid_css_regex',
 				sprintf(
 					/* translators: %s: invalid selector regular expressions. */
 					__( 'These selector regular expressions were not saved because they are invalid: %s', 'gt-performance' ),
@@ -332,7 +332,7 @@ final class AdminModule implements Module {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to view this report.', 'gt-performance' ) ), 403 );
 		}
-		check_ajax_referer( 'gtp_css_report', 'nonce' );
+		check_ajax_referer( 'gtperf_css_report', 'nonce' );
 
 		$repository = new ReportRepository();
 		$reports    = $repository->recent();
@@ -346,25 +346,25 @@ final class AdminModule implements Module {
 	}
 
 	public function installDropin(): void {
-		$this->guard( 'gtp_install_dropin' );
+		$this->guard( 'gtperf_install_dropin' );
 		$result = ( new DropinInstaller() )->install();
 		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'dropin-installed', 'tools' );
 	}
 
 	public function installRedis(): void {
-		$this->guard( 'gtp_install_redis' );
+		$this->guard( 'gtperf_install_redis' );
 		$result = ( new ObjectCacheInstaller() )->install();
 		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'redis-installed', 'tools' );
 	}
 
 	public function testRedis(): void {
-		$this->guard( 'gtp_test_redis' );
+		$this->guard( 'gtperf_test_redis' );
 		$result = ( new ConnectionTester() )->test();
 		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'redis-connected', 'integrations' );
 	}
 
 	public function xcloudRefresh(): void {
-		$this->guard( 'gtp_xcloud_refresh' );
+		$this->guard( 'gtperf_xcloud_refresh' );
 		$settings = Settings::all();
 		$status   = ( new SiteService() )->refresh( $settings );
 		if ( is_wp_error( $status ) ) {
@@ -403,16 +403,16 @@ final class AdminModule implements Module {
 	}
 
 	public function purge(): void {
-		$this->guard( 'gtp_purge' );
+		$this->guard( 'gtperf_purge' );
 		( new Purger() )->purgeAll();
 		$this->redirect( 'cache-purged', 'tools' );
 	}
 
 	public function cloudflareSync(): void {
-		$this->guard( 'gtp_cloudflare_sync' );
+		$this->guard( 'gtperf_cloudflare_sync' );
 		$settings = Settings::all();
 		if ( ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
-			$this->redirect( 'gtp_edge_owner_conflict', 'cloudflare' );
+			$this->redirect( 'gtperf_edge_owner_conflict', 'cloudflare' );
 		}
 		$factory  = new ClientFactory();
 		$client   = $factory->create( $settings );
@@ -448,7 +448,7 @@ final class AdminModule implements Module {
 	}
 
 	public function cloudflarePreview(): void {
-		$this->guard( 'gtp_cloudflare_preview' );
+		$this->guard( 'gtperf_cloudflare_preview' );
 		$settings = Settings::all();
 		$factory  = new ClientFactory();
 		$client   = $factory->create( $settings );
@@ -481,7 +481,7 @@ final class AdminModule implements Module {
 	 * Walk the connection one stage at a time and report the stage that breaks.
 	 */
 	public function cloudflareDiagnose(): void {
-		$this->guard( 'gtp_cloudflare_diagnose' );
+		$this->guard( 'gtperf_cloudflare_diagnose' );
 		$report = ( new ConnectionDiagnostics() )->run();
 		$this->redirect( empty( $report['ok'] ) ? 'cloudflare-diagnosed-fail' : 'cloudflare-diagnosed-ok', 'cloudflare' );
 	}
@@ -490,7 +490,7 @@ final class AdminModule implements Module {
 	 * Mint a least-privilege Cloudflare token from the stored Global API Key.
 	 */
 	public function cloudflareProvisionToken(): void {
-		$this->guard( 'gtp_cloudflare_token' );
+		$this->guard( 'gtperf_cloudflare_token' );
 		$created = ( new TokenProvisioner() )->provision();
 		if ( is_wp_error( $created ) ) {
 			$this->redirectError( $created, 'cloudflare' );
@@ -516,7 +516,7 @@ final class AdminModule implements Module {
 	}
 
 	public function purgeVerify(): void {
-		$this->guard( 'gtp_purge_verify' );
+		$this->guard( 'gtperf_purge_verify' );
 		// Capability and nonce checks above authorize this explicit URL field.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$url = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
@@ -530,13 +530,13 @@ final class AdminModule implements Module {
 	}
 
 	public function commerceSafety(): void {
-		$this->guard( 'gtp_commerce_safety' );
+		$this->guard( 'gtperf_commerce_safety' );
 		$result = ( new SafetyLab() )->run();
 		$this->redirect( 'pass' === (string) $result['status'] ? 'commerce-safety-pass' : 'commerce-safety-review', 'safety' );
 	}
 
 	public function cssTraining(): void {
-		$this->guard( 'gtp_css_training' );
+		$this->guard( 'gtperf_css_training' );
 		// Capability and nonce checks above authorize this explicit command field.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$command = isset( $_POST['command'] ) ? sanitize_key( wp_unslash( $_POST['command'] ) ) : '';
@@ -574,7 +574,7 @@ final class AdminModule implements Module {
 	}
 
 	public function cssRegenerate(): void {
-		$this->guard( 'gtp_css_regenerate' );
+		$this->guard( 'gtperf_css_regenerate' );
 		// Capability and nonce checks above authorize these explicit operation fields.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$command = isset( $_POST['command'] ) ? sanitize_key( wp_unslash( $_POST['command'] ) ) : '';
@@ -598,7 +598,7 @@ final class AdminModule implements Module {
 	}
 
 	public function fleetExport(): void {
-		$this->guard( 'gtp_fleet_export' );
+		$this->guard( 'gtperf_fleet_export' );
 		$result = ( new PolicyService() )->create();
 		if ( is_wp_error( $result ) ) {
 			$this->redirect( $result->get_error_code(), 'fleet' );
@@ -612,7 +612,7 @@ final class AdminModule implements Module {
 	}
 
 	public function fleetImport(): void {
-		$this->guard( 'gtp_fleet_import' );
+		$this->guard( 'gtperf_fleet_import' );
 		// Capability and nonce checks above authorize this explicit JSON field.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$json = isset( $_POST['policy_bundle'] ) && is_string( $_POST['policy_bundle'] )
@@ -624,7 +624,7 @@ final class AdminModule implements Module {
 	}
 
 	public function databaseClean(): void {
-		$this->guard( 'gtp_database_clean' );
+		$this->guard( 'gtperf_database_clean' );
 		// The capability and action nonce are verified by guard() above.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$tasks  = isset( $_POST['tasks'] ) && is_array( $_POST['tasks'] )
@@ -633,7 +633,7 @@ final class AdminModule implements Module {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$cleaner = new Cleaner();
 		$result  = $cleaner->run( null === $tasks ? null : $cleaner->sanitizeTasks( $tasks ) );
-		set_transient( 'gtp_database_result_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS );
+		set_transient( 'gtperf_database_result_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS );
 		$this->redirect( 'database-cleaned', 'tools' );
 	}
 
@@ -658,7 +658,7 @@ final class AdminModule implements Module {
 				<h1><?php esc_html_e( 'Performance control center', 'gt-performance' ); ?></h1>
 				<p class="gtp-admin__lede"><?php esc_html_e( 'Origin caching, server-side optimization, Cloudflare and custom CDN delivery, and commerce-safe controls in one place.', 'gt-performance' ); ?></p>
 			</div>
-			<span class="gtp-version"><?php echo esc_html( 'Version ' . GTP_VERSION ); ?></span>
+			<span class="gtp-version"><?php echo esc_html( 'Version ' . GTPERF_VERSION ); ?></span>
 		</header>
 		<nav class="gtp-tabs" aria-label="<?php esc_attr_e( 'GT Performance sections', 'gt-performance' ); ?>">
 			<?php foreach ( $tabs as $key => $label ) : ?>
@@ -672,7 +672,7 @@ final class AdminModule implements Module {
 
 	private function renderNotice(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display of a sanitized notice key; no state changes.
-		$notice = isset( $_GET['gtp_notice'] ) ? sanitize_key( wp_unslash( $_GET['gtp_notice'] ) ) : '';
+		$notice = isset( $_GET['gtperf_notice'] ) ? sanitize_key( wp_unslash( $_GET['gtperf_notice'] ) ) : '';
 		if ( '' === $notice ) {
 			return;
 		}
@@ -694,7 +694,7 @@ final class AdminModule implements Module {
 
 		// Dismissing drops the query argument rather than hiding the node, so a
 		// reload cannot resurrect a notice the reader has already dealt with.
-		$dismissUrl = remove_query_arg( 'gtp_notice' );
+		$dismissUrl = remove_query_arg( 'gtperf_notice' );
 		$dismiss    = sprintf(
 			'<a class="gtp-notice-dock__dismiss" href="%s" aria-label="%s">&times;</a>',
 			esc_url( $dismissUrl ),
@@ -1086,7 +1086,7 @@ final class AdminModule implements Module {
 				<h3><?php esc_html_e( 'Connect and synchronize', 'gt-performance' ); ?></h3>
 				<p><?php esc_html_e( 'Save credentials first, then discover the zone if needed and reconcile the managed Cloudflare cache rule.', 'gt-performance' ); ?></p>
 			</div>
-			<?php $this->actionButton( 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
+			<?php $this->actionButton( 'gtperf_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
 		</section>
 		<?php $this->renderCloudflareToken( $settings ); ?>
 		<?php $this->renderCloudflareDiagnostics(); ?>
@@ -1132,7 +1132,7 @@ final class AdminModule implements Module {
 						<h4><?php esc_html_e( 'Or create it automatically', 'gt-performance' ); ?></h4>
 						<p><?php esc_html_e( 'A Global API Key is on file, so GT Performance can create the zone-scoped token for you and save it. The new token is tested before it replaces the current credentials. Clear the Global API Key afterwards: it grants far more than this plugin needs.', 'gt-performance' ); ?></p>
 					</div>
-					<?php $this->actionButton( 'gtp_cloudflare_token', __( 'Create scoped token', 'gt-performance' ) ); ?>
+					<?php $this->actionButton( 'gtperf_cloudflare_token', __( 'Create scoped token', 'gt-performance' ) ); ?>
 				</div>
 			<?php else : ?>
 				<p class="gtp-panel-note"><?php esc_html_e( 'Cloudflare does not allow an application to sign in to your account, so the token has to be created in the dashboard. Saving a Global API Key and account email here would let GT Performance mint the scoped token over the API instead.', 'gt-performance' ); ?></p>
@@ -1165,7 +1165,7 @@ final class AdminModule implements Module {
 					<h3><?php esc_html_e( 'Connection check', 'gt-performance' ); ?></h3>
 					<p><?php esc_html_e( 'Walks credentials, authentication, zone lookup, and cache-rule read and write in order, and reports the exact stage and reason for any failure. The write stage rewrites the managed rule with its own current contents, so it changes nothing.', 'gt-performance' ); ?></p>
 				</div>
-				<?php $this->actionButton( 'gtp_cloudflare_diagnose', __( 'Run connection check', 'gt-performance' ) ); ?>
+				<?php $this->actionButton( 'gtperf_cloudflare_diagnose', __( 'Run connection check', 'gt-performance' ) ); ?>
 			</div>
 			<?php if ( null === $report ) : ?>
 				<p class="gtp-panel-note"><?php esc_html_e( 'No connection check has been run yet.', 'gt-performance' ); ?></p>
@@ -1305,7 +1305,7 @@ final class AdminModule implements Module {
 					<h3><?php esc_html_e( 'Cloudflare Free rule compiler', 'gt-performance' ); ?></h3>
 					<p><?php esc_html_e( 'Preview rule usage, managed-rule drift, overlapping host rules, and the exact expression before changing Cloudflare.', 'gt-performance' ); ?></p>
 				</div>
-				<?php $this->actionButton( 'gtp_cloudflare_preview', __( 'Preview live plan', 'gt-performance' ) ); ?>
+				<?php $this->actionButton( 'gtperf_cloudflare_preview', __( 'Preview live plan', 'gt-performance' ) ); ?>
 			</div>
 			<?php if ( ! $plan ) : ?>
 				<p class="gtp-panel-note"><?php esc_html_e( 'No live rule plan has been checked yet.', 'gt-performance' ); ?></p>
@@ -1401,7 +1401,7 @@ final class AdminModule implements Module {
 		$this->password( 'redis', 'password', __( 'Redis password', 'gt-performance' ), __( 'Encrypted in WordPress. Leave blank to keep the saved password.', 'gt-performance' ), ! empty( $settings['redis']['password'] ) );
 		$this->checkbox( 'redis', 'tls', __( 'Use TLS', 'gt-performance' ), __( 'Connect with tls:// when the Redis provider requires encrypted transport.', 'gt-performance' ), $settings );
 		$this->checkbox( 'redis', 'persistent', __( 'Reuse Redis connections', 'gt-performance' ), __( 'Keep a PhpRedis connection open between PHP requests when the host supports it.', 'gt-performance' ), $settings, __( 'Persistent connections reduce connection overhead but may be unsuitable on hosts that tightly limit Redis clients.', 'gt-performance' ) );
-		$this->text( 'redis', 'prefix', __( 'Cache key prefix', 'gt-performance' ), __( 'Optional. Leave blank for an automatic site-specific prefix.', 'gt-performance' ), $settings, 'text', 'gtp:site:', __( 'Use a unique prefix whenever multiple WordPress installations share the same Redis database.', 'gt-performance' ) );
+		$this->text( 'redis', 'prefix', __( 'Cache key prefix', 'gt-performance' ), __( 'Optional. Leave blank for an automatic site-specific prefix.', 'gt-performance' ), $settings, 'text', 'gtperf:site:', __( 'Use a unique prefix whenever multiple WordPress installations share the same Redis database.', 'gt-performance' ) );
 		$this->number( 'redis', 'connection_timeout', __( 'Connection timeout', 'gt-performance' ), __( 'Fail back to request-local cache quickly when Redis is unavailable.', 'gt-performance' ), $settings, 0.1, 10, __( 'seconds', 'gt-performance' ), '0.1' );
 		$this->number( 'redis', 'read_timeout', __( 'Read timeout', 'gt-performance' ), __( 'Maximum time to wait for a Redis response.', 'gt-performance' ), $settings, 0.1, 10, __( 'seconds', 'gt-performance' ), '0.1' );
 		$this->panelClose();
@@ -1416,7 +1416,7 @@ final class AdminModule implements Module {
 				<h3><?php esc_html_e( 'Test Redis credentials', 'gt-performance' ); ?></h3>
 				<p><?php esc_html_e( 'Save first, then run a bounded connection, authentication, database selection, and ping check.', 'gt-performance' ); ?></p>
 			</div>
-			<?php $this->actionButton( 'gtp_test_redis', __( 'Test Redis connection', 'gt-performance' ) ); ?>
+			<?php $this->actionButton( 'gtperf_test_redis', __( 'Test Redis connection', 'gt-performance' ) ); ?>
 		</section>
 		<?php
 	}
@@ -1473,7 +1473,7 @@ final class AdminModule implements Module {
 				<?php if ( ! empty( $xcloud['dashboard_url'] ) ) : ?>
 					<?php $this->fieldHelpLink( (string) $xcloud['dashboard_url'], __( 'Open this site in xCloud', 'gt-performance' ) ); ?>
 				<?php endif; ?>
-				<?php $this->actionButton( 'gtp_xcloud_refresh', __( 'Connect/refresh xCloud', 'gt-performance' ) ); ?>
+				<?php $this->actionButton( 'gtperf_xcloud_refresh', __( 'Connect/refresh xCloud', 'gt-performance' ) ); ?>
 			</div>
 		</section>
 		<?php
@@ -1481,7 +1481,7 @@ final class AdminModule implements Module {
 
 	private function renderSafetyLab(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display of a sanitized diagnostic URL; no state changes.
-		$url = isset( $_GET['gtp_url'] ) ? esc_url_raw( wp_unslash( $_GET['gtp_url'] ) ) : home_url( '/' );
+		$url = isset( $_GET['gtperf_url'] ) ? esc_url_raw( wp_unslash( $_GET['gtperf_url'] ) ) : home_url( '/' );
 		$url = '' !== $url ? $url : home_url( '/' );
 		$inspection = ( new CacheInspector() )->inspect( $url );
 		$receipts   = ( new PurgeReceiptRepository() )->recent( 10 );
@@ -1500,7 +1500,7 @@ final class AdminModule implements Module {
 				<input type="hidden" name="page" value="gt-performance">
 				<input type="hidden" name="tab" value="safety">
 				<label for="gtp-inspect-url" class="screen-reader-text"><?php esc_html_e( 'URL to inspect', 'gt-performance' ); ?></label>
-				<input id="gtp-inspect-url" class="regular-text" type="url" name="gtp_url" value="<?php echo esc_attr( $url ); ?>" required>
+				<input id="gtp-inspect-url" class="regular-text" type="url" name="gtperf_url" value="<?php echo esc_attr( $url ); ?>" required>
 				<?php submit_button( __( 'Explain URL', 'gt-performance' ), 'secondary', 'submit', false ); ?>
 			</form>
 			<?php if ( is_wp_error( $inspection ) ) : ?>
@@ -1519,9 +1519,9 @@ final class AdminModule implements Module {
 					<code><?php echo esc_html( (string) $inspection['cache_key'] ); ?></code>
 				</div>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gtp-panel-actions">
-					<input type="hidden" name="action" value="gtp_purge_verify">
+					<input type="hidden" name="action" value="gtperf_purge_verify">
 					<input type="hidden" name="url" value="<?php echo esc_attr( $url ); ?>">
-					<?php wp_nonce_field( 'gtp_purge_verify' ); ?>
+					<?php wp_nonce_field( 'gtperf_purge_verify' ); ?>
 					<?php submit_button( __( 'Purge and verify this URL', 'gt-performance' ), 'secondary', 'submit', false ); ?>
 				</form>
 			<?php endif; ?>
@@ -1532,7 +1532,7 @@ final class AdminModule implements Module {
 				<h3><?php esc_html_e( 'Commerce Safety Lab', 'gt-performance' ); ?></h3>
 				<p><?php esc_html_e( 'Simulate every registered path, cookie, and query bypass, then make fresh read-only requests to configured cart, checkout, account, and receipt routes. It never creates an order or captures payment.', 'gt-performance' ); ?></p>
 			</div>
-			<?php $this->actionButton( 'gtp_commerce_safety', __( 'Run safety checks', 'gt-performance' ) ); ?>
+			<?php $this->actionButton( 'gtperf_commerce_safety', __( 'Run safety checks', 'gt-performance' ) ); ?>
 		</section>
 
 		<?php $this->renderSafetyHistory( $receipts, $runs ); ?>
@@ -1579,19 +1579,19 @@ define( 'WP_REDIS_HOST', '127.0.0.1' );
 define( 'WP_REDIS_PORT', 6379 );
 define( 'WP_REDIS_DATABASE', 0 );
 define( 'WP_REDIS_PASSWORD', array( 'username', 'replace-with-a-secret' ) );
-define( 'WP_REDIS_PREFIX', 'gtp:site:' );
+define( 'WP_REDIS_PREFIX', 'gtperf:site:' );
 define( 'WP_REDIS_TIMEOUT', 0.5 );
 define( 'WP_REDIS_READ_TIMEOUT', 0.5 );
 PHP;
 
 		$this->panelOpen(
 			__( 'Compatible wp-config.php overrides', 'gt-performance' ),
-			__( 'GT Performance reads the same WP_REDIS_* constants used by Till Krüss Redis Object Cache. GTP_REDIS_* constants remain supported and take highest precedence.', 'gt-performance' )
+			__( 'GT Performance reads the same WP_REDIS_* constants used by Till Krüss Redis Object Cache. GTPERF_REDIS_* constants remain supported and take highest precedence.', 'gt-performance' )
 		);
 		?>
 		<div class="gtp-config-example">
 			<pre><code><?php echo esc_html( $example ); ?></code></pre>
-			<p><?php esc_html_e( 'Add only the constants you need before the WordPress stop-editing comment. WP_REDIS_HOST or WP_REDIS_PATH enables Redis unless WP_REDIS_DISABLED is true. Existing GTP_REDIS_* constants do not need to be changed.', 'gt-performance' ); ?></p>
+			<p><?php esc_html_e( 'Add only the constants you need before the WordPress stop-editing comment. WP_REDIS_HOST or WP_REDIS_PATH enables Redis unless WP_REDIS_DISABLED is true. Existing GTPERF_REDIS_* constants do not need to be changed.', 'gt-performance' ); ?></p>
 		</div>
 		<?php
 		$this->panelClose();
@@ -1694,10 +1694,10 @@ PHP;
 				</div>
 			</div>
 			<form class="gtp-inline-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="gtp_css_regenerate">
+				<input type="hidden" name="action" value="gtperf_css_regenerate">
 				<label for="gtp-css-regenerate-url" class="screen-reader-text"><?php esc_html_e( 'Public page URL', 'gt-performance' ); ?></label>
 				<input id="gtp-css-regenerate-url" class="regular-text" type="url" name="url" value="<?php echo esc_attr( home_url( '/' ) ); ?>" required>
-				<?php wp_nonce_field( 'gtp_css_regenerate' ); ?>
+				<?php wp_nonce_field( 'gtperf_css_regenerate' ); ?>
 				<button class="button button-secondary" type="submit" name="command" value="url"><?php esc_html_e( 'Regenerate URL CSS', 'gt-performance' ); ?></button>
 				<button class="button button-secondary" type="submit" name="command" value="all" formnovalidate><?php esc_html_e( 'Regenerate all CSS', 'gt-performance' ); ?></button>
 			</form>
@@ -1712,7 +1712,7 @@ PHP;
 	 */
 	private function renderCssTraining( array $training, array $approved ): void {
 		$candidates = array_map( 'strval', (array) ( $training['candidates'] ?? array() ) );
-		$previewUrl = add_query_arg( 'gtp_css_preview', wp_create_nonce( 'gtp_css_preview' ), home_url( '/' ) );
+		$previewUrl = add_query_arg( 'gtperf_css_preview', wp_create_nonce( 'gtperf_css_preview' ), home_url( '/' ) );
 		?>
 		<section class="gtp-panel">
 			<div class="gtp-panel__header">
@@ -1754,9 +1754,9 @@ PHP;
 	private function cssTrainingButton( string $command, string $label ): void {
 		?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="gtp_css_training">
+			<input type="hidden" name="action" value="gtperf_css_training">
 			<input type="hidden" name="command" value="<?php echo esc_attr( $command ); ?>">
-			<?php wp_nonce_field( 'gtp_css_training' ); ?>
+			<?php wp_nonce_field( 'gtperf_css_training' ); ?>
 			<?php submit_button( $label, 'secondary', 'submit', false ); ?>
 		</form>
 		<?php
@@ -1768,14 +1768,14 @@ PHP;
 	private function renderFleet( array $settings ): void {
 		$repository = new FleetRepository();
 		$events     = $repository->events();
-		$hasSecret  = '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) || defined( 'GTP_FLEET_SIGNING_SECRET' );
+		$hasSecret  = '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) || defined( 'GTPERF_FLEET_SIGNING_SECRET' );
 
 		$this->pageIntro( __( 'Fleet Console', 'gt-performance' ), __( 'Move a reviewed GT Performance policy between your sites without copying credentials or opening a remote code channel.', 'gt-performance' ) );
 		$this->settingsFormOpen();
 		$this->panelOpen( __( 'Fleet policy receiver', 'gt-performance' ), __( 'Policies are signed with a key derived from the shared signing secret, expire after five minutes, and are accepted only once.', 'gt-performance' ) );
 		$this->checkbox( 'fleet', 'enabled', __( 'Enable Fleet Console', 'gt-performance' ), __( 'Allow this site to create and receive signed configuration-only policy bundles.', 'gt-performance' ), $settings );
 		$this->checkbox( 'fleet', 'allow_imports', __( 'Allow signed policy imports', 'gt-performance' ), __( 'Disable this to make the site export-only while keeping its current configuration.', 'gt-performance' ), $settings );
-		$this->password( 'fleet', 'signing_secret', __( 'Fleet signing secret', 'gt-performance' ), __( 'Choose one long passphrase and save the same value on every site in the fleet. Encrypted in WordPress; leave blank to keep the saved secret. GTP_FLEET_SIGNING_SECRET in wp-config.php takes precedence.', 'gt-performance' ), '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) );
+		$this->password( 'fleet', 'signing_secret', __( 'Fleet signing secret', 'gt-performance' ), __( 'Choose one long passphrase and save the same value on every site in the fleet. Encrypted in WordPress; leave blank to keep the saved secret. GTPERF_FLEET_SIGNING_SECRET in wp-config.php takes precedence.', 'gt-performance' ), '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) );
 		$this->textarea( 'fleet', 'policy_modules', __( 'Included policy modules', 'gt-performance' ), __( 'One module per line. Credentials and secrets are removed even if their parent module is selected.', 'gt-performance' ), $settings, "cache\ncss\ncommerce\nintegrations" );
 		$this->panelClose();
 		$this->settingsFormClose();
@@ -1790,13 +1790,13 @@ PHP;
 		<div class="gtp-dashboard-grid">
 			<section class="gtp-panel gtp-operation">
 				<div><h3><?php esc_html_e( 'Export current policy', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Download a short-lived signed JSON bundle containing only the selected modules.', 'gt-performance' ); ?></p></div>
-				<?php $this->actionButton( 'gtp_fleet_export', __( 'Download policy', 'gt-performance' ) ); ?>
+				<?php $this->actionButton( 'gtperf_fleet_export', __( 'Download policy', 'gt-performance' ) ); ?>
 			</section>
 			<section class="gtp-panel">
 				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Import signed policy', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Paste a fresh bundle from another site that uses the same signing secret.', 'gt-performance' ); ?></p></div></div>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gtp-policy-import">
-					<input type="hidden" name="action" value="gtp_fleet_import">
-					<?php wp_nonce_field( 'gtp_fleet_import' ); ?>
+					<input type="hidden" name="action" value="gtperf_fleet_import">
+					<?php wp_nonce_field( 'gtperf_fleet_import' ); ?>
 					<label for="gtp-policy-bundle" class="screen-reader-text"><?php esc_html_e( 'Signed policy JSON', 'gt-performance' ); ?></label>
 					<textarea id="gtp-policy-bundle" name="policy_bundle" rows="7" required></textarea>
 					<?php submit_button( __( 'Verify and apply', 'gt-performance' ), 'secondary', 'submit', false ); ?>
@@ -1863,10 +1863,10 @@ PHP;
 				</div>
 			</div>
 			<div class="gtp-tools-grid">
-				<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtp_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
-				<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtp_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
-				<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtp_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
-				<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtp_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtperf_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtperf_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtperf_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtperf_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>
 			</div>
 		</section>
 		<?php
@@ -2032,9 +2032,9 @@ PHP;
 				<span class="gtp-status"><?php esc_html_e( 'Manual control', 'gt-performance' ); ?></span>
 			</div>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="gtp_database_clean">
+				<input type="hidden" name="action" value="gtperf_database_clean">
 				<input type="hidden" name="tasks[]" value="">
-				<?php wp_nonce_field( 'gtp_database_clean' ); ?>
+				<?php wp_nonce_field( 'gtperf_database_clean' ); ?>
 				<div class="gtp-database-task-list" role="group" aria-label="<?php esc_attr_e( 'Manual database optimization tasks', 'gt-performance' ); ?>">
 					<?php foreach ( $definitions as $key => $definition ) : ?>
 						<label class="gtp-database-task">
@@ -2113,7 +2113,7 @@ PHP;
 	 * @return array<string, int>
 	 */
 	private function databaseResult(): array {
-		$result = get_transient( 'gtp_database_result_' . get_current_user_id() );
+		$result = get_transient( 'gtperf_database_result_' . get_current_user_id() );
 
 		return is_array( $result ) ? array_map( 'intval', $result ) : array();
 	}
@@ -2185,7 +2185,7 @@ PHP;
 				'timeout'     => 15,
 				'redirection' => 3,
 				'headers'     => array( 'X-GT-Preload' => '1' ),
-				'user-agent'  => 'GT-Performance-CSS-Regenerator/' . GTP_VERSION,
+				'user-agent'  => 'GT-Performance-CSS-Regenerator/' . GTPERF_VERSION,
 			)
 		);
 	}
@@ -2498,7 +2498,7 @@ PHP;
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( $action ); ?>">
 			<?php // These operations are reachable from more than one screen, so remember where the visitor started. ?>
-			<input type="hidden" name="gtp_return" value="<?php echo esc_attr( $this->currentTab() ); ?>">
+			<input type="hidden" name="gtperf_return" value="<?php echo esc_attr( $this->currentTab() ); ?>">
 			<?php wp_nonce_field( $action ); ?>
 			<?php submit_button( $label, 'secondary', 'submit', false ); ?>
 		</form>
@@ -2538,7 +2538,7 @@ PHP;
 
 	private function redirect( string $notice, string $tab ): never {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by the calling action handler.
-		$return = isset( $_POST['gtp_return'] ) ? sanitize_key( (string) wp_unslash( $_POST['gtp_return'] ) ) : '';
+		$return = isset( $_POST['gtperf_return'] ) ? sanitize_key( (string) wp_unslash( $_POST['gtperf_return'] ) ) : '';
 		if ( '' !== $return && in_array( $return, self::TABS, true ) ) {
 			$tab = $return;
 		}
@@ -2548,7 +2548,7 @@ PHP;
 				array(
 					'page'       => self::PAGE_SLUG,
 					'tab'        => sanitize_key( $tab ),
-					'gtp_notice' => sanitize_key( $notice ),
+					'gtperf_notice' => sanitize_key( $notice ),
 				),
 				admin_url( 'admin.php' )
 			)
@@ -2639,48 +2639,48 @@ PHP;
 			'css-regenerated-all'       => array( __( 'All used CSS was invalidated and the page cache was purged for regeneration.', 'gt-performance' ), 'success' ),
 			'css-regenerate-invalid'    => array( __( 'Enter a valid public URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'fleet-policy-applied'      => array( __( 'The signed fleet policy was verified and applied.', 'gt-performance' ), 'success' ),
-			'gtp_cloudflare_token'      => array( __( 'Enter a Cloudflare API token, save the settings, then connect again.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_email'      => array( __( 'Enter the Cloudflare account email used with the Global API Key.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_global_key' => array( __( 'Enter a Cloudflare Global API Key, save the settings, then connect again.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_zone'       => array( __( 'No active Cloudflare zone matched this domain. Check the domain or enter the Zone ID.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_json'       => array( __( 'Cloudflare returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_api'        => array( __( 'Cloudflare rejected the request. Editing cache rules needs an API token with Zone → Cache Rules → Edit (permission group "Cache Settings Write"), plus Zone Read and Cache Purge. Run the connection check for the failing stage.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_transport'  => array( __( 'WordPress could not reach the Cloudflare API at all, so this is a network or firewall problem rather than a credential problem.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_ruleset'    => array( __( 'Cloudflare did not return the cache ruleset needed to finish setup.', 'gt-performance' ), 'error' ),
-			'gtp_cloudflare_rule_budget' => array( __( 'The Cloudflare Free Cache Rules budget is full. Remove an unused rule or reconnect the existing GT Performance rule.', 'gt-performance' ), 'warning' ),
-			'gtp_xcloud_token'         => array( __( 'Enter an xCloud API token with read:sites and write:sites scopes, save, then connect again.', 'gt-performance' ), 'error' ),
-			'gtp_xcloud_site'          => array( __( 'No exact xCloud site matched this domain or UUID.', 'gt-performance' ), 'error' ),
-			'gtp_xcloud_enterprise_ids' => array( __( 'xCloud did not expose the numeric site identifiers required by the Cloudflare Enterprise add-on. Refresh and try again.', 'gt-performance' ), 'error' ),
-			'gtp_xcloud_cache_settings' => array( __( 'xCloud did not return cache-layer settings for this site.', 'gt-performance' ), 'error' ),
-			'gtp_xcloud_json'          => array( __( 'xCloud returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
-			'gtp_xcloud_api'           => array( __( 'xCloud rejected the request. Check the token scopes and team permissions.', 'gt-performance' ), 'error' ),
-			'gtp_xcloud_enterprise_purge_unavailable' => array( __( 'Cloudflare Enterprise purge is not available through the xCloud Public API token. Use the Purge control in the xCloud Enterprise dashboard.', 'gt-performance' ), 'warning' ),
-			'gtp_edge_owner_conflict'  => array( __( 'xCloud Cloudflare Enterprise is the active owner. Disable it or the direct Cloudflare integration before synchronizing another cache rule.', 'gt-performance' ), 'warning' ),
+			'gtperf_cloudflare_token'      => array( __( 'Enter a Cloudflare API token, save the settings, then connect again.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_email'      => array( __( 'Enter the Cloudflare account email used with the Global API Key.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_global_key' => array( __( 'Enter a Cloudflare Global API Key, save the settings, then connect again.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_zone'       => array( __( 'No active Cloudflare zone matched this domain. Check the domain or enter the Zone ID.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_json'       => array( __( 'Cloudflare returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_api'        => array( __( 'Cloudflare rejected the request. Editing cache rules needs an API token with Zone → Cache Rules → Edit (permission group "Cache Settings Write"), plus Zone Read and Cache Purge. Run the connection check for the failing stage.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_transport'  => array( __( 'WordPress could not reach the Cloudflare API at all, so this is a network or firewall problem rather than a credential problem.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_ruleset'    => array( __( 'Cloudflare did not return the cache ruleset needed to finish setup.', 'gt-performance' ), 'error' ),
+			'gtperf_cloudflare_rule_budget' => array( __( 'The Cloudflare Free Cache Rules budget is full. Remove an unused rule or reconnect the existing GT Performance rule.', 'gt-performance' ), 'warning' ),
+			'gtperf_xcloud_token'         => array( __( 'Enter an xCloud API token with read:sites and write:sites scopes, save, then connect again.', 'gt-performance' ), 'error' ),
+			'gtperf_xcloud_site'          => array( __( 'No exact xCloud site matched this domain or UUID.', 'gt-performance' ), 'error' ),
+			'gtperf_xcloud_enterprise_ids' => array( __( 'xCloud did not expose the numeric site identifiers required by the Cloudflare Enterprise add-on. Refresh and try again.', 'gt-performance' ), 'error' ),
+			'gtperf_xcloud_cache_settings' => array( __( 'xCloud did not return cache-layer settings for this site.', 'gt-performance' ), 'error' ),
+			'gtperf_xcloud_json'          => array( __( 'xCloud returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
+			'gtperf_xcloud_api'           => array( __( 'xCloud rejected the request. Check the token scopes and team permissions.', 'gt-performance' ), 'error' ),
+			'gtperf_xcloud_enterprise_purge_unavailable' => array( __( 'Cloudflare Enterprise purge is not available through the xCloud Public API token. Use the Purge control in the xCloud Enterprise dashboard.', 'gt-performance' ), 'warning' ),
+			'gtperf_edge_owner_conflict'  => array( __( 'xCloud Cloudflare Enterprise is the active owner. Disable it or the direct Cloudflare integration before synchronizing another cache rule.', 'gt-performance' ), 'warning' ),
 			'xcloud-connected'         => array( __( 'xCloud site, host cache, and Cloudflare Enterprise status refreshed.', 'gt-performance' ), 'success' ),
 			'xcloud-edge-conflict'     => array( __( 'xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules.', 'gt-performance' ), 'warning' ),
-			'gtp_diagnostic_url'        => array( __( 'Enter a valid URL from this WordPress site.', 'gt-performance' ), 'error' ),
-			'gtp_purge_verification_http' => array( __( 'The purge ran, but GT Performance could not fetch the public page for verification.', 'gt-performance' ), 'warning' ),
-			'gtp_fleet_secret'          => array( __( 'Save the same fleet signing secret on every site before creating or applying fleet policies.', 'gt-performance' ), 'warning' ),
-			'gtp_fleet_disabled'        => array( __( 'Enable Fleet Console and signed policy imports before applying a bundle.', 'gt-performance' ), 'warning' ),
-			'gtp_fleet_json'            => array( __( 'The pasted fleet policy is not valid JSON.', 'gt-performance' ), 'error' ),
-			'gtp_fleet_signature'       => array( __( 'The fleet policy signature is invalid or the five-minute import window expired.', 'gt-performance' ), 'error' ),
-			'gtp_fleet_replay'          => array( __( 'That fleet policy was already applied and cannot be replayed.', 'gt-performance' ), 'warning' ),
-			'gtp_dropin_conflict'       => array( __( 'Another plugin owns advanced-cache.php. Disable or migrate that cache before installing this drop-in.', 'gt-performance' ), 'warning' ),
-			'gtp_dropin_directory'      => array( __( 'The WordPress content directory is not writable, so the page-cache drop-in could not be installed.', 'gt-performance' ), 'error' ),
-			'gtp_dropin_write'          => array( __( 'GT Performance could not write the page-cache drop-in.', 'gt-performance' ), 'error' ),
-			'gtp_dropin_move'           => array( __( 'GT Performance could not publish the page-cache drop-in safely.', 'gt-performance' ), 'error' ),
-			'gtp_wp_config_read'        => array( __( 'GT Performance could not read wp-config.php.', 'gt-performance' ), 'error' ),
-			'gtp_wp_cache_custom'       => array( __( 'wp-config.php contains a custom WP_CACHE declaration. Enable WP_CACHE manually, then try again.', 'gt-performance' ), 'warning' ),
-			'gtp_wp_config_update'      => array( __( 'GT Performance could not add WP_CACHE to wp-config.php.', 'gt-performance' ), 'error' ),
-			'gtp_wp_config_writable'    => array( __( 'wp-config.php is not writable. Add the WP_CACHE constant manually, then try again.', 'gt-performance' ), 'warning' ),
-			'gtp_wp_config_write'       => array( __( 'GT Performance could not write the temporary wp-config.php update.', 'gt-performance' ), 'error' ),
-			'gtp_wp_config_publish'     => array( __( 'GT Performance could not publish the wp-config.php update safely.', 'gt-performance' ), 'error' ),
-			'gtp_redis_extension'       => array( __( 'The PHP Redis extension is not installed on this server.', 'gt-performance' ), 'warning' ),
-			'gtp_redis_disabled'        => array( __( 'Enable Redis object caching and save the settings before testing the connection.', 'gt-performance' ), 'warning' ),
-			'gtp_redis_connect'         => array( __( 'Redis could not be reached with the saved host, TLS, or credentials.', 'gt-performance' ), 'error' ),
-			'gtp_redis_ping'            => array( __( 'Redis accepted the connection but did not answer the health check.', 'gt-performance' ), 'error' ),
-			'gtp_redis_conflict'        => array( __( 'Another plugin owns object-cache.php. Remove that conflict before installing the Redis drop-in.', 'gt-performance' ), 'warning' ),
-			'gtp_redis_install'         => array( __( 'GT Performance could not install the Redis object-cache drop-in.', 'gt-performance' ), 'error' ),
+			'gtperf_diagnostic_url'        => array( __( 'Enter a valid URL from this WordPress site.', 'gt-performance' ), 'error' ),
+			'gtperf_purge_verification_http' => array( __( 'The purge ran, but GT Performance could not fetch the public page for verification.', 'gt-performance' ), 'warning' ),
+			'gtperf_fleet_secret'          => array( __( 'Save the same fleet signing secret on every site before creating or applying fleet policies.', 'gt-performance' ), 'warning' ),
+			'gtperf_fleet_disabled'        => array( __( 'Enable Fleet Console and signed policy imports before applying a bundle.', 'gt-performance' ), 'warning' ),
+			'gtperf_fleet_json'            => array( __( 'The pasted fleet policy is not valid JSON.', 'gt-performance' ), 'error' ),
+			'gtperf_fleet_signature'       => array( __( 'The fleet policy signature is invalid or the five-minute import window expired.', 'gt-performance' ), 'error' ),
+			'gtperf_fleet_replay'          => array( __( 'That fleet policy was already applied and cannot be replayed.', 'gt-performance' ), 'warning' ),
+			'gtperf_dropin_conflict'       => array( __( 'Another plugin owns advanced-cache.php. Disable or migrate that cache before installing this drop-in.', 'gt-performance' ), 'warning' ),
+			'gtperf_dropin_directory'      => array( __( 'The WordPress content directory is not writable, so the page-cache drop-in could not be installed.', 'gt-performance' ), 'error' ),
+			'gtperf_dropin_write'          => array( __( 'GT Performance could not write the page-cache drop-in.', 'gt-performance' ), 'error' ),
+			'gtperf_dropin_move'           => array( __( 'GT Performance could not publish the page-cache drop-in safely.', 'gt-performance' ), 'error' ),
+			'gtperf_wp_config_read'        => array( __( 'GT Performance could not read wp-config.php.', 'gt-performance' ), 'error' ),
+			'gtperf_wp_cache_custom'       => array( __( 'wp-config.php contains a custom WP_CACHE declaration. Enable WP_CACHE manually, then try again.', 'gt-performance' ), 'warning' ),
+			'gtperf_wp_config_update'      => array( __( 'GT Performance could not add WP_CACHE to wp-config.php.', 'gt-performance' ), 'error' ),
+			'gtperf_wp_config_writable'    => array( __( 'wp-config.php is not writable. Add the WP_CACHE constant manually, then try again.', 'gt-performance' ), 'warning' ),
+			'gtperf_wp_config_write'       => array( __( 'GT Performance could not write the temporary wp-config.php update.', 'gt-performance' ), 'error' ),
+			'gtperf_wp_config_publish'     => array( __( 'GT Performance could not publish the wp-config.php update safely.', 'gt-performance' ), 'error' ),
+			'gtperf_redis_extension'       => array( __( 'The PHP Redis extension is not installed on this server.', 'gt-performance' ), 'warning' ),
+			'gtperf_redis_disabled'        => array( __( 'Enable Redis object caching and save the settings before testing the connection.', 'gt-performance' ), 'warning' ),
+			'gtperf_redis_connect'         => array( __( 'Redis could not be reached with the saved host, TLS, or credentials.', 'gt-performance' ), 'error' ),
+			'gtperf_redis_ping'            => array( __( 'Redis accepted the connection but did not answer the health check.', 'gt-performance' ), 'error' ),
+			'gtperf_redis_conflict'        => array( __( 'Another plugin owns object-cache.php. Remove that conflict before installing the Redis drop-in.', 'gt-performance' ), 'warning' ),
+			'gtperf_redis_install'         => array( __( 'GT Performance could not install the Redis object-cache drop-in.', 'gt-performance' ), 'error' ),
 			'quick-action-invalid'      => array( __( 'That quick action is not available.', 'gt-performance' ), 'warning' ),
 		);
 

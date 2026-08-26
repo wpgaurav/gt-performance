@@ -7,11 +7,11 @@ Every GitHub release is built from a pushed `v<version>` tag. The workflow does 
 Before tagging, update every version surface:
 
 - `composer.json`
-- the plugin header and `GTP_VERSION` in `gt-performance.php`
+- the plugin header and `GTPERF_VERSION` in `gt-performance.php`
 - `Stable tag` and the changelog section in `readme.txt`
 - the current release in `README.md`
 - the default version in `bin/build-package.sh`
-- `GTP_VERSION` in `tests/phpstan-bootstrap.php`
+- `GTPERF_VERSION` in `tests/phpstan-bootstrap.php`
 - a dated top section in `CHANGELOG.md`
 
 Then run:

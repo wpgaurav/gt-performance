@@ -3,10 +3,15 @@
  * GT Performance Redis object-cache drop-in.
  *
  * This file intentionally has no plugin runtime dependency. As an
- * object-cache.php drop-in it must define the canonical global
- * wp_cache_*() API that WordPress core calls.
+ * object-cache.php drop-in it must define the canonical global wp_cache_*()
+ * API that WordPress core calls, alongside the WP_Object_Cache class, and it
+ * must publish that class as $GLOBALS['wp_object_cache']. Those three things
+ * are what makes a file an object-cache drop-in, so the sniffs that forbid
+ * them cannot apply here.
  *
  * phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
+ * phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed
+ * phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
  *
  * @package GTPerformance
  */
@@ -76,7 +81,10 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 					$cacheKey,
 					$payload,
 					$expire > 0
-						? array( 'nx', 'ex' => (int) $expire )
+						? array(
+							'nx',
+							'ex' => (int) $expire,
+						)
 						: array( 'nx' )
 				);
 				if ( ! $stored ) {
@@ -108,7 +116,10 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 					$cacheKey,
 					$payload,
 					$expire > 0
-						? array( 'xx', 'ex' => (int) $expire )
+						? array(
+							'xx',
+							'ex' => (int) $expire,
+						)
 						: array( 'xx' )
 				);
 				if ( ! $stored ) {
@@ -400,7 +411,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		private function basePrefix(): string {
 			$prefix = (string) ( $this->config['prefix'] ?? '' );
 			if ( '' === $prefix ) {
-				$prefix = 'gtp:' . md5( ( defined( 'DB_NAME' ) ? DB_NAME : 'wordpress' ) . ABSPATH );
+				$prefix = 'gtperf:' . md5( ( defined( 'DB_NAME' ) ? DB_NAME : 'wordpress' ) . ABSPATH );
 			}
 
 			return rtrim( $prefix, ':' ) . ':';
@@ -410,22 +421,27 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		 * @return array<string, mixed>
 		 */
 		private function configuration(): array {
+			// The configuration file is inert data, never executed. Its first
+			// line is a fixed guard that terminates direct web requests; the
+			// remainder is JSON.
 			$file   = WP_CONTENT_DIR . '/cache/gt-performance/redis-config.php';
-			$config = is_readable( $file ) ? require $file : array();
+			$raw    = is_readable( $file ) ? @file_get_contents( $file ) : false;
+			$break  = is_string( $raw ) ? strpos( $raw, "\n" ) : false;
+			$config = false === $break ? array() : json_decode( substr( (string) $raw, $break + 1 ), true );
 			$config = is_array( $config ) ? $config : array();
 			$config = array_replace( $config, $this->compatibleConstantOverrides() );
 
 			$gtpConstants = array(
-				'host'               => 'GTP_REDIS_HOST',
-				'port'               => 'GTP_REDIS_PORT',
-				'database'           => 'GTP_REDIS_DATABASE',
-				'username'           => 'GTP_REDIS_USERNAME',
-				'password'           => 'GTP_REDIS_PASSWORD',
-				'tls'                => 'GTP_REDIS_TLS',
-				'persistent'         => 'GTP_REDIS_PERSISTENT',
-				'prefix'             => 'GTP_REDIS_PREFIX',
-				'connection_timeout' => 'GTP_REDIS_TIMEOUT',
-				'read_timeout'       => 'GTP_REDIS_READ_TIMEOUT',
+				'host'               => 'GTPERF_REDIS_HOST',
+				'port'               => 'GTPERF_REDIS_PORT',
+				'database'           => 'GTPERF_REDIS_DATABASE',
+				'username'           => 'GTPERF_REDIS_USERNAME',
+				'password'           => 'GTPERF_REDIS_PASSWORD',
+				'tls'                => 'GTPERF_REDIS_TLS',
+				'persistent'         => 'GTPERF_REDIS_PERSISTENT',
+				'prefix'             => 'GTPERF_REDIS_PREFIX',
+				'connection_timeout' => 'GTPERF_REDIS_TIMEOUT',
+				'read_timeout'       => 'GTPERF_REDIS_READ_TIMEOUT',
 			);
 			foreach ( $gtpConstants as $key => $constant ) {
 				if ( defined( $constant ) ) {
@@ -433,14 +449,14 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 				}
 			}
 
-			if ( defined( 'GTP_REDIS_HOST' ) || defined( 'WP_REDIS_HOST' ) || defined( 'WP_REDIS_PATH' ) ) {
+			if ( defined( 'GTPERF_REDIS_HOST' ) || defined( 'WP_REDIS_HOST' ) || defined( 'WP_REDIS_PATH' ) ) {
 				$config['enabled'] = true;
 			}
 			if ( defined( 'WP_REDIS_DISABLED' ) && (bool) WP_REDIS_DISABLED ) {
 				$config['enabled'] = false;
 			}
-			if ( defined( 'GTP_REDIS_ENABLED' ) ) {
-				$config['enabled'] = (bool) GTP_REDIS_ENABLED;
+			if ( defined( 'GTPERF_REDIS_ENABLED' ) ) {
+				$config['enabled'] = (bool) GTPERF_REDIS_ENABLED;
 			}
 
 			return array(

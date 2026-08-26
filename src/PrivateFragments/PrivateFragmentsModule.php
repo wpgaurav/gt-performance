@@ -20,7 +20,7 @@ final class PrivateFragmentsModule implements Module {
 	}
 
 	public function register(): void {
-		add_shortcode( 'gtp_private_island', array( $this, 'shortcode' ) );
+		add_shortcode( 'gtperf_private_island', array( $this, 'shortcode' ) );
 		add_filter( 'gt_performance_html', array( $this, 'prepareHtml' ), 90 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ), PHP_INT_MAX );
 		add_action( 'wp_ajax_gtp_private_fragments', array( $this, 'respond' ) );
@@ -35,7 +35,7 @@ final class PrivateFragmentsModule implements Module {
 			return '';
 		}
 
-		$attributes = shortcode_atts( array( 'id' => '' ), $attributes, 'gtp_private_island' );
+		$attributes = shortcode_atts( array( 'id' => '' ), $attributes, 'gtperf_private_island' );
 		$fragmentId = sanitize_key( (string) $attributes['id'] );
 		if ( ! $this->fragments->has( $fragmentId ) ) {
 			return '';
@@ -94,9 +94,9 @@ final class PrivateFragmentsModule implements Module {
 
 		wp_enqueue_script(
 			'gt-performance-private-islands',
-			plugins_url( 'assets/private-islands.js', GTP_FILE ),
+			plugins_url( 'assets/private-islands.js', GTPERF_FILE ),
 			array(),
-			GTP_VERSION,
+			GTPERF_VERSION,
 			true
 		);
 		wp_localize_script(

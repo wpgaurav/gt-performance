@@ -27,7 +27,7 @@ final class TokenCipherTest extends TestCase {
 
 		self::assertSame(
 			'test-cloudflare-global-key',
-			$cipher->decrypt( $encrypted, 'GTP_TEST_CLOUDFLARE_GLOBAL_API_KEY' )
+			$cipher->decrypt( $encrypted, 'GTPERF_TEST_CLOUDFLARE_GLOBAL_API_KEY' )
 		);
 	}
 }

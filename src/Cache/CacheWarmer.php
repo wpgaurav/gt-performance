@@ -102,7 +102,7 @@ final class CacheWarmer {
 				'timeout'             => 10,
 				'redirection'         => 2,
 				'limit_response_size' => 2 * MB_IN_BYTES,
-				'user-agent'          => 'GT-Performance-Warmer/' . GTP_VERSION,
+				'user-agent'          => 'GT-Performance-Warmer/' . GTPERF_VERSION,
 			)
 		);
 

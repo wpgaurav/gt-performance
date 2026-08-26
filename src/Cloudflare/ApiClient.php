@@ -38,7 +38,7 @@ final class ApiClient {
 				$this->credentials->headers(),
 				array(
 					'Content-Type' => 'application/json',
-					'User-Agent'   => 'GT-Performance/' . GTP_VERSION,
+					'User-Agent'   => 'GT-Performance/' . GTPERF_VERSION,
 				)
 			),
 		);
@@ -52,7 +52,7 @@ final class ApiClient {
 			// A transport failure never reached Cloudflare, so say so rather than
 			// letting it read as a rejected request.
 			return new \WP_Error(
-				'gtp_cloudflare_transport',
+				'gtperf_cloudflare_transport',
 				sprintf(
 					/* translators: %s: transport error reported by WordPress. */
 					__( 'WordPress could not reach the Cloudflare API: %s', 'gt-performance' ),
@@ -69,7 +69,7 @@ final class ApiClient {
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( ! is_array( $data ) ) {
 			return new \WP_Error(
-				'gtp_cloudflare_json',
+				'gtperf_cloudflare_json',
 				sprintf(
 					/* translators: %d: HTTP status code. */
 					__( 'Cloudflare returned an unreadable response (HTTP %d).', 'gt-performance' ),
@@ -85,7 +85,7 @@ final class ApiClient {
 
 		if ( $code < 200 || $code >= 300 || empty( $data['success'] ) ) {
 			return new \WP_Error(
-				'gtp_cloudflare_api',
+				'gtperf_cloudflare_api',
 				$this->describeErrors( $data, $code ),
 				array(
 					'status'  => $code,
@@ -187,7 +187,7 @@ final class ApiClient {
 		}
 
 		return new \WP_Error(
-			'gtp_cloudflare_zone',
+			'gtperf_cloudflare_zone',
 			sprintf(
 				/* translators: %s: hostname that was searched for. */
 				__( 'No active Cloudflare zone matched %s on this account.', 'gt-performance' ),

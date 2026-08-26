@@ -27,7 +27,7 @@ final class RedisConfigurationTest extends TestCase {
 				'password'           => $password,
 				'tls'                => true,
 				'persistent'         => false,
-				'prefix'             => 'gtp:test:',
+				'prefix'             => 'gtperf:test:',
 				'connection_timeout' => 0.7,
 				'read_timeout'       => 0.8,
 			)
@@ -42,11 +42,11 @@ final class RedisConfigurationTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	public function test_wp_config_constants_override_saved_redis_settings(): void {
-		define( 'GTP_REDIS_HOST', 'redis.internal' );
-		define( 'GTP_REDIS_DATABASE', 6 );
-		define( 'GTP_REDIS_USERNAME', 'wordpress' );
-		define( 'GTP_REDIS_PASSWORD', 'constant-secret' );
-		define( 'GTP_REDIS_TLS', true );
+		define( 'GTPERF_REDIS_HOST', 'redis.internal' );
+		define( 'GTPERF_REDIS_DATABASE', 6 );
+		define( 'GTPERF_REDIS_USERNAME', 'wordpress' );
+		define( 'GTPERF_REDIS_PASSWORD', 'constant-secret' );
+		define( 'GTPERF_REDIS_TLS', true );
 
 		$config = ( new Configuration() )->constantOverrides(
 			array(
@@ -74,8 +74,8 @@ final class RedisConfigurationTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	public function test_enabled_constant_can_explicitly_disable_a_configured_host(): void {
-		define( 'GTP_REDIS_ENABLED', false );
-		define( 'GTP_REDIS_HOST', 'redis.internal' );
+		define( 'GTPERF_REDIS_ENABLED', false );
+		define( 'GTPERF_REDIS_HOST', 'redis.internal' );
 
 		$config = ( new Configuration() )->constantOverrides(
 			( new Configuration() )->runtime(
@@ -143,10 +143,10 @@ final class RedisConfigurationTest extends TestCase {
 		define( 'WP_REDIS_HOST', 'shared-redis.internal' );
 		define( 'WP_REDIS_DATABASE', 3 );
 		define( 'WP_REDIS_PASSWORD', array( 'shared-user', 'shared-secret' ) );
-		define( 'GTP_REDIS_HOST', 'gtp-redis.internal' );
-		define( 'GTP_REDIS_DATABASE', 9 );
-		define( 'GTP_REDIS_USERNAME', 'gtp-user' );
-		define( 'GTP_REDIS_PASSWORD', 'gtp-secret' );
+		define( 'GTPERF_REDIS_HOST', 'gtp-redis.internal' );
+		define( 'GTPERF_REDIS_DATABASE', 9 );
+		define( 'GTPERF_REDIS_USERNAME', 'gtp-user' );
+		define( 'GTPERF_REDIS_PASSWORD', 'gtp-secret' );
 
 		$config = ( new Configuration() )->constantOverrides(
 			( new Configuration() )->runtime( array() )

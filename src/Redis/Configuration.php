@@ -19,17 +19,17 @@ final class Configuration {
 	 */
 	public function constants(): array {
 		return array(
-			'enabled'            => 'GTP_REDIS_ENABLED',
-			'host'               => 'GTP_REDIS_HOST',
-			'port'               => 'GTP_REDIS_PORT',
-			'database'           => 'GTP_REDIS_DATABASE',
-			'username'           => 'GTP_REDIS_USERNAME',
-			'password'           => 'GTP_REDIS_PASSWORD',
-			'tls'                => 'GTP_REDIS_TLS',
-			'persistent'         => 'GTP_REDIS_PERSISTENT',
-			'prefix'             => 'GTP_REDIS_PREFIX',
-			'connection_timeout' => 'GTP_REDIS_TIMEOUT',
-			'read_timeout'       => 'GTP_REDIS_READ_TIMEOUT',
+			'enabled'            => 'GTPERF_REDIS_ENABLED',
+			'host'               => 'GTPERF_REDIS_HOST',
+			'port'               => 'GTPERF_REDIS_PORT',
+			'database'           => 'GTPERF_REDIS_DATABASE',
+			'username'           => 'GTPERF_REDIS_USERNAME',
+			'password'           => 'GTPERF_REDIS_PASSWORD',
+			'tls'                => 'GTPERF_REDIS_TLS',
+			'persistent'         => 'GTPERF_REDIS_PERSISTENT',
+			'prefix'             => 'GTPERF_REDIS_PREFIX',
+			'connection_timeout' => 'GTPERF_REDIS_TIMEOUT',
+			'read_timeout'       => 'GTPERF_REDIS_READ_TIMEOUT',
 		);
 	}
 
@@ -77,7 +77,7 @@ final class Configuration {
 	/**
 	 * Apply compatible and GT Performance constants defined in wp-config.php.
 	 *
-	 * GTP_REDIS_* constants take precedence over WP_REDIS_* constants, which
+	 * GTPERF_REDIS_* constants take precedence over WP_REDIS_* constants, which
 	 * take precedence over saved settings.
 	 *
 	 * @param array<string, bool|float|int|string> $config Redis configuration.
@@ -98,10 +98,10 @@ final class Configuration {
 			}
 		}
 
-		if ( ! defined( 'GTP_REDIS_ENABLED' ) ) {
+		if ( ! defined( 'GTPERF_REDIS_ENABLED' ) ) {
 			if ( $standardDisabled ) {
 				$config['enabled'] = false;
-			} elseif ( defined( 'GTP_REDIS_HOST' ) || defined( 'WP_REDIS_HOST' ) || defined( 'WP_REDIS_PATH' ) ) {
+			} elseif ( defined( 'GTPERF_REDIS_HOST' ) || defined( 'WP_REDIS_HOST' ) || defined( 'WP_REDIS_PATH' ) ) {
 				$config['enabled'] = true;
 			}
 		}

@@ -71,15 +71,15 @@ final class Plugin {
 	 * @return array<string, array<string, int|string>>
 	 */
 	public static function cronSchedules( array $schedules ): array {
-		$schedules['gtp_every_minute'] = array(
+		$schedules['gtperf_every_minute'] = array(
 			'interval' => MINUTE_IN_SECONDS,
 			'display'  => __( 'Every minute (GT Performance)', 'gt-performance' ),
 		);
-		$schedules['gtp_weekly']       = array(
+		$schedules['gtperf_weekly']       = array(
 			'interval' => WEEK_IN_SECONDS,
 			'display'  => __( 'Weekly (GT Performance)', 'gt-performance' ),
 		);
-		$schedules['gtp_monthly']      = array(
+		$schedules['gtperf_monthly']      = array(
 			'interval' => 30 * DAY_IN_SECONDS,
 			'display'  => __( 'Monthly (GT Performance)', 'gt-performance' ),
 		);

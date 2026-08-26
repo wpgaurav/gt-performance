@@ -46,8 +46,8 @@ final class DatabaseModule implements Module {
 		$saved   = (string) Settings::get( 'database.schedule', 'weekly' );
 		$target  = match ( $saved ) {
 			'daily' => 'daily',
-			'monthly' => 'gtp_monthly',
-			default => 'gtp_weekly',
+			'monthly' => 'gtperf_monthly',
+			default => 'gtperf_weekly',
 		};
 		$event   = wp_get_scheduled_event( 'gt_performance_database_cleanup' );
 
@@ -277,7 +277,7 @@ final class DatabaseModule implements Module {
 
 		if ( 'non_admin' === $mode || 'disabled' === $mode ) {
 			return new \WP_Error(
-				'gtp_rest_disabled',
+				'gtperf_rest_disabled',
 				__( 'The REST API is disabled by GT Performance.', 'gt-performance' ),
 				array( 'status' => 403 )
 			);

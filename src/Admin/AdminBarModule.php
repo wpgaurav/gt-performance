@@ -55,7 +55,7 @@ final class AdminBarModule implements Module {
 						array(
 							'page'    => 'gt-performance',
 							'tab'     => 'safety',
-							'gtp_url' => $url,
+							'gtperf_url' => $url,
 						),
 						admin_url( 'admin.php' )
 					),
@@ -110,7 +110,7 @@ final class AdminBarModule implements Module {
 		}
 
 		$command = isset( $_GET['command'] ) ? sanitize_key( wp_unslash( $_GET['command'] ) ) : '';
-		check_admin_referer( 'gtp_quick_action_' . $command );
+		check_admin_referer( 'gtperf_quick_action_' . $command );
 		$url = isset( $_GET['url'] ) ? $this->sameSiteUrl( sanitize_url( wp_unslash( $_GET['url'] ) ) ) : null;
 
 		switch ( $command ) {
@@ -175,7 +175,7 @@ final class AdminBarModule implements Module {
 
 	private function actionNode( \WP_Admin_Bar $bar, string $id, string $title, string $command, ?string $url = null ): void {
 		$args = array(
-			'action'  => 'gtp_quick_action',
+			'action'  => 'gtperf_quick_action',
 			'command' => $command,
 		);
 		if ( null !== $url ) {
@@ -189,7 +189,7 @@ final class AdminBarModule implements Module {
 				'title'  => $title,
 				'href'   => wp_nonce_url(
 					add_query_arg( $args, admin_url( 'admin-post.php' ) ),
-					'gtp_quick_action_' . $command
+					'gtperf_quick_action_' . $command
 				),
 			)
 		);
@@ -223,7 +223,7 @@ final class AdminBarModule implements Module {
 				'timeout'     => 15,
 				'redirection' => 3,
 				'headers'     => array( 'X-GT-Preload' => '1' ),
-				'user-agent'  => 'GT-Performance-Admin-Bar/' . GTP_VERSION,
+				'user-agent'  => 'GT-Performance-Admin-Bar/' . GTPERF_VERSION,
 			)
 		);
 	}
@@ -234,7 +234,7 @@ final class AdminBarModule implements Module {
 				array(
 					'page'       => 'gt-performance',
 					'tab'        => $tab,
-					'gtp_notice' => sanitize_key( $notice ),
+					'gtperf_notice' => sanitize_key( $notice ),
 				),
 				admin_url( 'admin.php' )
 			)

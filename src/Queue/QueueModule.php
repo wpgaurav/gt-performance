@@ -52,7 +52,7 @@ final class QueueModule implements Module {
 			return;
 		}
 
-		wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtp_every_minute', 'gt_performance_run_queue' );
+		wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtperf_every_minute', 'gt_performance_run_queue' );
 		$this->logger->log( 'warning', 'Queue cron was missing and has been rescheduled' );
 	}
 
@@ -66,11 +66,11 @@ final class QueueModule implements Module {
 			return;
 		}
 
-		if ( get_transient( 'gtp_warm_pending' ) ) {
+		if ( get_transient( 'gtperf_warm_pending' ) ) {
 			return;
 		}
 
-		set_transient( 'gtp_warm_pending', 1, MINUTE_IN_SECONDS );
+		set_transient( 'gtperf_warm_pending', 1, MINUTE_IN_SECONDS );
 		$this->jobs->enqueue( 'warm_site', array(), 80, 30 );
 	}
 
@@ -98,7 +98,7 @@ final class QueueModule implements Module {
 			return;
 		}
 
-		if ( get_transient( 'gtp_revalidate_pending' ) ) {
+		if ( get_transient( 'gtperf_revalidate_pending' ) ) {
 			return;
 		}
 
@@ -126,7 +126,7 @@ final class QueueModule implements Module {
 			return;
 		}
 
-		set_transient( 'gtp_revalidate_pending', 1, MINUTE_IN_SECONDS );
+		set_transient( 'gtperf_revalidate_pending', 1, MINUTE_IN_SECONDS );
 		$this->enqueuePreload( $urls );
 
 		$this->logger->log( 'debug', 'Queued stale page revalidation', array( 'count' => count( $urls ) ) );
@@ -225,7 +225,7 @@ final class QueueModule implements Module {
 						'timeout'     => 15,
 						'redirection' => 3,
 						'headers'     => array( 'X-GT-Preload' => '1' ),
-						'user-agent'  => 'GT-Performance-Preloader/' . GTP_VERSION,
+						'user-agent'  => 'GT-Performance-Preloader/' . GTPERF_VERSION,
 					)
 				);
 				$status = wp_remote_retrieve_response_code( $response );
@@ -243,7 +243,7 @@ final class QueueModule implements Module {
 				return;
 
 			case 'warm_site':
-				delete_transient( 'gtp_warm_pending' );
+				delete_transient( 'gtperf_warm_pending' );
 				$this->warmer->warm( (int) Settings::get( 'cache.preload_max_urls', 200 ) );
 				return;
 

@@ -39,7 +39,7 @@ final class WpCacheConstant {
 
 		$content = file_get_contents( $path );
 		if ( ! is_string( $content ) ) {
-			return new \WP_Error( 'gtp_wp_config_read', __( 'GT Performance could not read wp-config.php.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_wp_config_read', __( 'GT Performance could not read wp-config.php.', 'gt-performance' ) );
 		}
 
 		$declarationPattern = '~^[\t ]*(?:define\s*\(\s*([\'"])WP_CACHE\1\s*,[^\r\n]*\)\s*;|const\s+WP_CACHE\s*=[^\r\n]*;)[^\r\n]*$~im';
@@ -51,7 +51,7 @@ final class WpCacheConstant {
 			);
 		} elseif ( preg_match( '~(?:define\s*\(\s*([\'"])WP_CACHE\1\s*,|const\s+WP_CACHE\s*=)~i', $this->withoutComments( $content ) ) ) {
 			return new \WP_Error(
-				'gtp_wp_cache_custom',
+				'gtperf_wp_cache_custom',
 				__( 'wp-config.php contains a custom WP_CACHE declaration. Enable it manually before installing the drop-in.', 'gt-performance' )
 			);
 		} else {
@@ -63,7 +63,7 @@ final class WpCacheConstant {
 		}
 
 		if ( ! is_string( $updated ) || $updated === $content ) {
-			return new \WP_Error( 'gtp_wp_config_update', __( 'GT Performance could not add WP_CACHE to wp-config.php.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_wp_config_update', __( 'GT Performance could not add WP_CACHE to wp-config.php.', 'gt-performance' ) );
 		}
 
 		$result = $this->publish( $path, $updated );
@@ -98,7 +98,7 @@ final class WpCacheConstant {
 		$content = file_get_contents( $path );
 		if ( ! is_string( $content ) || ! str_contains( $content, self::LINE ) ) {
 			return new \WP_Error(
-				'gtp_wp_cache_restore',
+				'gtperf_wp_cache_restore',
 				__( 'GT Performance no longer owns the WP_CACHE line, so it was left unchanged.', 'gt-performance' )
 			);
 		}
@@ -143,21 +143,21 @@ final class WpCacheConstant {
 		}
 
 		return new \WP_Error(
-			'gtp_wp_config_writable',
+			'gtperf_wp_config_writable',
 			__( 'wp-config.php is not writable. Add define( \'WP_CACHE\', true ); manually.', 'gt-performance' )
 		);
 	}
 
 	private function publish( string $path, string $content ): bool|\WP_Error {
-		$temp = $path . '.gtp-' . wp_generate_uuid4() . '.tmp';
+		$temp = $path . '.gtperf-' . wp_generate_uuid4() . '.tmp';
 		if ( false === file_put_contents( $temp, $content, LOCK_EX ) ) {
-			return new \WP_Error( 'gtp_wp_config_write', __( 'GT Performance could not write a temporary wp-config.php.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_wp_config_write', __( 'GT Performance could not write a temporary wp-config.php.', 'gt-performance' ) );
 		}
 
 		$permissions = fileperms( $path );
 		if ( ! rename( $temp, $path ) ) {
 			@unlink( $temp );
-			return new \WP_Error( 'gtp_wp_config_publish', __( 'GT Performance could not publish the wp-config.php change.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_wp_config_publish', __( 'GT Performance could not publish the wp-config.php change.', 'gt-performance' ) );
 		}
 		if ( is_int( $permissions ) ) {
 			chmod( $path, $permissions & 0777 );

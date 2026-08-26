@@ -57,7 +57,7 @@
 		const selectors = Array.from(pending).slice(0, 100);
 		selectors.forEach((selector) => pending.delete(selector));
 		const body = new URLSearchParams({
-			action: "gtp_css_training_observe",
+			action: "gtperf_css_training_observe",
 			nonce: window.gtPerformanceCssTraining.nonce,
 		});
 		selectors.forEach((selector) => body.append("selectors[]", selector));

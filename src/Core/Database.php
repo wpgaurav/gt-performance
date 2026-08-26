@@ -26,9 +26,9 @@ final class Database {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		$charset = $wpdb->get_charset_collate();
-		$jobs    = $wpdb->prefix . 'gtp_jobs';
-		$deps    = $wpdb->prefix . 'gtp_dependencies';
-		$assets  = $wpdb->prefix . 'gtp_artifacts';
+		$jobs    = $wpdb->prefix . 'gtperf_jobs';
+		$deps    = $wpdb->prefix . 'gtperf_dependencies';
+		$assets  = $wpdb->prefix . 'gtperf_artifacts';
 
 		dbDelta(
 			"CREATE TABLE {$jobs} (
@@ -82,7 +82,7 @@ final class Database {
 			) {$charset};"
 		);
 
-		$legacyVitals = $wpdb->prefix . 'gtp_vitals';
+		$legacyVitals = $wpdb->prefix . 'gtperf_vitals';
 		// Remove the retired real-user measurement table during upgrades. The name
 		// interpolates only the trusted WordPress table prefix, and dropping the
 		// plugin's own retired table is the entire purpose of this statement.

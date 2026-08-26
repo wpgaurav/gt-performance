@@ -22,9 +22,9 @@ final class CommandTest extends TestCase {
 		$settings['cloudflare']['zone_id']  = 'zone-123';
 		$settings['cloudflare']['api_token'] = ( new TokenCipher() )->encrypt( 'test-token' );
 
-		$GLOBALS['gtp_test_options']       = array( Settings::OPTION => $settings );
-		$GLOBALS['gtp_test_http_requests'] = array();
-		$GLOBALS['gtp_test_http_response'] = array(
+		$GLOBALS['gtperf_test_options']       = array( Settings::OPTION => $settings );
+		$GLOBALS['gtperf_test_http_requests'] = array();
+		$GLOBALS['gtperf_test_http_response'] = array(
 			'response' => array( 'code' => 200 ),
 			'body'     => '{"success":true,"result":{}}',
 		);
@@ -36,14 +36,14 @@ final class CommandTest extends TestCase {
 	public function testCloudflarePurgeClearsTheEntireZone(): void {
 		( new Command() )->cloudflare( array( 'purge' ), array() );
 
-		self::assertCount( 1, $GLOBALS['gtp_test_http_requests'] );
+		self::assertCount( 1, $GLOBALS['gtperf_test_http_requests'] );
 		self::assertSame(
 			'https://api.cloudflare.com/client/v4/zones/zone-123/purge_cache',
-			$GLOBALS['gtp_test_http_requests'][0]['url']
+			$GLOBALS['gtperf_test_http_requests'][0]['url']
 		);
 		self::assertSame(
 			array( 'purge_everything' => true ),
-			json_decode( (string) $GLOBALS['gtp_test_http_requests'][0]['args']['body'], true )
+			json_decode( (string) $GLOBALS['gtperf_test_http_requests'][0]['args']['body'], true )
 		);
 		self::assertSame( array( 'Cloudflare full purge completed.' ), \WP_CLI::$successes );
 	}
@@ -53,16 +53,16 @@ final class CommandTest extends TestCase {
 
 		( new Command() )->cloudflare( array( 'purge' ), array( 'page-url' => $url ) );
 
-		self::assertCount( 1, $GLOBALS['gtp_test_http_requests'] );
+		self::assertCount( 1, $GLOBALS['gtperf_test_http_requests'] );
 		self::assertSame(
 			array( 'files' => array( $url ) ),
-			json_decode( (string) $GLOBALS['gtp_test_http_requests'][0]['args']['body'], true )
+			json_decode( (string) $GLOBALS['gtperf_test_http_requests'][0]['args']['body'], true )
 		);
 		self::assertSame( array( 'Cloudflare URL purge completed.' ), \WP_CLI::$successes );
 	}
 
 	public function testCloudflarePurgeReportsApiFailures(): void {
-		$GLOBALS['gtp_test_http_response'] = array(
+		$GLOBALS['gtperf_test_http_response'] = array(
 			'response' => array( 'code' => 403 ),
 			'body'     => '{"success":false,"errors":[{"message":"Missing purge permission"}]}',
 		);
@@ -81,7 +81,7 @@ final class CommandTest extends TestCase {
 			self::assertSame( 'Use --page-url with a complete HTTP or HTTPS URL.', $exception->getMessage() );
 		}
 
-		self::assertSame( array(), $GLOBALS['gtp_test_http_requests'] );
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 
 	public function testActionSpecificOptionsCannotBeSilentlyIgnored(): void {
@@ -111,7 +111,7 @@ final class CommandTest extends TestCase {
 			}
 		}
 
-		self::assertSame( array(), $GLOBALS['gtp_test_http_requests'] );
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 
 	public function testQueueRejectsANonNumericLimitBeforeRunningJobs(): void {
@@ -134,7 +134,7 @@ final class CommandTest extends TestCase {
 			self::assertSame( $message, $exception->getMessage() );
 		}
 
-		self::assertSame( array(), $GLOBALS['gtp_test_http_requests'] );
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 
 	/**

@@ -31,7 +31,7 @@ final class ApiClient {
 				'Accept'        => 'application/json',
 				'Authorization' => 'Bearer ' . $this->token,
 				'Content-Type'  => 'application/json',
-				'User-Agent'    => 'GT-Performance/' . GTP_VERSION,
+				'User-Agent'    => 'GT-Performance/' . GTPERF_VERSION,
 			),
 		);
 
@@ -47,7 +47,7 @@ final class ApiClient {
 		$code = wp_remote_retrieve_response_code( $response );
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( ! is_array( $data ) ) {
-			return new \WP_Error( 'gtp_xcloud_json', __( 'xCloud returned an invalid response.', 'gt-performance' ), array( 'status' => $code ) );
+			return new \WP_Error( 'gtperf_xcloud_json', __( 'xCloud returned an invalid response.', 'gt-performance' ), array( 'status' => $code ) );
 		}
 
 		$envelopeFailed = $requiresSuccessEnvelope && array_key_exists( 'success', $data ) && empty( $data['success'] );
@@ -56,7 +56,7 @@ final class ApiClient {
 				? $this->plainText( $data['message'] )
 				: __( 'xCloud API request failed.', 'gt-performance' );
 
-			return new \WP_Error( 'gtp_xcloud_api', $message, array( 'status' => $code ) );
+			return new \WP_Error( 'gtperf_xcloud_api', $message, array( 'status' => $code ) );
 		}
 
 		return $data;
@@ -75,7 +75,7 @@ final class ApiClient {
 
 		return is_array( $site )
 			? $site
-			: new \WP_Error( 'gtp_xcloud_site', __( 'xCloud did not return the configured site.', 'gt-performance' ) );
+			: new \WP_Error( 'gtperf_xcloud_site', __( 'xCloud did not return the configured site.', 'gt-performance' ) );
 	}
 
 	/**
@@ -98,7 +98,7 @@ final class ApiClient {
 			}
 		}
 
-		return new \WP_Error( 'gtp_xcloud_site', __( 'No xCloud site matched this exact domain.', 'gt-performance' ) );
+		return new \WP_Error( 'gtperf_xcloud_site', __( 'No xCloud site matched this exact domain.', 'gt-performance' ) );
 	}
 
 	/**
@@ -137,7 +137,7 @@ final class ApiClient {
 			}
 		}
 
-		return new \WP_Error( 'gtp_xcloud_enterprise_ids', __( 'xCloud did not expose the Enterprise add-on IDs for this domain.', 'gt-performance' ) );
+		return new \WP_Error( 'gtperf_xcloud_enterprise_ids', __( 'xCloud did not expose the Enterprise add-on IDs for this domain.', 'gt-performance' ) );
 	}
 
 	/**
@@ -153,7 +153,7 @@ final class ApiClient {
 
 		return is_array( $settings )
 			? $settings
-			: new \WP_Error( 'gtp_xcloud_cache_settings', __( 'xCloud did not return host-cache settings for this site.', 'gt-performance' ) );
+			: new \WP_Error( 'gtperf_xcloud_cache_settings', __( 'xCloud did not return host-cache settings for this site.', 'gt-performance' ) );
 	}
 
 	/**
@@ -161,7 +161,7 @@ final class ApiClient {
 	 */
 	public function enterpriseAnalytics( int $serverId, int $siteId, string $range = '12h' ): array|\WP_Error {
 		if ( $serverId < 1 || $siteId < 1 ) {
-			return new \WP_Error( 'gtp_xcloud_enterprise_ids', __( 'Valid xCloud Enterprise site identifiers are required.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_xcloud_enterprise_ids', __( 'Valid xCloud Enterprise site identifiers are required.', 'gt-performance' ) );
 		}
 
 		$allowed = array( '30m', '6h', '12h', '24h', '7d', '14d' );

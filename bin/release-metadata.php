@@ -43,10 +43,10 @@ try {
 	$surfaces = array(
 		'composer.json'          => $version,
 		'plugin header'          => $match( '/^[ \t*]*Version:\s*([^\s]+)/m', $plugin, 'the plugin header' ),
-		'GTP_VERSION'            => $match( "/define\\(\\s*'GTP_VERSION',\\s*'([^']+)'\\s*\\)/", $plugin, 'GTP_VERSION' ),
+		'GTPERF_VERSION'            => $match( "/define\\(\\s*'GTPERF_VERSION',\\s*'([^']+)'\\s*\\)/", $plugin, 'GTPERF_VERSION' ),
 		'readme stable tag'      => $match( '/^Stable tag:\s*(\S+)/mi', $readme, 'readme.txt' ),
-		'package builder'        => $match( '/GTP_PACKAGE_VERSION:-([^}]+)}/', $build, 'bin/build-package.sh' ),
-		'PHPStan bootstrap'      => $match( "/define\\(\\s*'GTP_VERSION',\\s*'([^']+)'\\s*\\)/", $stan, 'tests/phpstan-bootstrap.php' ),
+		'package builder'        => $match( '/GTPERF_PACKAGE_VERSION:-([^}]+)}/', $build, 'bin/build-package.sh' ),
+		'PHPStan bootstrap'      => $match( "/define\\(\\s*'GTPERF_VERSION',\\s*'([^']+)'\\s*\\)/", $stan, 'tests/phpstan-bootstrap.php' ),
 		'README current release' => $match( '/current release is `([^`]+)`/i', $project, 'README.md' ),
 	);
 

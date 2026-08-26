@@ -2,7 +2,7 @@
 /**
  * Durable queue repository.
  *
- * Jobs live in the plugin's own gtp_jobs table, so every access is necessarily
+ * Jobs live in the plugin's own gtperf_jobs table, so every access is necessarily
  * a direct query. Rows are claimed and mutated with row-level semantics on each
  * call; caching a work queue would serve stale claims. Table names interpolate
  * only the trusted WordPress table prefix.
@@ -25,7 +25,7 @@ final class JobRepository {
 
 		$now = current_time( 'mysql', true );
 		$wpdb->insert(
-			$wpdb->prefix . 'gtp_jobs',
+			$wpdb->prefix . 'gtperf_jobs',
 			array(
 				'type'         => sanitize_key( $type ),
 				'payload'      => wp_json_encode( $payload ),
@@ -48,7 +48,7 @@ final class JobRepository {
 	public function claim(): ?array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'gtp_jobs';
+		$table = $wpdb->prefix . 'gtperf_jobs';
 		$token = wp_generate_uuid4();
 		$now   = current_time( 'mysql', true );
 		$stale = gmdate( 'Y-m-d H:i:s', time() - 10 * MINUTE_IN_SECONDS );
@@ -113,7 +113,7 @@ final class JobRepository {
 		global $wpdb;
 
 		$wpdb->update(
-			$wpdb->prefix . 'gtp_jobs',
+			$wpdb->prefix . 'gtperf_jobs',
 			array(
 				'status'     => 'complete',
 				'locked_at'  => null,
@@ -139,7 +139,7 @@ final class JobRepository {
 	public function pendingCount( string $type ): int {
 		global $wpdb;
 
-		$table = $wpdb->prefix . 'gtp_jobs';
+		$table = $wpdb->prefix . 'gtperf_jobs';
 
 		// The table name is built from the trusted WordPress prefix.
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -164,7 +164,7 @@ final class JobRepository {
 	public function purgeTerminal( int $olderThanSeconds = 3 * DAY_IN_SECONDS, int $limit = 500 ): int {
 		global $wpdb;
 
-		$table  = $wpdb->prefix . 'gtp_jobs';
+		$table  = $wpdb->prefix . 'gtperf_jobs';
 		$cutoff = gmdate( 'Y-m-d H:i:s', time() - max( 0, $olderThanSeconds ) );
 
 		// The table name is built from the trusted WordPress prefix.
@@ -193,7 +193,7 @@ final class JobRepository {
 		$delay  = $retry ? min( HOUR_IN_SECONDS, 30 * ( 2 ** $attempts ) ) : 0;
 
 		$wpdb->update(
-			$wpdb->prefix . 'gtp_jobs',
+			$wpdb->prefix . 'gtperf_jobs',
 			array(
 				'status'       => $status,
 				'attempts'     => $attempts,

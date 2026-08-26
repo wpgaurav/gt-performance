@@ -94,7 +94,7 @@ final class RuleManager {
 		$ruleset   = (array) ( $entrypoint['result'] ?? array() );
 		$rulesetId = (string) ( $ruleset['id'] ?? '' );
 		if ( '' === $rulesetId ) {
-			return new \WP_Error( 'gtp_cloudflare_ruleset', __( 'Cloudflare did not return a cache ruleset ID.', 'gt-performance' ) );
+			return new \WP_Error( 'gtperf_cloudflare_ruleset', __( 'Cloudflare did not return a cache ruleset ID.', 'gt-performance' ) );
 		}
 
 		update_option( 'gt_performance_cloudflare_backup', $ruleset, false );
@@ -102,7 +102,7 @@ final class RuleManager {
 		$plan  = $this->compiler->plan( $host, $cache, $rules, RuleCompiler::FREE_RULE_LIMIT, $this->edgeTtl(), ! $this->customKeyRejected() );
 		if ( ! (bool) $plan['within_budget'] ) {
 			return new \WP_Error(
-				'gtp_cloudflare_rule_budget',
+				'gtperf_cloudflare_rule_budget',
 				__( 'The Cloudflare Free Cache Rules budget is full. Remove an unused rule or let GT Performance update its existing managed rule.', 'gt-performance' )
 			);
 		}
