@@ -28,12 +28,33 @@ final class Paths {
 		return self::cacheRoot() . '/locks';
 	}
 
+	/**
+	 * Compiled cache configuration.
+	 *
+	 * The `.json.php` suffix is literal: the payload is JSON, and the `.php`
+	 * extension exists so a direct web request hits the guard line instead of
+	 * the data. The name deliberately differs from the `config.php` used up to
+	 * 1.0.0, so a drop-in left over from that release finds nothing and returns
+	 * rather than executing a file it would expect to `return` an array.
+	 */
 	public static function config(): string {
-		return self::cacheRoot() . '/config.php';
+		return self::cacheRoot() . '/config.json.php';
 	}
 
 	public static function redisConfig(): string {
-		return self::cacheRoot() . '/redis-config.php';
+		return self::cacheRoot() . '/redis-config.json.php';
+	}
+
+	/**
+	 * Configuration filenames used up to 1.0.0.
+	 *
+	 * @return list<string>
+	 */
+	public static function legacyConfigFiles(): array {
+		return array(
+			self::cacheRoot() . '/config.php',
+			self::cacheRoot() . '/redis-config.php',
+		);
 	}
 
 	public static function logs(): string {

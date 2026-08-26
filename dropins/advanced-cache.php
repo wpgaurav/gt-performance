@@ -23,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
 	}
 
 	$cacheRoot  = rtrim( WP_CONTENT_DIR, '/\\' ) . '/cache/gt-performance';
-	$configFile = $cacheRoot . '/config.php';
+	$configFile = $cacheRoot . '/config.json.php';
 	if ( ! is_readable( $configFile ) ) {
 		return;
 	}

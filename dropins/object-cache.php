@@ -424,7 +424,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			// The configuration file is inert data, never executed. Its first
 			// line is a fixed guard that terminates direct web requests; the
 			// remainder is JSON.
-			$file   = WP_CONTENT_DIR . '/cache/gt-performance/redis-config.php';
+			$file   = WP_CONTENT_DIR . '/cache/gt-performance/redis-config.json.php';
 			$raw    = is_readable( $file ) ? @file_get_contents( $file ) : false;
 			$break  = is_string( $raw ) ? strpos( $raw, "\n" ) : false;
 			$config = false === $break ? array() : json_decode( substr( (string) $raw, $break + 1 ), true );
