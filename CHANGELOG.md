@@ -6,6 +6,11 @@
 
 - All upgrade compatibility carried since 1.0.1. `DropinRuntime::serve()` no longer loads `ConfigFile` on behalf of a drop-in published before 1.0.1, `Settings::compile()` no longer deletes the configuration files those releases wrote, `Database::install()` no longer drops their tables, and `uninstall.php` no longer lists their names.
 
+### Added
+
+- `Migration\Migrator`, in this build only. It runs on `upgrader_process_complete` - the same request that replaced the plugin files, while the old drop-in and old files are still the consistent pair that booted it - and republishes the drop-ins, removes the configuration files and tables earlier releases left behind, and logs any retired `GTP_` constants still defined in `wp-config.php`. An `admin_init` pass repairs a site whose files were replaced without the upgrader.
+- Nothing inside WordPress can rescue the first request after a file swap on a site that still has a pre-1.0.1 drop-in, because that fatal is raised at `wp-settings.php` line 98, before mu-plugins and before the plugin exists. Running in the upgrade request itself is what avoids ever reaching that state.
+
 ### Upgrade note
 
 - A site running 1.0.0 or earlier still has that release's generated `advanced-cache.php` on disk. It loads a fixed list of runtime files that predates `ConfigFile`, so on the first request after this update it raises a fatal from `wp-settings.php`, before WordPress can catch it, taking the front end and wp-admin down together. Replace the drop-in before or during the update. The build distributed from gauravtiwari.org carries a migrator that does this automatically; for any other route, run the standalone migration snippet first: https://gist.github.com/wpgaurav/03d61d313df00b4127db92393ed74681

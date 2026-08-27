@@ -49,6 +49,7 @@ final class Plugin {
 			new \GTPerformance\Optimization\Css\TrainingModule(),
 			new \GTPerformance\Database\DatabaseModule(),
 			new \GTPerformance\Redis\RedisModule(),
+			new \GTPerformance\Migration\Migrator( $logger ),
 			new \GTPerformance\Licensing\LicenseModule(),
 			new \GTPerformance\Fleet\FleetModule(),
 			new \GTPerformance\Admin\AdminModule(),
