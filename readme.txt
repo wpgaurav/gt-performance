@@ -101,7 +101,7 @@ GT Performance stores a list of script hostname patterns such as `connect.facebo
 
 = 1.0.4 =
 * Removed the upgrade compatibility code carried since 1.0.1. The plugin no longer deletes configuration files written by earlier releases, no longer drops their database tables, and no longer loads a class on behalf of a cache drop-in published before 1.0.1.
-* Upgrading from 1.0.0 or earlier now requires replacing the cache drop-in first. See the upgrade note below.
+* Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. A standalone repair script is available: https://gist.github.com/wpgaurav/03d61d313df00b4127db92393ed74681
 
 = 1.0.3 =
 * Fixes the License screen's Activate, Deactivate, and Check buttons returning a blank page in the build distributed from gauravtiwari.org. Same cause as the admin buttons fixed in 1.0.2, in a file the 1.0.2 fix did not cover.

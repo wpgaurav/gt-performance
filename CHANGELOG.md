@@ -8,7 +8,7 @@
 
 ### Upgrade note
 
-- A site running 1.0.0 or earlier still has that release's generated `advanced-cache.php` on disk. It loads a fixed list of runtime files that predates `ConfigFile`, so on the first request after this update it raises a fatal from `wp-settings.php`, before WordPress can catch it, taking the front end and wp-admin down together. Replace the drop-in before or during the update. The build distributed from gauravtiwari.org carries a migrator that does this automatically; for any other route, run the standalone migration snippet first.
+- A site running 1.0.0 or earlier still has that release's generated `advanced-cache.php` on disk. It loads a fixed list of runtime files that predates `ConfigFile`, so on the first request after this update it raises a fatal from `wp-settings.php`, before WordPress can catch it, taking the front end and wp-admin down together. Replace the drop-in before or during the update. The build distributed from gauravtiwari.org carries a migrator that does this automatically; for any other route, run the standalone migration snippet first: https://gist.github.com/wpgaurav/03d61d313df00b4127db92393ed74681
 
 ## 1.0.3 - 2026-08-27
 
