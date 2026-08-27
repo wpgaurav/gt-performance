@@ -61,22 +61,29 @@ final class DropinInstaller {
 	}
 
 	/**
-	 * Regenerate an owned drop-in after a plugin update so a renamed embedded file
-	 * or a changed DropinRuntime::serve() signature can never leave a stale
-	 * advanced-cache.php that silently disables caching or fatals on every front-end
-	 * request. Option-gated so the file is touched at most once per version.
+	 * Republish an owned drop-in when the release or the plugin location changes.
+	 *
+	 * A drop-in left behind by an update can silently disable caching. So can a
+	 * correct drop-in whose compiled configuration still names the directory the
+	 * plugin used to live in, which is what a migration or a restored backup
+	 * leaves behind: the version matches, so a version-only gate never notices,
+	 * and the site serves uncached forever without reporting anything.
+	 *
+	 * The gate therefore tracks the location alongside the version. Both come
+	 * from an autoloaded option, so the common case costs no extra I/O.
 	 */
 	public static function syncVersion(): void {
-		if ( GTPERF_VERSION === (string) get_option( self::VERSION_OPTION, '' ) ) {
+		$signature = GTPERF_VERSION . '|' . GTPERF_DIR;
+		if ( (string) get_option( self::VERSION_OPTION, '' ) === $signature ) {
 			return;
 		}
 
 		$installer = new self();
-		if ( 'owned' === $installer->status() && GTPERF_VERSION !== $installer->installedVersion() ) {
+		if ( 'owned' === $installer->status() ) {
 			$installer->install();
 		}
 
-		update_option( self::VERSION_OPTION, GTPERF_VERSION, false );
+		update_option( self::VERSION_OPTION, $signature, false );
 	}
 
 	public function install(): bool|\WP_Error {

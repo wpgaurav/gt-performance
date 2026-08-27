@@ -118,6 +118,55 @@ final class DropinInstallerTest extends TestCase {
 		self::assertFileExists( Paths::config() );
 	}
 
+	/**
+	 * A migrated or restored site runs the same version from a new path. The
+	 * compiled configuration still names the old directory, so the drop-in finds
+	 * nothing to load and the site serves uncached with nothing reporting it.
+	 */
+	public function test_sync_republishes_when_the_plugin_location_changes(): void {
+		$this->installer->install();
+		self::assertSame( GTPERF_DIR, ConfigFile::read( Paths::config() )['plugin_dir'] ?? null );
+
+		// Same version, configuration left behind by a different install path.
+		$GLOBALS['gtperf_test_options'][ 'gt_performance_dropin_version' ] = GTPERF_VERSION . '|/old/path/plugins/gt-performance';
+		$stale                                                            = ConfigFile::read( Paths::config() );
+		$stale['plugin_dir']                                              = '/old/path/plugins/gt-performance';
+		ConfigFile::write( Paths::config(), $stale );
+
+		DropinInstaller::syncVersion();
+
+		self::assertSame(
+			GTPERF_DIR,
+			ConfigFile::read( Paths::config() )['plugin_dir'] ?? null,
+			'The drop-in must be republished against the directory the plugin actually runs from.'
+		);
+	}
+
+	public function test_sync_is_a_no_op_when_version_and_location_are_unchanged(): void {
+		self::assertTrue( $this->installer->install() );
+		DropinInstaller::syncVersion();
+		self::assertFileExists( $this->installer->target() );
+
+		$before = filemtime( $this->installer->target() );
+		DropinInstaller::syncVersion();
+
+		self::assertSame( $before, filemtime( $this->installer->target() ) );
+	}
+
+	/**
+	 * Installing twice must leave a working drop-in. A failed WP_CACHE update
+	 * makes install() delete the file it just published, so a second install
+	 * that reports failure takes page caching down entirely.
+	 */
+	public function test_installing_twice_is_idempotent(): void {
+		self::assertTrue( $this->installer->install() );
+		self::assertTrue( $this->installer->install() );
+
+		self::assertFileExists( $this->installer->target() );
+		self::assertSame( 'owned', $this->installer->status() );
+		self::assertSame( GTPERF_VERSION, $this->installer->installedVersion() );
+	}
+
 	public function test_foreign_dropin_is_never_overwritten(): void {
 		$foreign = "<?php\n/** Another cache plugin */\n";
 		file_put_contents( $this->installer->target(), $foreign );

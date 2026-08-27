@@ -9,6 +9,10 @@
 
 ### Fixed
 
+- Updating from 1.0.0 took the whole site down. The drop-in published by that release loads a fixed list of runtime files that predates `ConfigFile`, so the moment the new plugin files landed it fatally errored inside `wp-settings.php` — before WordPress exists to catch it — taking the front end and wp-admin down together with no way back except filesystem access. `DropinRuntime::serve()` now loads its own dependency when an older drop-in did not.
+- Schema 3 renames this plugin's tables from the `gtp_` prefix to `gtperf_`. Without a schema bump the upgrade left the old tables in place and every queue, dependency, and CSS artifact query failed against a table that did not exist. The upgrade now creates the renamed tables and drops the superseded ones.
+- `WpCacheConstant::enable()` rewrote an already-correct `WP_CACHE` line to an identical value, read the unchanged file as a failed update, and returned an error — which made `DropinInstaller::install()` delete the drop-in it had just published. Installing twice in a row disabled page caching.
+- `DropinInstaller::syncVersion()` gated only on the version, so a migrated or restored site running the same release from a new path kept a compiled configuration naming the old directory. The drop-in found nothing to load and the site served uncached indefinitely without reporting anything. The gate now tracks the location alongside the version.
 - Keyboard focus styles were pruned out of generated CSS. `:focus-visible` and `:focus-within` matched the shorter `focus` alternative in the dynamic-state pattern, leaving `-visible` and `-within` fused to the class name, so the rules matched nothing and were removed as unused.
 - `RequestContext::fromGlobals()` did not unslash the superglobals, so any URL, query value, or cookie containing a quote hashed differently in WordPress than in the drop-in and could never produce a cache hit.
 - `DropinInstaller::installedVersion()` captured the trailing period after the drop-in signature, which made every version comparison unequal and reinstalled the drop-in on each request.

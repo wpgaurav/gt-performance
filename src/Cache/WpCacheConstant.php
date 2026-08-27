@@ -44,6 +44,14 @@ final class WpCacheConstant {
 
 		$declarationPattern = '~^[\t ]*(?:define\s*\(\s*([\'"])WP_CACHE\1\s*,[^\r\n]*\)\s*;|const\s+WP_CACHE\s*=[^\r\n]*;)[^\r\n]*$~im';
 		if ( preg_match( $declarationPattern, $content, $matches ) ) {
+			// Already exactly the line this plugin writes. Rewriting it would
+			// produce identical content, which the guard below reads as a failed
+			// update — and install() responds to a failure by deleting the
+			// drop-in it just published. Enabling has to be idempotent.
+			if ( trim( (string) $matches[0] ) === trim( self::LINE ) ) {
+				return true;
+			}
+
 			$updated   = preg_replace( $declarationPattern, self::LINE, $content, 1 );
 			$ownership = array(
 				'mode'     => 'changed',

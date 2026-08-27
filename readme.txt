@@ -100,6 +100,10 @@ GT Performance stores a list of script hostname patterns such as `connect.facebo
 == Changelog ==
 
 = 1.0.1 =
+* Fixed a fatal error that took the front end and wp-admin down when updating from 1.0.0.
+* Fixed the plugin's database tables not being recreated after the internal prefix rename, which broke cache preloading and CSS generation on upgraded sites.
+* Fixed installing the page-cache drop-in twice removing it instead of leaving it in place.
+* A site moved to a new path now republishes its drop-in automatically instead of silently serving uncached.
 * Configuration and page-cache metadata are now inert JSON data files. Nothing generates or executes PHP at runtime.
 * advanced-cache.php now ships as a bundled file that is copied into place instead of being generated, and resolves its own paths, so a renamed or relocated plugin directory keeps working.
 * The early cache drop-in and WordPress now sanitize every request value through one shared implementation, so cache keys and bypass decisions can no longer diverge between them.
