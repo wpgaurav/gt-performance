@@ -12,7 +12,6 @@ namespace GTPerformance\Tests\Unit;
 use GTPerformance\Cache\ConfigFile;
 use GTPerformance\Cache\DropinInstaller;
 use GTPerformance\Core\Paths;
-use GTPerformance\Core\Settings;
 use PHPUnit\Framework\TestCase;
 
 final class DropinInstallerTest extends TestCase {
@@ -94,28 +93,6 @@ final class DropinInstallerTest extends TestCase {
 				'The drop-in requires this file before it will serve anything.'
 			);
 		}
-	}
-
-	/**
-	 * A 1.0.0 drop-in reads `config.php` with `require`. If the new guarded file
-	 * were written to that same path, any ordering that left the old drop-in in
-	 * place would execute its exit guard and blank every front-end response.
-	 * Compiling must therefore write elsewhere and clear the old path.
-	 */
-	public function test_compiling_leaves_nothing_a_pre_1_0_1_dropin_would_execute(): void {
-		foreach ( Paths::legacyConfigFiles() as $legacy ) {
-			is_dir( dirname( $legacy ) ) || mkdir( dirname( $legacy ), 0o777, true );
-			file_put_contents( $legacy, "<?php\nreturn array( 'cache' => array() );\n" );
-		}
-
-		Settings::compile();
-
-		foreach ( Paths::legacyConfigFiles() as $legacy ) {
-			self::assertFileDoesNotExist( $legacy, 'A legacy drop-in must find no configuration at all.' );
-		}
-
-		self::assertStringEndsWith( '.json.php', Paths::config() );
-		self::assertFileExists( Paths::config() );
 	}
 
 	/**

@@ -82,20 +82,6 @@ final class Database {
 			) {$charset};"
 		);
 
-		// Retire this plugin's own superseded tables. Schema 3 renamed the `gtp_`
-		// table prefix to `gtperf_`, so an upgraded site carries a full set of
-		// tables under the old name that nothing reads any more; leaving them
-		// behind would also leave the schema gate reporting success while every
-		// queue query failed against a table that no longer exists. `gtp_vitals`
-		// belongs to the retired real-user measurement feature.
-		foreach ( array( 'gtp_jobs', 'gtp_dependencies', 'gtp_artifacts', 'gtp_vitals', 'gtperf_vitals' ) as $retired ) {
-			$table = $wpdb->prefix . $retired;
-			// The name interpolates only the trusted WordPress table prefix and a
-			// literal from the list above. Dropping this plugin's own retired
-			// tables is the entire purpose of the statement.
-			$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		}
-
 		$settings = get_option( Settings::OPTION, array() );
 		if ( is_array( $settings ) && array_key_exists( 'rum', $settings ) ) {
 			unset( $settings['rum'] );

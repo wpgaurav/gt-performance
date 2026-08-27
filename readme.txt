@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ GT Performance also sends requests to your own site's URLs for cache warming, pu
 GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
 == Changelog ==
+
+= 1.0.4 =
+* Removed the upgrade compatibility code carried since 1.0.1. The plugin no longer deletes configuration files written by earlier releases, no longer drops their database tables, and no longer loads a class on behalf of a cache drop-in published before 1.0.1.
+* Upgrading from 1.0.0 or earlier now requires replacing the cache drop-in first. See the upgrade note below.
 
 = 1.0.3 =
 * Fixes the License screen's Activate, Deactivate, and Check buttons returning a blank page in the build distributed from gauravtiwari.org. Same cause as the admin buttons fixed in 1.0.2, in a file the 1.0.2 fix did not cover.

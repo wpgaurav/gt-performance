@@ -22,20 +22,6 @@ final class DropinRuntime {
 	);
 
 	public static function serve( string $configFile, string $pagesRoot ): void {
-		// A drop-in published by an older release requires a fixed list of runtime
-		// files that predates ConfigFile. After an update that drop-in is still on
-		// disk and loads this newer class, so serve() must not assume its own
-		// dependencies were loaded for it: a missing class here is a fatal raised
-		// from wp-settings.php, before WordPress exists to catch it, which takes
-		// the front end and wp-admin down together until the drop-in is replaced.
-		if ( ! class_exists( ConfigFile::class, false ) ) {
-			$dependency = __DIR__ . '/ConfigFile.php';
-			if ( ! is_readable( $dependency ) ) {
-				return;
-			}
-			require_once $dependency;
-		}
-
 		$config = ConfigFile::read( $configFile );
 		if ( null === $config || ! isset( $config['cache'] ) || ! is_array( $config['cache'] ) ) {
 			return;

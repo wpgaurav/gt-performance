@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.4 - 2026-08-27
+
+### Removed
+
+- All upgrade compatibility carried since 1.0.1. `DropinRuntime::serve()` no longer loads `ConfigFile` on behalf of a drop-in published before 1.0.1, `Settings::compile()` no longer deletes the configuration files those releases wrote, `Database::install()` no longer drops their tables, and `uninstall.php` no longer lists their names.
+
+### Upgrade note
+
+- A site running 1.0.0 or earlier still has that release's generated `advanced-cache.php` on disk. It loads a fixed list of runtime files that predates `ConfigFile`, so on the first request after this update it raises a fatal from `wp-settings.php`, before WordPress can catch it, taking the front end and wp-admin down together. Replace the drop-in before or during the update. The build distributed from gauravtiwari.org carries a migrator that does this automatically; for any other route, run the standalone migration snippet first.
+
 ## 1.0.3 - 2026-08-27
 
 ### Fixed

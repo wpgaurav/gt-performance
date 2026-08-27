@@ -38,8 +38,6 @@ delete_option( 'gt_performance_license' );
 delete_option( 'gt_performance_remove_data_on_uninstall' );
 delete_transient( 'gtperf_warm_pending' );
 delete_transient( 'gtperf_revalidate_pending' );
-delete_transient( 'gtp_warm_pending' );
-delete_transient( 'gtp_revalidate_pending' );
 
 global $wpdb;
 
@@ -48,12 +46,6 @@ $gt_performance_tables = array(
 	$wpdb->prefix . 'gtperf_dependencies',
 	$wpdb->prefix . 'gtperf_artifacts',
 	$wpdb->prefix . 'gtperf_vitals',
-	// Names used before the schema 3 table rename. Normally dropped during the
-	// upgrade, listed here so uninstalling can never leave one behind.
-	$wpdb->prefix . 'gtp_jobs',
-	$wpdb->prefix . 'gtp_dependencies',
-	$wpdb->prefix . 'gtp_artifacts',
-	$wpdb->prefix . 'gtp_vitals',
 );
 
 foreach ( $gt_performance_tables as $gt_performance_table ) {

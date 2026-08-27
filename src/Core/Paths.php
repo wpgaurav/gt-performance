@@ -45,18 +45,6 @@ final class Paths {
 		return self::cacheRoot() . '/redis-config.json.php';
 	}
 
-	/**
-	 * Configuration filenames used up to 1.0.0.
-	 *
-	 * @return list<string>
-	 */
-	public static function legacyConfigFiles(): array {
-		return array(
-			self::cacheRoot() . '/config.php',
-			self::cacheRoot() . '/redis-config.php',
-		);
-	}
-
 	public static function logs(): string {
 		return self::cacheRoot() . '/logs';
 	}

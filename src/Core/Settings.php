@@ -484,15 +484,6 @@ final class Settings {
 
 		Paths::harden();
 
-		// A drop-in left behind by 1.0.0 reads these paths with `require`. Remove
-		// them so no combination of update ordering can leave an old drop-in
-		// executing a file that now begins with an exit guard.
-		foreach ( Paths::legacyConfigFiles() as $legacy ) {
-			if ( is_file( $legacy ) ) {
-				wp_delete_file( $legacy );
-			}
-		}
-
 		if ( ! self::writeConfig( Paths::config(), $config ) ) {
 			return false;
 		}
