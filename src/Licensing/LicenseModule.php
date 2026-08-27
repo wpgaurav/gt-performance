@@ -15,9 +15,9 @@ final class LicenseModule implements Module {
 	public function register(): void {
 		( new Updater() )->register();
 
-		add_action( 'admin_post_gtp_license_activate', array( $this, 'activate' ) );
-		add_action( 'admin_post_gtp_license_deactivate', array( $this, 'deactivate' ) );
-		add_action( 'admin_post_gtp_license_check', array( $this, 'check' ) );
+		add_action( 'admin_post_gtperf_license_activate', array( $this, 'activate' ) );
+		add_action( 'admin_post_gtperf_license_deactivate', array( $this, 'deactivate' ) );
+		add_action( 'admin_post_gtperf_license_check', array( $this, 'check' ) );
 		add_action( 'gt_performance_verify_license', array( $this, 'scheduledCheck' ) );
 		add_filter( 'plugin_action_links_' . GTPERF_BASENAME, array( $this, 'actionLinks' ) );
 	}
