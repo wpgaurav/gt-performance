@@ -226,6 +226,96 @@ if ( ! function_exists( 'esc_url_raw' ) ) {
 	}
 }
 
+if ( ! function_exists( 'gtperf_test_transients' ) ) {
+	/**
+	 * Shared store behind the transient stubs.
+	 *
+	 * @return array<string, mixed>
+	 */
+	function &gtperf_test_transients(): array {
+		static $store = array();
+
+		return $store;
+	}
+
+	function get_transient( string $transient ): mixed {
+		$store = &gtperf_test_transients();
+
+		return $store[ $transient ] ?? false;
+	}
+
+	function set_transient( string $transient, mixed $value, int $expiration = 0 ): bool {
+		unset( $expiration );
+		$store               = &gtperf_test_transients();
+		$store[ $transient ] = $value;
+
+		return true;
+	}
+
+	function delete_transient( string $transient ): bool {
+		$store = &gtperf_test_transients();
+		unset( $store[ $transient ] );
+
+		return true;
+	}
+}
+
+// Minimal $wpdb for code that only inspects or drops this plugin's own tables.
+// It records statements instead of executing them; nothing under test needs a
+// real database, and a fake that silently returned success would let a broken
+// query pass.
+if ( ! class_exists( 'gtperf_Test_Wpdb' ) ) {
+	class gtperf_Test_Wpdb {
+		public string $prefix = 'wp_';
+		/** @var list<string> */
+		public array $queries = array();
+		/** @var array<string, bool> */
+		public array $tables = array();
+		public string $last_error = '';
+
+		public function prepare( string $query, mixed ...$args ): string {
+			foreach ( $args as $arg ) {
+				$replacement = is_int( $arg ) ? (string) $arg : "'" . str_replace( "'", "\\'", (string) $arg ) . "'";
+				$query       = preg_replace( '/%[sd]/', $replacement, $query, 1 ) ?? $query;
+			}
+
+			return $query;
+		}
+
+		public function get_var( string $query ): mixed {
+			$this->queries[] = $query;
+			if ( preg_match( "/SHOW TABLES LIKE '([^']+)'/", $query, $m ) ) {
+				return ( $this->tables[ $m[1] ] ?? false ) ? $m[1] : null;
+			}
+
+			return null;
+		}
+
+		public function query( string $query ): int {
+			$this->queries[] = $query;
+			if ( preg_match( '/DROP TABLE IF EXISTS `([^`]+)`/', $query, $m ) ) {
+				unset( $this->tables[ $m[1] ] );
+			}
+
+			return 1;
+		}
+
+		public function get_results( string $query, mixed $output = null ): array {
+			$this->queries[] = $query;
+
+			return array();
+		}
+
+		public function get_charset_collate(): string {
+			return '';
+		}
+	}
+}
+
+if ( ! isset( $GLOBALS['wpdb'] ) ) {
+	$GLOBALS['wpdb'] = new gtperf_Test_Wpdb();
+}
+
 if ( ! function_exists( 'wp_delete_file' ) ) {
 	function wp_delete_file( string $file ): void {
 		is_file( $file ) && unlink( $file );
