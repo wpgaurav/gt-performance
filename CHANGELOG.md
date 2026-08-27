@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3 - 2026-08-27
+
+### Fixed
+
+- The License screen's Activate, Deactivate, and Check buttons returned a blank page in the store build. Identical cause to the controls fixed in 1.0.2 - the handlers were still registered as `admin_post_gtp_license_*` while the buttons submitted `gtperf_license_*` - in a file the 1.0.2 sweep did not reach. The WordPress.org build has no licensing code and was never affected.
+- `AdminActionWiringTest` now discovers every PHP file under `src/` instead of checking a hardcoded list of four. The hardcoded list was the same mistake the test exists to catch: it could not see the licensing module, which only ships in the store build, so 1.0.2 shipped believing the wiring was fully verified.
+
 ## 1.0.2 - 2026-08-27
 
 ### Fixed

@@ -21,15 +21,30 @@ use PHPUnit\Framework\TestCase;
  */
 final class AdminActionWiringTest extends TestCase {
 	/**
+	 * Every PHP file under src/.
+	 *
+	 * Discovered rather than listed. A hardcoded list is the same failure this
+	 * test exists to catch: the first version of it named four files and so did
+	 * not notice that the licensing module, which only ships in the store build,
+	 * still registered its three handlers under the retired prefix.
+	 *
 	 * @return list<string>
 	 */
 	private static function sources(): array {
-		return array(
-			GTPERF_DIR . '/src/Admin/AdminModule.php',
-			GTPERF_DIR . '/src/Admin/AdminBarModule.php',
-			GTPERF_DIR . '/src/PrivateFragments/PrivateFragmentsModule.php',
-			GTPERF_DIR . '/src/Optimization/Css/TrainingModule.php',
+		$files    = array();
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( GTPERF_DIR . '/src', \FilesystemIterator::SKIP_DOTS )
 		);
+
+		foreach ( $iterator as $item ) {
+			if ( $item->isFile() && 'php' === $item->getExtension() ) {
+				$files[] = $item->getPathname();
+			}
+		}
+
+		sort( $files );
+
+		return $files;
 	}
 
 	private static function allSource(): string {
@@ -112,13 +127,19 @@ final class AdminActionWiringTest extends TestCase {
 	 * character. Hook strings are the place that flaw hides.
 	 */
 	public function test_no_hook_registration_uses_the_retired_prefix(): void {
+		$offenders = array();
+
 		foreach ( self::sources() as $file ) {
 			$source = (string) file_get_contents( $file );
-			self::assertSame(
-				0,
-				preg_match( "/add_action\(\s*'(?:admin_post|wp_ajax)_(?:nopriv_)?gtp_/", $source ),
-				basename( $file ) . ' still registers a hook under the retired gtp_ prefix.'
-			);
+			if ( preg_match( "/add_action\(\s*'(?:admin_post|wp_ajax)_(?:nopriv_)?gtp_/", $source ) ) {
+				$offenders[] = basename( $file );
+			}
 		}
+
+		self::assertSame(
+			array(),
+			$offenders,
+			'These files still register hooks under the retired gtp_ prefix: ' . implode( ', ', $offenders )
+		);
 	}
 }

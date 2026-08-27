@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,9 @@ GT Performance also sends requests to your own site's URLs for cache warming, pu
 GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
 == Changelog ==
+
+= 1.0.3 =
+* Fixes the License screen's Activate, Deactivate, and Check buttons returning a blank page in the build distributed from gauravtiwari.org. Same cause as the admin buttons fixed in 1.0.2, in a file the 1.0.2 fix did not cover.
 
 = 1.0.2 =
 * Fixes every button and background request in the GT Performance admin screens returning a blank page on 1.0.1. The 1.0.1 prefix rename renamed what the controls submit but not the handlers registered to receive it, so nothing was listening. Purge, Cloudflare connect and sync, Redis test and install, drop-in install, xCloud refresh, Safety Lab, Fleet export and import, database cleanup, CSS regeneration and training, admin-bar actions, and Private Islands were all affected.
