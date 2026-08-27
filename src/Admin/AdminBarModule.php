@@ -19,7 +19,7 @@ use GTPerformance\Redis\ConnectionTester;
 final class AdminBarModule implements Module {
 	public function register(): void {
 		add_action( 'admin_bar_menu', array( $this, 'menu' ), 90 );
-		add_action( 'admin_post_gtp_quick_action', array( $this, 'handle' ) );
+		add_action( 'admin_post_gtperf_quick_action', array( $this, 'handle' ) );
 	}
 
 	public function menu( \WP_Admin_Bar $bar ): void {

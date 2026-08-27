@@ -15,7 +15,7 @@ use GTPerformance\Core\Settings;
 final class TrainingModule implements Module {
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ), PHP_INT_MAX );
-		add_action( 'wp_ajax_gtp_css_training_observe', array( $this, 'observe' ) );
+		add_action( 'wp_ajax_gtperf_css_training_observe', array( $this, 'observe' ) );
 		add_filter( 'gt_performance_css_safelist', array( $this, 'safelist' ), 5 );
 	}
 

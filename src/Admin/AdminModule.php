@@ -75,23 +75,23 @@ final class AdminModule implements Module {
 		add_filter( 'plugin_action_links_' . GTPERF_BASENAME, array( $this, 'actionLinks' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'afterSettingsUpdate' ), 10, 2 );
-		add_action( 'admin_post_gtp_install_dropin', array( $this, 'installDropin' ) );
-		add_action( 'admin_post_gtp_install_redis', array( $this, 'installRedis' ) );
-		add_action( 'admin_post_gtp_test_redis', array( $this, 'testRedis' ) );
-		add_action( 'admin_post_gtp_xcloud_refresh', array( $this, 'xcloudRefresh' ) );
-		add_action( 'admin_post_gtp_purge', array( $this, 'purge' ) );
-		add_action( 'admin_post_gtp_cloudflare_sync', array( $this, 'cloudflareSync' ) );
-		add_action( 'admin_post_gtp_cloudflare_preview', array( $this, 'cloudflarePreview' ) );
-		add_action( 'admin_post_gtp_cloudflare_diagnose', array( $this, 'cloudflareDiagnose' ) );
-		add_action( 'admin_post_gtp_cloudflare_token', array( $this, 'cloudflareProvisionToken' ) );
-		add_action( 'admin_post_gtp_purge_verify', array( $this, 'purgeVerify' ) );
-		add_action( 'admin_post_gtp_commerce_safety', array( $this, 'commerceSafety' ) );
-		add_action( 'admin_post_gtp_css_training', array( $this, 'cssTraining' ) );
-		add_action( 'admin_post_gtp_css_regenerate', array( $this, 'cssRegenerate' ) );
-		add_action( 'admin_post_gtp_fleet_export', array( $this, 'fleetExport' ) );
-		add_action( 'admin_post_gtp_fleet_import', array( $this, 'fleetImport' ) );
-		add_action( 'admin_post_gtp_database_clean', array( $this, 'databaseClean' ) );
-		add_action( 'wp_ajax_gtp_css_report', array( $this, 'cssReport' ) );
+		add_action( 'admin_post_gtperf_install_dropin', array( $this, 'installDropin' ) );
+		add_action( 'admin_post_gtperf_install_redis', array( $this, 'installRedis' ) );
+		add_action( 'admin_post_gtperf_test_redis', array( $this, 'testRedis' ) );
+		add_action( 'admin_post_gtperf_xcloud_refresh', array( $this, 'xcloudRefresh' ) );
+		add_action( 'admin_post_gtperf_purge', array( $this, 'purge' ) );
+		add_action( 'admin_post_gtperf_cloudflare_sync', array( $this, 'cloudflareSync' ) );
+		add_action( 'admin_post_gtperf_cloudflare_preview', array( $this, 'cloudflarePreview' ) );
+		add_action( 'admin_post_gtperf_cloudflare_diagnose', array( $this, 'cloudflareDiagnose' ) );
+		add_action( 'admin_post_gtperf_cloudflare_token', array( $this, 'cloudflareProvisionToken' ) );
+		add_action( 'admin_post_gtperf_purge_verify', array( $this, 'purgeVerify' ) );
+		add_action( 'admin_post_gtperf_commerce_safety', array( $this, 'commerceSafety' ) );
+		add_action( 'admin_post_gtperf_css_training', array( $this, 'cssTraining' ) );
+		add_action( 'admin_post_gtperf_css_regenerate', array( $this, 'cssRegenerate' ) );
+		add_action( 'admin_post_gtperf_fleet_export', array( $this, 'fleetExport' ) );
+		add_action( 'admin_post_gtperf_fleet_import', array( $this, 'fleetImport' ) );
+		add_action( 'admin_post_gtperf_database_clean', array( $this, 'databaseClean' ) );
+		add_action( 'wp_ajax_gtperf_css_report', array( $this, 'cssReport' ) );
 	}
 
 	public function menu(): void {

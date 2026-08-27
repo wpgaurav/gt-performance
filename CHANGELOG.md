@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2 - 2026-08-27
+
+### Fixed
+
+- Every admin control in 1.0.1 returned a blank page. The 1.0.1 rename moved the action names the controls submit from `gtp_` to `gtperf_`, but left all 21 `add_action( 'admin_post_gtp_...' )` and `add_action( 'wp_ajax_gtp_...' )` registrations untouched, so nothing was hooked to the names being submitted. WordPress does not error in that case: it fires an action with no listeners and exits, which the browser renders as an empty response and which leaves no trace in the error log. Purge, Cloudflare connect/sync/preview/diagnose/token, Redis test and install, page-cache drop-in install, xCloud refresh, purge verification, Commerce Safety Lab, CSS training and regeneration, Fleet export and import, database cleanup, the admin-bar quick actions, the CSS report poll, and the Private Islands fragment endpoint were all dead.
+- The rename missed these because it matched `\bgtp_`, and in `admin_post_gtp_purge` the `gtp_` is preceded by an underscore, which is a word character, so the boundary never applied. Hook strings are the one place that flaw could hide, and nothing compared the two sides.
+
+### Added
+
+- `AdminActionWiringTest` asserts that every action an admin control submits, every admin-bar action, and every AJAX action posted by the bundled JavaScript has a matching handler registered, and that no hook is registered under the retired prefix. A silent-blank-page regression of this shape now fails the test suite.
+
 ## 1.0.1 - 2026-08-26
 
 ### Security

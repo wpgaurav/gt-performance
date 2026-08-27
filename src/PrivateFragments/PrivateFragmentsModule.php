@@ -23,8 +23,8 @@ final class PrivateFragmentsModule implements Module {
 		add_shortcode( 'gtperf_private_island', array( $this, 'shortcode' ) );
 		add_filter( 'gt_performance_html', array( $this, 'prepareHtml' ), 90 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ), PHP_INT_MAX );
-		add_action( 'wp_ajax_gtp_private_fragments', array( $this, 'respond' ) );
-		add_action( 'wp_ajax_nopriv_gtp_private_fragments', array( $this, 'respond' ) );
+		add_action( 'wp_ajax_gtperf_private_fragments', array( $this, 'respond' ) );
+		add_action( 'wp_ajax_nopriv_gtperf_private_fragments', array( $this, 'respond' ) );
 	}
 
 	/**
