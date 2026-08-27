@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5 - 2026-08-27
+
+### Fixed
+
+- Uninstalling with data removal enabled deleted this plugin's options and tables but never touched the filesystem, so `wp-content/cache/gt-performance/` survived in full: cached HTML, generated CSS and JavaScript, logs, and both configuration files. `redis-config.json.php` holds a host, username, and password. The guard kept those unreadable over HTTP, but someone who asked for their data to be removed should not be left with credentials in `wp-content`. Uninstall now removes the directory, resolving the path the way `Core\Paths` does and confirming with `realpath()` that it still sits inside `wp-content` before deleting anything. `wp-content/cache` itself is left for other plugins.
+
 ## 1.0.4 - 2026-08-27
 
 ### Removed

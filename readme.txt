@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,9 @@ GT Performance also sends requests to your own site's URLs for cache warming, pu
 GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
 == Changelog ==
+
+= 1.0.5 =
+* Uninstalling with "remove all data" enabled now also removes the cache directory. Cached pages, generated CSS and JavaScript, logs, and both configuration files were left on disk, and the Redis configuration file holds a host, username, and password.
 
 = 1.0.4 =
 * Removed the upgrade compatibility code carried since 1.0.1. The plugin no longer deletes configuration files written by earlier releases, no longer drops their database tables, and no longer loads a class on behalf of a cache drop-in published before 1.0.1.

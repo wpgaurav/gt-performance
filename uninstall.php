@@ -52,3 +52,45 @@ foreach ( $gt_performance_tables as $gt_performance_table ) {
 	// Table names are generated exclusively from the trusted WordPress prefix.
 	$wpdb->query( "DROP TABLE IF EXISTS `{$gt_performance_table}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 }
+
+/*
+ * Remove the cache directory.
+ *
+ * Deleting options and tables alone leaves cached HTML, generated CSS and JS,
+ * logs, and both configuration files on disk - and the Redis configuration
+ * holds a host, username, and password. A visitor cannot read them, but someone
+ * who asked for their data to be removed should not be left with credentials in
+ * wp-content.
+ *
+ * The path is derived the same way Core\Paths does, inline, because uninstall
+ * runs without the plugin loaded and should not bootstrap it. Only this
+ * plugin's own directory is touched, and only after realpath confirms it still
+ * resolves inside wp-content.
+ */
+$gt_performance_cache_root = realpath( rtrim( WP_CONTENT_DIR, '/\\' ) . '/cache/gt-performance' );
+$gt_performance_content    = realpath( WP_CONTENT_DIR );
+
+if (
+	false !== $gt_performance_cache_root
+	&& false !== $gt_performance_content
+	&& is_dir( $gt_performance_cache_root )
+	&& str_starts_with( $gt_performance_cache_root, $gt_performance_content . DIRECTORY_SEPARATOR )
+) {
+	$gt_performance_entries = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $gt_performance_cache_root, FilesystemIterator::SKIP_DOTS ),
+		RecursiveIteratorIterator::CHILD_FIRST
+	);
+
+	foreach ( $gt_performance_entries as $gt_performance_entry ) {
+		if ( $gt_performance_entry->isLink() || $gt_performance_entry->isFile() ) {
+			wp_delete_file( $gt_performance_entry->getPathname() );
+		} elseif ( $gt_performance_entry->isDir() ) {
+			// No WordPress wrapper exists for removing a directory, and this one
+			// is the plugin's own.
+			@rmdir( $gt_performance_entry->getPathname() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+	}
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.PHP.NoSilencedErrors.Discouraged -- Leaves wp-content/cache itself for other plugins.
+	@rmdir( $gt_performance_cache_root );
+}
