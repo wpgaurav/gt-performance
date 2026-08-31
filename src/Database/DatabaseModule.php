@@ -108,9 +108,18 @@ final class DatabaseModule implements Module {
 			remove_action( 'template_redirect', 'wp_shortlink_header', 11 );
 		}
 
-		if ( (bool) Settings::get( 'bloat.remove_feed_links', false ) ) {
+		$feedPolicy      = new FeedPolicy();
+		$removeAllLinks  = (bool) Settings::get( 'bloat.remove_feed_links', false );
+		$removeExtraOnly = (bool) Settings::get( 'bloat.remove_secondary_feed_links', false );
+
+		if ( $feedPolicy->removesAllLinks( $removeAllLinks ) ) {
 			remove_action( 'wp_head', 'feed_links', 2 );
 			remove_action( 'wp_head', 'feed_links_extra', 3 );
+		} elseif ( $feedPolicy->removesSecondaryLinksOnly( $removeAllLinks, $removeExtraOnly ) ) {
+			// Keep the main site feed discoverable and drop the comment, term, author,
+			// and post type discovery links that feed_links_extra() prints.
+			remove_action( 'wp_head', 'feed_links_extra', 3 );
+			add_filter( 'feed_links_show_comments_feed', '__return_false' );
 		}
 
 		if ( (bool) Settings::get( 'bloat.remove_rest_api_links', false ) ) {
@@ -174,7 +183,20 @@ final class DatabaseModule implements Module {
 	}
 
 	public function blockFeeds(): void {
-		if ( ! (bool) Settings::get( 'bloat.disable_rss_feeds', false ) || ! is_feed() ) {
+		if ( ! is_feed() ) {
+			return;
+		}
+
+		$policy = new FeedPolicy();
+		$main   = $policy->isMainFeed( is_comment_feed(), is_singular(), is_archive(), is_search() );
+
+		$blocked = $policy->blocksFeed(
+			(bool) Settings::get( 'bloat.disable_rss_feeds', false ),
+			(bool) Settings::get( 'bloat.disable_secondary_feeds', false ),
+			$main
+		);
+
+		if ( ! $blocked ) {
 			return;
 		}
 

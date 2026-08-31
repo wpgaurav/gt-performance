@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.6 - 2026-08-31
+
+### Added
+
+- Separate controls for the main feed and the secondary feeds. "Disable secondary feeds only" keeps `/feed/` serving and indexable while returning a 404 for comment feeds (site-wide and per post), category, tag, custom taxonomy, author, date, search, and post type archive feeds. "Remove secondary RSS feed links" keeps the main feed's discovery link in the document head and removes the rest. The existing all-or-nothing controls are unchanged and still win when enabled: "Disable every RSS feed" blocks the main feed too, and "Remove every RSS feed link" removes every discovery link.
+
+### Changed
+
+- The gauravtiwari.org WordPress preset now applies the two secondary-feed controls instead of removing every feed discovery link, so the main feed stays discoverable and indexable.
+
 ## 1.0.5 - 2026-08-27
 
 ### Fixed

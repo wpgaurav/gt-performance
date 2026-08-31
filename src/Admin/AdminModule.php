@@ -918,8 +918,10 @@ final class AdminModule implements Module {
 		$this->checkbox( 'bloat', 'remove_jquery_migrate', __( 'Remove jQuery Migrate for visitors', 'gt-performance' ), __( 'Reduce a legacy dependency on public pages.', 'gt-performance' ), $settings, __( 'Older themes and plugins may still use removed jQuery APIs. Test menus, forms, sliders, and checkout after enabling.', 'gt-performance' ) );
 		$this->checkbox( 'bloat', 'hide_wp_version', __( 'Remove WordPress version', 'gt-performance' ), __( 'Remove the generator value and mask WordPress core version query strings.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_shortlink', __( 'Remove shortlink', 'gt-performance' ), __( 'Remove shortlink output from the document head and response headers.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'disable_rss_feeds', __( 'Disable RSS feeds', 'gt-performance' ), __( 'Return a 404 for feed requests. Leave disabled when readers use feeds.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_feed_links', __( 'Remove RSS feed links', 'gt-performance' ), __( 'Keep feeds working but remove automatic discovery links from the document head.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_rss_feeds', __( 'Disable every RSS feed', 'gt-performance' ), __( 'Return a 404 for all feed requests, including the main feed. Leave disabled when readers or syndication services use feeds.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_secondary_feeds', __( 'Disable secondary feeds only', 'gt-performance' ), __( 'Keep the main feed at /feed/ live and indexable, and return a 404 for comment, category, tag, taxonomy, author, date, search, and post type feeds.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_feed_links', __( 'Remove every RSS feed link', 'gt-performance' ), __( 'Keep feeds working but remove all automatic discovery links from the document head.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_secondary_feed_links', __( 'Remove secondary RSS feed links', 'gt-performance' ), __( 'Keep the main feed discovery link and remove the comment, term, author, and post type discovery links.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_self_pingbacks', __( 'Disable self pingbacks', 'gt-performance' ), __( 'Prevent WordPress from pinging links that point back to this site.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_rest_api_links', __( 'Remove REST API links', 'gt-performance' ), __( 'Keep the REST API working while removing discovery links from public responses.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_google_maps', __( 'Disable Google Maps', 'gt-performance' ), __( 'Remove Google Maps scripts except on paths listed in Exceptions.', 'gt-performance' ), $settings );
@@ -1976,7 +1978,7 @@ PHP;
 		<div class="gtp-presets gtp-presets--compact" data-gtp-wordpress-presets>
 			<div class="gtp-presets__heading">
 				<h4><?php esc_html_e( 'WordPress presets', 'gt-performance' ); ?></h4>
-				<p><?php esc_html_e( 'The site baseline matches the active request-removal settings on gauravtiwari.org. It does not change comments, feeds, global styles, Heartbeat, revisions, or REST access.', 'gt-performance' ); ?></p>
+				<p><?php esc_html_e( 'The site baseline matches the active request-removal settings on gauravtiwari.org. It keeps the main feed live and indexable while disabling secondary feeds, and it does not change comments, global styles, Heartbeat, revisions, or REST access.', 'gt-performance' ); ?></p>
 			</div>
 			<div class="gtp-presets__actions" role="group" aria-label="<?php esc_attr_e( 'WordPress optimization presets', 'gt-performance' ); ?>">
 				<button type="button" class="button button-secondary" data-gtp-wordpress-preset="gaurav"><?php esc_html_e( 'Apply site baseline', 'gt-performance' ); ?></button>

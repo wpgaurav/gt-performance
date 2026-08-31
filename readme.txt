@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ GT Performance also sends requests to your own site's URLs for cache warming, pu
 GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
 == Changelog ==
+
+= 1.0.6 =
+* Adds separate controls for the main feed and the secondary feeds. The main feed at /feed/ can stay live and indexable while comment, category, tag, taxonomy, author, date, search, and post type feeds return a 404, and the main feed's discovery link can stay in the head while the rest are removed.
+* The gauravtiwari.org WordPress preset now keeps the main feed discoverable instead of removing every feed link.
 
 = 1.0.5 =
 * Uninstalling with "remove all data" enabled now also removes the cache directory. Cached pages, generated CSS and JavaScript, logs, and both configuration files were left on disk, and the Redis configuration file holds a host, username, and password.
