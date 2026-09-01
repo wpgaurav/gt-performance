@@ -138,12 +138,18 @@ final class PrivateFragmentsModule implements Module {
 		wp_send_json_success( array( 'fragments' => $result ) );
 	}
 
+	/**
+	 * Builds the placeholder markup returned to the page.
+	 *
+	 * Every interpolated value is escaped here, at the point of output, because
+	 * this string is returned by a shortcode callback and printed by WordPress.
+	 */
 	private function placeholder( string $fragmentId ): string {
 		return sprintf(
 			'<span data-gtp-private-island="%1$s" data-gtp-signature="%2$s" aria-live="polite">%3$s</span>',
 			esc_attr( $fragmentId ),
 			esc_attr( Signer::forSite()->sign( $fragmentId ) ),
-			$this->fragments->fallback( $fragmentId )
+			wp_kses_post( $this->fragments->fallback( $fragmentId ) )
 		);
 	}
 }

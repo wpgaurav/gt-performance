@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTPERF_PACKAGE_VERSION:-1.0.6}"
+VERSION="${GTPERF_PACKAGE_VERSION:-1.0.7}"
 BUILD_ROOT="${ROOT}/build/package"
 PLUGIN_DIR="${BUILD_ROOT}/gt-performance"
 ARCHIVE="${ROOT}/dist/gt-performance-${VERSION}.zip"
@@ -42,6 +42,16 @@ composer install \
 	--classmap-authoritative
 
 rm -rf "${PLUGIN_DIR}/vendor/bin"
+
+# WordPress.org rejects packages containing files that are not normally part of
+# a plugin. Composer packages ship extensionless CLI wrappers in their own bin/
+# directories (matthiasmullie/minify/bin/minifyjs, minifycss); the library code
+# lives in src/, so the wrappers are dead weight in a plugin package.
+find "${PLUGIN_DIR}/vendor" -mindepth 3 -maxdepth 3 -type d -name bin -prune -exec rm -rf {} +
+
+# Drop VCS placeholders and other hidden files the vendor tree carries along.
+find "${PLUGIN_DIR}/vendor" -name '.git*' -prune -exec rm -rf {} +
+
 # composer.json stays in the package: Plugin Check flags a bundled vendor/
 # directory whose composer.json is missing.
 rm -f \
@@ -49,6 +59,20 @@ rm -f \
 	"${PLUGIN_DIR}/CHANGELOG.md" \
 	"${PLUGIN_DIR}/PRODUCT-PLAN.md" \
 	"${PLUGIN_DIR}/composer.lock"
+
+# Fail the build rather than ship a file type the directory does not permit.
+UNPERMITTED="$(
+	find "${PLUGIN_DIR}" -type f \
+		! -iname '*.php' ! -iname '*.js' ! -iname '*.css' ! -iname '*.txt' \
+		! -iname '*.md' ! -iname '*.json' ! -iname '*.xml' ! -iname '*.svg' \
+		! -iname '*.png' ! -iname '*.jpg' ! -iname '*.jpeg' ! -iname '*.gif' \
+		! -iname '*.pot' ! -iname '*.po' ! -iname '*.mo' \
+		! -iname 'LICENSE' ! -iname 'LICENSE.*' ! -iname 'COPYING'
+)"
+if [[ -n "${UNPERMITTED}" ]]; then
+	printf 'Unpermitted files in package:\n%s\n' "${UNPERMITTED}" >&2
+	exit 1
+fi
 
 rm -f "${ARCHIVE}"
 (

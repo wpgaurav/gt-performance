@@ -63,6 +63,12 @@ fi
 
 GT Performance is distributed free through the WordPress.org plugin directory, which is also the update authority. GitHub releases remain the source-of-truth archive.
 
+`bin/build-package.sh` fails the build if the staged tree contains a file type
+the directory does not permit, so the packaging step itself is the first gate.
+It also strips the extensionless CLI wrappers Composer packages ship in their
+own `bin/` directories (for example `matthiasmullie/minify/bin/minifyjs`),
+which WordPress.org rejects.
+
 Before every deploy:
 
 1. run `wp plugin check gt-performance` (Plugin Check) against the built ZIP on a Studio site and resolve any errors;

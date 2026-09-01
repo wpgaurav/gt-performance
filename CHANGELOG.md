@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.7 - 2026-09-01
+
+### Fixed
+
+- The `gtperf_private_island` shortcode now escapes the fragment fallback where it is returned. The fallback was already filtered through `wp_kses_post()` inside the fragment registry, so the rendered output is unchanged, but the escaping was applied in a different class and was not visible at the point of output.
+
+### Changed
+
+- The release package no longer contains the extensionless command line wrappers that Composer packages ship in their own `bin/` directories, such as `matthiasmullie/minify/bin/minifyjs` and `bin/minifycss`. WordPress.org does not permit them, and the minifier library itself is unaffected.
+- `bin/build-package.sh` now fails the build when the staged package contains a file type the plugin directory does not permit, instead of producing an archive that is rejected on review.
+
 ## 1.0.6 - 2026-08-31
 
 ### Added
