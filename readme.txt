@@ -118,6 +118,11 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 == Changelog ==
 
 = 1.1.0 =
+* Adds Safe Mode. Define `GTPERF_SAFE_MODE` in wp-config.php and every HTML transformation stops and no page is served from or written to the cache, without changing a single setting or touching the drop-in. It is the answer to "something looks wrong and I cannot tell which option did it".
+* Adds automatic cleanup. Cached pages past their lifetime, entries left unreachable by a settings change, generated CSS and JavaScript nothing has requested in two weeks, and the diagnostic log are now reclaimed hourly, and the cache is capped at a configurable number of entries. Nothing removed cached files before, so one settings save could leave hundreds of megabytes on disk permanently.
+* Adds a "Remove all data when the plugin is deleted" option. The uninstall routine has always been gated on a setting that nothing wrote, so deleting the plugin left its options, database tables, drop-ins, and the Redis credentials file behind whatever you chose.
+* Removes Fleet Console, Private Islands, Commerce Safety Lab, and CSS Training Mode. The plugin now registers no REST route and no admin-ajax action at all.
+* Product pages now clear when stock or price changes through the shop's own tools rather than only when the post is saved.
 * Fixed the managed Cloudflare Cache Rule telling the edge to cache responses this plugin marks private. The edge cache lifetime now defaults to respecting your origin's Cache-Control header. If you set a positive lifetime, the rule is narrowed to requests with no query string, because overriding the origin cannot be made safe for query strings the origin refuses to cache.
 * Removed the WordPress revision limit control. It filtered `wp_revisions_to_keep` on every site that activated the plugin, whether or not the database module was enabled, so posts lost revision history that could not be recovered.
 * Trashing, unpublishing, or renaming a post now clears its cached page. Previously a withdrawn page kept being served from the cache for the rest of its stale window, and a renamed post kept serving its old URL ahead of the redirect WordPress would issue.

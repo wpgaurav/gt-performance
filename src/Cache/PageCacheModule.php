@@ -60,6 +60,15 @@ final class PageCacheModule implements Module {
 			return;
 		}
 
+		// Safe mode must show the page WordPress would render, so nothing is stored and
+		// the response is marked private rather than served from an existing entry.
+		if ( \GTPerformance\Core\SafeMode::active() ) {
+			nocache_headers();
+			SharedCacheHeaders::noStore();
+			header( 'X-GT-Cache: SAFE-MODE' );
+			return;
+		}
+
 		if ( is_feed() || is_robots() ) {
 			nocache_headers();
 			SharedCacheHeaders::noStore();

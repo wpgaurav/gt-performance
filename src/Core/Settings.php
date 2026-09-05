@@ -47,6 +47,7 @@ final class Settings {
 					's',
 					'wc-ajax',
 					'gtperf_verify',
+					'gtperf_safe_mode',
 					'gtperf_css_preview',
 				),
 				'bypass_paths'         => array(
@@ -223,6 +224,7 @@ final class Settings {
 				'jetpack'           => true,
 			),
 			'debug'      => false,
+			'remove_data_on_uninstall' => false,
 		);
 	}
 
@@ -260,6 +262,7 @@ final class Settings {
 
 		$merged['generation'] = max( 1, (int) $current['generation'] + 1 );
 		$merged['debug']      = (bool) ( $merged['debug'] ?? false );
+		$merged['remove_data_on_uninstall'] = (bool) ( $merged['remove_data_on_uninstall'] ?? false );
 
 		$merged['cache']['entry_budget'] = max( 0, min( 200000, (int) ( $merged['cache']['entry_budget'] ?? 5000 ) ) );
 

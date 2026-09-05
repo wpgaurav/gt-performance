@@ -21,8 +21,39 @@ final class CloudflareModule implements Module {
 	}
 
 	public function register(): void {
-		add_action( 'gt_performance_purged_urls', array( $this, 'purgeUrls' ) );
+		// Collect during the request, send once on shutdown. Each post save previously
+		// made one blocking API call per URL with a 20s timeout and no de-duplication,
+		// so a bulk edit or a stock sync could hold the request open for minutes.
+		add_action( 'gt_performance_purged_urls', array( $this, 'queueUrls' ) );
+		add_action( 'shutdown', array( $this, 'flushQueuedUrls' ), 100 );
 		add_action( 'gt_performance_purged_all', array( $this, 'purgeEverything' ) );
+	}
+
+	/**
+	 * @var list<string>
+	 */
+	private array $pendingUrls = array();
+
+	/**
+	 * @param list<string> $urls URLs.
+	 */
+	public function queueUrls( array $urls ): void {
+		foreach ( $urls as $url ) {
+			if ( is_string( $url ) && '' !== $url ) {
+				$this->pendingUrls[] = $url;
+			}
+		}
+	}
+
+	public function flushQueuedUrls(): void {
+		if ( ! $this->pendingUrls ) {
+			return;
+		}
+
+		$urls              = array_values( array_unique( $this->pendingUrls ) );
+		$this->pendingUrls = array();
+
+		$this->purgeUrls( $urls );
 	}
 
 	/**

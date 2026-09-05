@@ -251,6 +251,15 @@ final class AdminModule implements Module {
 		// `generation` is part of the cache key and Settings::sanitize() bumps it on
 		// every save, so any save makes every stored entry unreachable. Nothing else
 		// ever deletes them, so without this each save leaks the whole store to disk.
+		// uninstall.php runs after the plugin's classes are gone, so it can only read a
+		// plain option. This mirror is the thing that makes its gate reachable at all:
+		// before this, the option was never written and uninstall silently did nothing.
+		update_option(
+			'gt_performance_remove_data_on_uninstall',
+			! empty( $new['remove_data_on_uninstall'] ),
+			false
+		);
+
 		$generationChanged = (int) ( $old['generation'] ?? 0 ) !== (int) ( $new['generation'] ?? 0 );
 
 		if ( $generationChanged || ( $old['cdn'] ?? array() ) !== ( $new['cdn'] ?? array() ) ) {
@@ -844,6 +853,7 @@ final class AdminModule implements Module {
 
 		$this->panelOpen( __( 'Diagnostics', 'gt-performance' ), __( 'Keep troubleshooting data local, bounded, and disabled unless it is needed.', 'gt-performance' ) );
 		$this->checkboxRoot( 'debug', __( 'Diagnostic logging', 'gt-performance' ), __( 'Write redacted plugin errors to the GT Performance log directory.', 'gt-performance' ), $settings );
+		$this->checkboxRoot( 'remove_data_on_uninstall', __( 'Remove all data when the plugin is deleted', 'gt-performance' ), __( 'Delete settings, database tables, drop-ins, and the cache directory on uninstall.', 'gt-performance' ), $settings, __( 'Leave this off to keep your configuration if you reinstall. With it off, deleting the plugin leaves its options, tables, and the Redis credentials file on disk.', 'gt-performance' ) );
 		$this->panelClose();
 
 		$this->settingsFormClose();

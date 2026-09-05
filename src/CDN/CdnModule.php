@@ -26,6 +26,10 @@ final class CdnModule implements Module {
 			return;
 		}
 
+		if ( \GTPerformance\Core\SafeMode::active() ) {
+			return;
+		}
+
 		// Start before the page-cache buffer. When origin caching is active, its
 		// optimizer pipeline runs first as the inner buffer and this final pass is
 		// idempotent. When origin caching is bypassed, CDN delivery still works.

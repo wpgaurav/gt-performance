@@ -204,7 +204,10 @@ final class ApiClient {
 	 */
 	public function purgeUrls( string $zoneId, array $urls ): bool|\WP_Error {
 		$urls = array_values( array_unique( array_filter( array_map( 'trim', $urls ) ) ) );
-		foreach ( array_chunk( $urls, 30 ) as $chunk ) {
+		// Cloudflare accepts 100 files per purge request on every plan. Chunking at 30
+		// tripled the number of blocking round trips and burned the Free plan's purge
+		// rate limit three times faster than necessary.
+		foreach ( array_chunk( $urls, 100 ) as $chunk ) {
 			$result = $this->request(
 				'POST',
 				'zones/' . rawurlencode( $zoneId ) . '/purge_cache',

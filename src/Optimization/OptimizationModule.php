@@ -61,6 +61,10 @@ final class OptimizationModule implements Module {
 	}
 
 	private function stageEnabled( string $stage ): bool {
+		if ( \GTPerformance\Core\SafeMode::active() ) {
+			return false;
+		}
+
 		return (bool) apply_filters( 'gt_performance_optimize_stage', true, $stage );
 	}
 }

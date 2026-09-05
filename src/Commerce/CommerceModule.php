@@ -28,6 +28,56 @@ final class CommerceModule implements Module {
 		add_action( 'init', array( $this, 'synchronizeCompiledPolicy' ), 99 );
 		add_action( 'send_headers', array( $this, 'protectDynamicResponse' ), -9999 );
 		add_action( 'save_post', array( $this, 'purgeProduct' ), 30, 2 );
+
+		// A price change, a stock movement or a sale-schedule transition goes through
+		// the commerce plugin's own CRUD layer and never reaches save_post, so the
+		// cached product page kept advertising the old price and an in-stock badge for
+		// a product that had sold out.
+		foreach ( array(
+			'woocommerce_product_set_stock',
+			'woocommerce_variation_set_stock',
+			'woocommerce_product_set_stock_status',
+			'woocommerce_variation_set_stock_status',
+			'woocommerce_product_object_updated_props',
+			'woocommerce_scheduled_sales',
+			'edd_update_product_price',
+			'fluent_cart/product_updated',
+		) as $hook ) {
+			add_action( $hook, array( $this, 'purgeCommerceObject' ), 30 );
+		}
+	}
+
+	/**
+	 * Invalidate a product whose price or stock changed outside the post save.
+	 *
+	 * The hooks these come from pass either a product object or an id depending on
+	 * the plugin and the version, so accept both rather than binding to one shape.
+	 *
+	 * @param mixed $product Product object or post id.
+	 */
+	public function purgeCommerceObject( mixed $product ): void {
+		$postId = 0;
+
+		if ( is_numeric( $product ) ) {
+			$postId = (int) $product;
+		} elseif ( is_object( $product ) && method_exists( $product, 'get_id' ) ) {
+			$postId = (int) $product->get_id();
+		} elseif ( $product instanceof \WP_Post ) {
+			$postId = (int) $product->ID;
+		}
+
+		if ( $postId <= 0 ) {
+			return;
+		}
+
+		// A variation's price shows on its parent's page, not its own.
+		$parent = (int) wp_get_post_parent_id( $postId );
+		foreach ( array_unique( array_filter( array( $postId, $parent ) ) ) as $id ) {
+			$url = get_permalink( $id );
+			if ( is_string( $url ) && '' !== $url ) {
+				do_action( 'gt_performance_enqueue_purge', array( $url ) );
+			}
+		}
 	}
 
 	/**
