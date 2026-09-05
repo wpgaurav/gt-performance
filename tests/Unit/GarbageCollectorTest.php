@@ -104,6 +104,25 @@ final class GarbageCollectorTest extends TestCase {
 		unset( $GLOBALS['gtperf_test_options']['gt_performance_settings'] );
 	}
 
+	/**
+	 * The collector was scheduled inside a branch that only ran when the queue event
+	 * was missing, so an upgraded site with a healthy queue never armed it, which is
+	 * the common upgrade path rather than a rare one. Caught on a live site.
+	 */
+	public function test_each_scheduled_event_is_armed_independently(): void {
+		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/Queue/QueueModule.php' );
+
+		self::assertMatchesRegularExpression(
+			'/if \( ! wp_next_scheduled\( \x27gt_performance_run_queue\x27 \) \) \{/',
+			$source,
+			'Scheduling the queue must not be an early return that skips everything after it.'
+		);
+		self::assertStringNotContainsString(
+			"if ( wp_next_scheduled( 'gt_performance_run_queue' ) ) {\n\t\t\treturn;",
+			$source
+		);
+	}
+
 	public function test_abandoned_temporary_files_are_cleaned_up(): void {
 		$temp = Paths::pages() . '/aa/orphan.html.abandoned.tmp';
 		if ( ! is_dir( dirname( $temp ) ) ) {

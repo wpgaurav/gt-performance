@@ -50,16 +50,17 @@ final class QueueModule implements Module {
 	 * pending for seven days.
 	 */
 	public function ensureScheduled(): void {
-		if ( wp_next_scheduled( 'gt_performance_run_queue' ) ) {
-			return;
+		// Each event is checked independently. Guarding both behind "is the queue event
+		// missing" means a site that upgraded with a healthy queue never schedules
+		// anything added in a later release, which is the common path, not the rare one.
+		if ( ! wp_next_scheduled( 'gt_performance_run_queue' ) ) {
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtperf_every_minute', 'gt_performance_run_queue' );
+			$this->logger->log( 'warning', 'Queue cron was missing and has been rescheduled' );
 		}
-
-		wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtperf_every_minute', 'gt_performance_run_queue' );
 
 		if ( ! wp_next_scheduled( \GTPerformance\Cache\GarbageCollector::HOOK ) ) {
 			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', \GTPerformance\Cache\GarbageCollector::HOOK );
 		}
-		$this->logger->log( 'warning', 'Queue cron was missing and has been rescheduled' );
 	}
 
 	/**
