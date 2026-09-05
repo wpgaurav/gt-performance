@@ -187,7 +187,9 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 				return false;
 			}
 
-			$data = @unserialize( $payload );
+			// allowed_classes => false: a cached payload is data. Without it a crafted
+			// value in Redis instantiates arbitrary classes and runs their __wakeup().
+			$data = @unserialize( $payload, array( 'allowed_classes' => false ) );
 			if ( ! is_array( $data ) || ! array_key_exists( 'value', $data ) ) {
 				$found = false;
 				return false;

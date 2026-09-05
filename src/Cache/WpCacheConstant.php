@@ -158,6 +158,17 @@ final class WpCacheConstant {
 
 	private function publish( string $path, string $content ): bool|\WP_Error {
 		$temp = $path . '.gtperf-' . wp_generate_uuid4() . '.tmp';
+
+		// This file is a complete copy of wp-config.php, database credentials and salts
+		// included, sitting in the web root for the moment before the rename. Create it
+		// unreadable first: writing then chmod'ing leaves a window where it is not.
+		$handle = @fopen( $temp, 'xb' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( false === $handle ) {
+			return new \WP_Error( 'gtperf_wp_config_write', __( 'GT Performance could not write a temporary wp-config.php.', 'gt-performance' ) );
+		}
+		fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		chmod( $temp, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+
 		if ( false === file_put_contents( $temp, $content, LOCK_EX ) ) {
 			return new \WP_Error( 'gtperf_wp_config_write', __( 'GT Performance could not write a temporary wp-config.php.', 'gt-performance' ) );
 		}

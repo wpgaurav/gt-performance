@@ -108,7 +108,12 @@ final class DropinRuntime {
 		header( 'ETag: ' . $etag );
 		header( 'Vary: ' . ( (bool) ( $cacheConfig['separate_mobile'] ?? false ) ? 'Accept-Encoding, User-Agent' : 'Accept-Encoding' ) );
 		header( 'X-GT-Cache: ' . ( $isStale ? 'STALE' : 'HIT' ) );
-		header( 'X-GT-Cache-Key: ' . substr( $hash, 0, 12 ) );
+		// A cache-key fingerprint on every public response tells an attacker when two
+		// requests collide, which is the reconnaissance step for a poisoning attempt.
+		// It is a debugging aid, so gate it like one.
+		if ( ! empty( $config['debug'] ) ) {
+			header( 'X-GT-Cache-Key: ' . substr( $hash, 0, 12 ) );
+		}
 
 		if ( 'HEAD' !== $request->method ) {
 			echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Previously validated cached HTML.

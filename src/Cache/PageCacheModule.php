@@ -334,6 +334,9 @@ final class PageCacheModule implements Module {
 	private function cacheConfig(): array {
 		$config               = (array) Settings::get( 'cache', array() );
 		$config['generation'] = (int) Settings::get( 'generation', 1 );
+		// Must match what Settings::compile() writes for the drop-in, or the two sides
+		// of the cache disagree about which requests are eligible.
+		$config['hosts']      = Settings::canonicalHosts();
 
 		return apply_filters( 'gt_performance_cache_policy', $config );
 	}

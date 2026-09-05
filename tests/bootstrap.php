@@ -33,6 +33,12 @@ if ( ! defined( 'GTPERF_BASENAME' ) ) {
 	define( 'GTPERF_BASENAME', 'gt-performance/gt-performance.php' );
 }
 
+if ( ! function_exists( 'site_url' ) ) {
+	function site_url( string $path = '' ): string {
+		return 'https://example.com' . ( '' === $path ? '' : '/' . ltrim( $path, '/' ) );
+	}
+}
+
 if ( ! function_exists( 'gtperf_test_site_transients' ) ) {
 	/**
 	 * Shared store behind the site-transient stubs.

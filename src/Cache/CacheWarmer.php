@@ -74,7 +74,7 @@ final class CacheWarmer {
 			}
 		}
 
-		$cache      = apply_filters( 'gt_performance_cache_policy', (array) Settings::get( 'cache', array() ) );
+		$cache      = apply_filters( 'gt_performance_cache_policy', array( 'hosts' => Settings::canonicalHosts() ) + (array) Settings::get( 'cache', array() ) );
 		$eligible   = new Eligibility();
 		$sameOrigin = array();
 		foreach ( $candidates as $url ) {

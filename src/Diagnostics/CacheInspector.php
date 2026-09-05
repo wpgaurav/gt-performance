@@ -38,6 +38,7 @@ final class CacheInspector {
 
 		$cachePolicy               = (array) Settings::get( 'cache', array() );
 		$cachePolicy['generation'] = (int) Settings::get( 'generation', 1 );
+		$cachePolicy['hosts']      = Settings::canonicalHosts();
 		$cachePolicy               = apply_filters( 'gt_performance_cache_policy', $cachePolicy );
 		$decision                  = ( new Eligibility() )->decide( $request, $cachePolicy );
 		$key                       = ( new CacheKey() )->make( $request, $cachePolicy );

@@ -92,5 +92,30 @@ final class Paths {
 				@file_put_contents( $file, $deny ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.PHP.NoSilencedErrors.Discouraged
 			}
 		}
+
+		// The cache root itself cannot be denied wholesale: assets/ under it is linked
+		// into the page and must stay reachable. But the two config files directly in it
+		// are not assets, and redis-config.json.php holds a host, username and password
+		// in clear text. Deny those by name.
+		$root = self::cacheRoot();
+		if ( is_dir( $root ) ) {
+			$file = $root . '/.htaccess';
+			if ( ! is_file( $file ) ) {
+				$rule = "# GT Performance: deny direct access to configuration payloads.\n"
+					. "<FilesMatch \"\\.json\\.php$\">\n"
+					. "\t<IfModule mod_authz_core.c>\n\t\tRequire all denied\n\t</IfModule>\n"
+					. "\t<IfModule !mod_authz_core.c>\n\t\tDeny from all\n\t</IfModule>\n"
+					. "</FilesMatch>\n";
+				@file_put_contents( $file, $rule ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.PHP.NoSilencedErrors.Discouraged
+			}
+		}
+
+		// Belt and braces for servers that ignore .htaccess: the config payloads carry
+		// credentials and only PHP needs to read them.
+		foreach ( array( self::config(), self::redisConfig() ) as $file ) {
+			if ( is_file( $file ) ) {
+				@chmod( $file, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPress.PHP.NoSilencedErrors.Discouraged
+			}
+		}
 	}
 }

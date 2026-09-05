@@ -450,7 +450,10 @@ final class Settings {
 		$settings = $settings ?? self::all();
 		$config   = array(
 			'generation' => (int) $settings['generation'],
-			'cache'      => $settings['cache'],
+			// The host allowlist lives inside the cache policy because that is the only
+			// slice advanced-cache.php receives, and the drop-in and the runtime must
+			// decide from a byte-identical policy or they disagree about what is cached.
+			'cache'      => array( 'hosts' => self::canonicalHosts() ) + (array) $settings['cache'],
 			'debug'      => (bool) $settings['debug'],
 			// The bundled advanced-cache.php drop-in carries no hard-coded paths.
 			// It reads this value to locate the runtime classes it loads, so the
@@ -474,6 +477,32 @@ final class Settings {
 		$redis = ( new \GTPerformance\Redis\Configuration() )->runtime( (array) ( $settings['redis'] ?? array() ) );
 
 		return self::writeConfig( Paths::redisConfig(), $redis );
+	}
+
+	/**
+	 * Hostnames this installation legitimately answers to.
+	 *
+	 * @return list<string>
+	 */
+	public static function canonicalHosts(): array {
+		$hosts = array();
+		foreach ( array( home_url( '/' ), site_url( '/' ) ) as $url ) {
+			$host = wp_parse_url( (string) $url, PHP_URL_HOST );
+			if ( is_string( $host ) && '' !== $host ) {
+				$hosts[] = strtolower( $host );
+			}
+		}
+
+		/**
+		 * Additional hostnames that serve this site, such as a staging alias or a
+		 * second domain mapped to the same install.
+		 *
+		 * @param list<string> $hosts Lowercase hostnames, without a port.
+		 */
+		$hosts = array_map( 'strval', (array) apply_filters( 'gt_performance_canonical_hosts', $hosts ) );
+		$hosts = array_map( static fn ( string $host ): string => strtolower( trim( $host ) ), $hosts );
+
+		return array_values( array_unique( array_filter( $hosts ) ) );
 	}
 
 	/**

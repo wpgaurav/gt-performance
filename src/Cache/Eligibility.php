@@ -26,6 +26,19 @@ final class Eligibility {
 			return Decision::deny( 'host_missing' );
 		}
 
+		// HTTP_HOST is client-supplied. On a catch-all vhost an attacker can vary it
+		// freely, and it is part of the cache key and of the URL recorded in each
+		// entry's metadata, which the preload queue later fetches with wp_remote_get().
+		// Refusing an unrecognised Host bounds the key space and keeps the queue from
+		// being handed a URL nobody on this site chose.
+		$hosts = array_map( 'strval', (array) ( $config['hosts'] ?? array() ) );
+		if ( $hosts ) {
+			$host = strtolower( (string) preg_replace( '/:\d+$/', '', $request->host ) );
+			if ( ! in_array( $host, $hosts, true ) ) {
+				return Decision::deny( 'foreign_host' );
+			}
+		}
+
 		if ( '' !== trim( (string) ( $request->headers['authorization'] ?? '' ) ) ) {
 			return Decision::deny( 'authorization' );
 		}

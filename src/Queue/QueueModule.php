@@ -218,17 +218,37 @@ final class QueueModule implements Module {
 	}
 
 	/**
+	 * Whether a URL belongs to this installation, host and port included.
+	 */
+	private function sameSite( string $url ): bool {
+		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		if ( '' === $host || ! in_array( $host, \GTPerformance\Core\Settings::canonicalHosts(), true ) ) {
+			return false;
+		}
+
+		return in_array( strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ), array( 'http', 'https' ), true );
+	}
+
+	/**
 	 * @param array<string, mixed> $payload Job payload.
 	 */
 	private function handle( string $type, array $payload ): void {
 		$url = isset( $payload['url'] ) ? esc_url_raw( (string) $payload['url'] ) : '';
+
+		// Job payloads are built from cached-entry metadata, whose URL was assembled
+		// from a client-supplied Host header. Eligibility now refuses a foreign Host,
+		// but the queue is the component that actually makes the request, so it checks
+		// again rather than trusting a row written by an earlier release.
+		if ( '' !== $url && ! $this->sameSite( $url ) ) {
+			throw new \RuntimeException( 'Refusing to request a URL outside this site.' );
+		}
 
 		switch ( $type ) {
 			case 'preload_url':
 				if ( '' === $url ) {
 					throw new \RuntimeException( 'Missing preload URL.' );
 				}
-				$response = wp_remote_get(
+				$response = wp_safe_remote_get(
 					$url,
 					array(
 						'timeout'     => 15,
