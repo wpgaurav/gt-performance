@@ -1,4 +1,6 @@
 <?php
+// The unused-CSS engine is gated on GTPERF_UNUSED_CSS; define it in wp-config.php
+// before running this smoke harness.
 /**
  * Disposable WordPress Studio fixture for unused CSS delivery tests.
  *
@@ -57,7 +59,6 @@ add_action(
 		$settings['cache']['enabled']                = true;
 		$settings['cache']['ignored_query_params'][] = 'gtp-css-mode';
 		$settings['cache']['ignored_query_params']   = array_values( array_unique( $settings['cache']['ignored_query_params'] ) );
-		$settings['css']['enabled']                  = true;
 		$settings['css']['mode']                     = $modes[ $mode ];
 		$settings['css']['critical_budget']          = 'hybrid-fallback' === $mode ? 2048 : 14336;
 		$settings['css']['safelist']                 = array(

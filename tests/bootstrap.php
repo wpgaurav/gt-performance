@@ -366,3 +366,29 @@ if ( ! defined( 'AUTH_KEY' ) ) {
 if ( ! defined( 'SECURE_AUTH_SALT' ) ) {
 	define( 'SECURE_AUTH_SALT', 'gt-performance-test-secure-auth-salt' );
 }
+
+// Settings::sanitize() is the one place every saved value is bounded, and it was
+// unreachable from the suite for want of three sanitizers. These mirror WordPress
+// closely enough to exercise the bounding logic, not to replace it.
+if ( ! function_exists( 'sanitize_text_field' ) ) {
+	function sanitize_text_field( string $value ): string {
+		$value = strip_tags( $value ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+		$value = preg_replace( '/[\r\n\t ]+/', ' ', $value ) ?? '';
+
+		return trim( $value );
+	}
+}
+
+if ( ! function_exists( 'sanitize_key' ) ) {
+	function sanitize_key( string $value ): string {
+		return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( $value ) ) ?? '';
+	}
+}
+
+if ( ! function_exists( 'sanitize_email' ) ) {
+	function sanitize_email( string $value ): string {
+		$value = trim( $value );
+
+		return false === filter_var( $value, FILTER_VALIDATE_EMAIL ) ? '' : $value;
+	}
+}

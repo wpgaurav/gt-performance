@@ -61,7 +61,7 @@ fi
 
 ## Deploy to WordPress.org
 
-GT Performance is distributed free through the WordPress.org plugin directory, which is also the update authority. GitHub releases remain the source-of-truth archive.
+GT Performance is **not yet listed** in the WordPress.org plugin directory: there is no SVN target and no directory update authority. Verify with `https://plugins.svn.wordpress.org/gt-performance/` before promising a deploy. GitHub releases are the source-of-truth archive, and the plugin ships `Update URI: false` so nothing on the directory can push to existing installs while the slug is unclaimed.
 
 `bin/build-package.sh` fails the build if the staged tree contains a file type
 the directory does not permit, so the packaging step itself is the first gate.

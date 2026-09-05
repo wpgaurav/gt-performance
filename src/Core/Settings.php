@@ -74,7 +74,7 @@ final class Settings {
 				'api_token'          => '',
 				'global_api_key'     => '',
 				'email'              => '',
-				'edge_ttl'           => 86400,
+				'edge_ttl'           => 0,
 				'drift_hash'         => '',
 			),
 			'xcloud'     => array(
@@ -120,7 +120,6 @@ final class Settings {
 				),
 			),
 			'css'        => array(
-				'enabled'              => false,
 				'mode'                 => 'file',
 				'critical_budget'      => 14336,
 				'keep_dynamic_states'  => true,
@@ -197,7 +196,6 @@ final class Settings {
 				'separate_block_styles'          => false,
 				'heartbeat_mode'                 => 'reduce',
 				'heartbeat_seconds'              => 60,
-				'limit_revisions'                => 5,
 				'autosave_interval'              => 60,
 			),
 			'redis'      => array(
@@ -291,7 +289,7 @@ final class Settings {
 		$merged['cloudflare']['email']     = sanitize_email( (string) ( $merged['cloudflare']['email'] ?? '' ) );
 		$merged['cloudflare']['domain']    = self::sanitizeDomain( (string) ( $merged['cloudflare']['domain'] ?? '' ) );
 		$merged['cloudflare']['zone_id']   = sanitize_text_field( (string) ( $merged['cloudflare']['zone_id'] ?? '' ) );
-		$merged['cloudflare']['edge_ttl']  = max( 0, min( 31536000, (int) ( $merged['cloudflare']['edge_ttl'] ?? 86400 ) ) );
+		$merged['cloudflare']['edge_ttl']  = max( 0, min( 31536000, (int) ( $merged['cloudflare']['edge_ttl'] ?? 0 ) ) );
 		$merged['xcloud']['domain']         = self::sanitizeDomain( (string) ( $merged['xcloud']['domain'] ?? '' ) );
 		$siteUuid                           = strtolower( sanitize_text_field( (string) ( $merged['xcloud']['site_uuid'] ?? '' ) ) );
 		$merged['xcloud']['site_uuid']      = preg_match( '/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/', $siteUuid ) ? $siteUuid : '';
@@ -367,7 +365,6 @@ final class Settings {
 			array( 'xcloud', 'free_edge_cache_enabled' ),
 			array( 'xcloud', 'enterprise_available' ),
 			array( 'cdn', 'enabled' ),
-			array( 'css', 'enabled' ),
 			array( 'css', 'keep_dynamic_states' ),
 			array( 'javascript', 'minify' ),
 			array( 'javascript', 'defer' ),
@@ -423,7 +420,6 @@ final class Settings {
 		$merged['media']['critical_images']       = max( 0, min( 10, (int) ( $merged['media']['critical_images'] ?? 2 ) ) );
 		$merged['database']['retain_revisions']   = max( 0, min( 100, (int) ( $merged['database']['retain_revisions'] ?? 5 ) ) );
 		$merged['bloat']['heartbeat_seconds']     = max( 15, min( 120, (int) ( $merged['bloat']['heartbeat_seconds'] ?? 60 ) ) );
-		$merged['bloat']['limit_revisions']       = max( 0, min( 100, (int) ( $merged['bloat']['limit_revisions'] ?? 5 ) ) );
 		$merged['bloat']['autosave_interval']      = max( 15, min( 3600, (int) ( $merged['bloat']['autosave_interval'] ?? 60 ) ) );
 		$merged['redis']['host']                   = self::sanitizeRedisHost( (string) ( $merged['redis']['host'] ?? '127.0.0.1' ) );
 		$merged['redis']['port']                   = max( 0, min( 65535, (int) ( $merged['redis']['port'] ?? 6379 ) ) );

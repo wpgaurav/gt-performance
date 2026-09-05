@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.7`, distributed free through the WordPress.org plugin directory. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.1.0`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -184,7 +184,7 @@ Only explicitly selected extensions are rewritten. Third-party URLs, extensionle
 
 ## Updates
 
-GT Performance is free software distributed through the WordPress.org plugin directory. Updates arrive through the normal WordPress update flow with no license key or activation.
+GT Performance is free software with no license key or activation. It is not yet listed in the WordPress.org plugin directory, so WordPress will not offer updates for it automatically: the plugin ships `Update URI: false` so that an unrelated plugin claiming the `gt-performance` slug can never push a package to these installs. Update by replacing the plugin directory with a release archive from this repository until the directory listing exists.
 
 ## Development
 

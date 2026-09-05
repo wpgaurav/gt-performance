@@ -57,7 +57,7 @@ final class RuleCompiler {
 		return array(
 			'ref'               => self::MANAGED_RULE_REF,
 			'description'       => 'GT Performance: cache eligible public HTML',
-			'expression'        => ( new RuleExpression() )->compile( $host, $cache ),
+			'expression'        => ( new RuleExpression() )->compile( $host, $cache, $edgeTtl > 0 ),
 			'action'            => 'set_cache_settings',
 			'action_parameters' => $action,
 			'enabled'           => true,
@@ -121,6 +121,7 @@ final class RuleCompiler {
 			'expected_hash'   => $expectedHash,
 			'live_hash'       => $liveHash,
 			'custom_key'      => isset( $expected['action_parameters']['cache_key']['custom_key'] ),
+			'override_origin' => $edgeTtl > 0,
 			'expression'      => (string) $expected['expression'],
 			'expression_size' => strlen( (string) $expected['expression'] ),
 			'conflicts'       => $conflicts,

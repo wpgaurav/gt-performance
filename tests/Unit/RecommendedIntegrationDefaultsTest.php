@@ -18,7 +18,10 @@ final class RecommendedIntegrationDefaultsTest extends TestCase {
 
 		self::assertSame( 'example.com', $profiles['cloudflare']['cloudflare']['domain'] );
 		self::assertSame( 'token', $profiles['cloudflare']['cloudflare']['auth_mode'] );
-		self::assertSame( 86400, $profiles['cloudflare']['cloudflare']['edge_ttl'] );
+		// 0 compiles the managed rule as respect_origin. A recommended profile must
+		// never propose overriding origin freshness: the origin marks every request it
+		// refuses as no-store, and override_origin makes Cloudflare ignore exactly that.
+		self::assertSame( 0, $profiles['cloudflare']['cloudflare']['edge_ttl'] );
 		self::assertSame( 'example.com', $profiles['xcloud']['xcloud']['domain'] );
 		self::assertArrayNotHasKey( 'api_token', $profiles['cloudflare']['cloudflare'] );
 		self::assertArrayNotHasKey( 'api_token', $profiles['xcloud']['xcloud'] );

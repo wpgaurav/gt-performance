@@ -25,7 +25,6 @@ final class DatabaseModule implements Module {
 		add_action( 'wp_head', array( $this, 'blankFavicon' ), 1 );
 
 		add_filter( 'heartbeat_settings', array( $this, 'heartbeat' ) );
-		add_filter( 'wp_revisions_to_keep', array( $this, 'revisions' ) );
 		add_filter( 'xmlrpc_enabled', array( $this, 'xmlrpcEnabled' ) );
 		add_action( 'wp_default_scripts', array( $this, 'removeJqueryMigrate' ) );
 		add_filter( 'the_generator', array( $this, 'generator' ) );
@@ -223,10 +222,6 @@ final class DatabaseModule implements Module {
 		}
 
 		return $settings;
-	}
-
-	public function revisions( int $number ): int {
-		return max( 0, (int) Settings::get( 'bloat.limit_revisions', $number ) );
 	}
 
 	public function xmlrpcEnabled( bool $enabled ): bool {

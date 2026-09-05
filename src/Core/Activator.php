@@ -21,6 +21,16 @@ final class Activator {
 			wp_die( esc_html__( 'GT Performance requires WordPress 6.6 or newer.', 'gt-performance' ) );
 		}
 
+		// One compiled config file and one cache root are shared by the whole network,
+		// so the last subsite to save settings decides the bypass rules every other
+		// subsite is cached under, and a network purge wipes every site at once. Refusing
+		// is honest; a half-correct network mode would cache one subsite's checkout for
+		// another's visitors.
+		if ( is_multisite() ) {
+			deactivate_plugins( GTPERF_BASENAME );
+			wp_die( esc_html__( 'GT Performance does not support WordPress multisite. Its cache configuration and cache directory are shared across a network, which would let one site\'s settings decide another site\'s cache behavior.', 'gt-performance' ) );
+		}
+
 		foreach ( Paths::writableDirectories() as $directory ) {
 			wp_mkdir_p( $directory );
 		}

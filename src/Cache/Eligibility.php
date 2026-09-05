@@ -30,10 +30,6 @@ final class Eligibility {
 			return Decision::deny( 'authorization' );
 		}
 
-		if ( '' !== trim( (string) ( $request->headers['x-gt-performance-bypass'] ?? '' ) ) ) {
-			return Decision::deny( 'signed_bypass' );
-		}
-
 		foreach ( (array) ( $config['bypass_paths'] ?? array() ) as $path ) {
 			$path = (string) $path;
 			if ( '' !== $path && self::pathMatches( $request->path, $path ) ) {

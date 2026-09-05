@@ -34,6 +34,8 @@ final class PageCacheModule implements Module {
 	public function register(): void {
 		add_action( 'template_redirect', array( $this, 'startCapture' ), -9999 );
 		add_action( 'save_post', array( $this, 'purgePost' ), 20, 2 );
+		add_action( 'transition_post_status', array( $this, 'purgeStatusTransition' ), 20, 3 );
+		add_action( 'post_updated', array( $this, 'purgeRenamedPost' ), 20, 3 );
 		add_action( 'before_delete_post', array( $this, 'purgeDeletedPost' ), 20, 2 );
 		add_action( 'wp_insert_comment', array( $this, 'purgeInsertedComment' ), 20, 2 );
 		add_action( 'comment_post', array( $this, 'purgeCommentById' ), 20 );
@@ -47,6 +49,14 @@ final class PageCacheModule implements Module {
 
 	public function startCapture(): void {
 		if ( is_admin() || wp_doing_ajax() || wp_doing_cron() ) {
+			return;
+		}
+
+		// Nothing reads what capture() writes until the owned drop-in is in place and
+		// WP_CACHE is on, which is not the state a fresh activation leaves behind. Until
+		// then the buffer, the optimizer chain, the key hash and two file writes are all
+		// work whose only product is disk usage.
+		if ( ! self::storageActive() ) {
 			return;
 		}
 
@@ -87,6 +97,21 @@ final class PageCacheModule implements Module {
 			header( 'X-GT-Cache: MISS' );
 		}
 		OutputBuffer::start( array( $this, 'capture' ) );
+	}
+
+	/**
+	 * Whether an owned drop-in is installed and WP_CACHE is on, so a stored entry
+	 * can actually be served. Memoized: status() stats and reads a file, and this is
+	 * consulted on every frontend request.
+	 */
+	private static function storageActive(): bool {
+		static $active = null;
+
+		if ( null === $active ) {
+			$active = defined( 'WP_CACHE' ) && WP_CACHE && 'owned' === ( new DropinInstaller() )->status();
+		}
+
+		return $active;
 	}
 
 	/**
@@ -208,6 +233,46 @@ final class PageCacheModule implements Module {
 
 		$this->purgedPublishedPosts[ $postId ] = true;
 		$this->purgePublishedPost( $postId, $post );
+	}
+
+	/**
+	 * Purge a post that stops being publicly viewable.
+	 *
+	 * The save_post handler returns early for any post that is not
+	 * publicly viewable, and trashing or unpublishing reaches save_post with the new
+	 * status already applied. Without this the withdrawn page keeps being served from
+	 * disk for the rest of its stale window while WordPress itself would answer 404.
+	 */
+	public function purgeStatusTransition( string $newStatus, string $oldStatus, \WP_Post $post ): void {
+		if ( $newStatus === $oldStatus || 'publish' !== $oldStatus || 'revision' === $post->post_type ) {
+			return;
+		}
+
+		$this->purgePostById( (int) $post->ID );
+	}
+
+	/**
+	 * Purge the previous permalink when a slug or parent changes.
+	 *
+	 * The purge set is built after the save, so it only ever names the new URL. The
+	 * old URL keeps serving its stored body with a 200 ahead of the canonical redirect
+	 * WordPress would issue.
+	 */
+	public function purgeRenamedPost( int $postId, \WP_Post $after, \WP_Post $before ): void {
+		if ( wp_is_post_revision( $postId ) || 'revision' === $after->post_type ) {
+			return;
+		}
+
+		if ( $after->post_name === $before->post_name && (int) $after->post_parent === (int) $before->post_parent ) {
+			return;
+		}
+
+		$previous = get_permalink( $before );
+		if ( ! is_string( $previous ) || '' === $previous ) {
+			return;
+		}
+
+		( new Purger( $this->store ) )->purgeUrls( array( $previous ) );
 	}
 
 	public function purgePostById( int $postId ): void {

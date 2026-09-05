@@ -23,8 +23,22 @@ final class UnusedCssOptimizer {
 	) {
 	}
 
+	/**
+	 * Whether the unused-CSS engine may run.
+	 *
+	 * The engine currently corrupts native CSS nesting, drops @import sheets, prunes
+	 * escaped utility selectors, and runs synchronously in the visitor's request. It
+	 * is not a setting any more, because a settings checkbox is an invitation and
+	 * these defects are silent and cached. Define GTPERF_UNUSED_CSS in wp-config.php
+	 * to run it anyway. It returns as a supported feature once generation moves out
+	 * of band and the differential safety net lands.
+	 */
+	public static function available(): bool {
+		return defined( 'GTPERF_UNUSED_CSS' ) && GTPERF_UNUSED_CSS;
+	}
+
 	public function optimize( string $html ): string {
-		if ( ! (bool) Settings::get( 'css.enabled', false ) ) {
+		if ( ! self::available() ) {
 			return $html;
 		}
 

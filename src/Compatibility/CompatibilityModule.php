@@ -233,7 +233,7 @@ final class CompatibilityModule implements Module {
 	}
 
 	public function perfmattersUnusedCss( bool $enabled ): bool {
-		return $this->perfmattersFeature( $enabled, (bool) Settings::get( 'css.enabled', false ) );
+		return $this->perfmattersFeature( $enabled, \GTPerformance\Optimization\Css\UnusedCssOptimizer::available() );
 	}
 
 	public function perfmattersDeferJavaScript( bool $enabled ): bool {

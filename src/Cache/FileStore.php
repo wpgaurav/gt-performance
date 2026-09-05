@@ -161,6 +161,13 @@ final class FileStore {
 		return array_values( array_unique( $urls ) );
 	}
 
+	/**
+	 * Files that keep the store unreadable from the web. They live inside the tree
+	 * this walk deletes, so a full purge used to strip the directory's own guards and
+	 * leave raw cached HTML fetchable by hash on Apache until something re-hardened.
+	 */
+	private const GUARD_FILES = array( '.htaccess', 'index.html' );
+
 	public function purgeAll(): int {
 		$count = 0;
 		if ( ! is_dir( Paths::pages() ) ) {
@@ -174,11 +181,18 @@ final class FileStore {
 
 		foreach ( $iterator as $item ) {
 			if ( $item->isFile() ) {
-				$count += @unlink( $item->getPathname() ) ? 1 : 0;
+				if ( in_array( $item->getFilename(), self::GUARD_FILES, true ) ) {
+					continue;
+				}
+
+				$count += @unlink( $item->getPathname() ) ? 1 : 0; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent purge is expected, not exceptional.
 			} elseif ( $item->isDir() ) {
-				@rmdir( $item->getPathname() );
+				@rmdir( $item->getPathname() ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Non-empty directories are skipped by design.
 			}
 		}
+
+		// Subdirectories are removed wholesale, so re-assert the guards afterwards.
+		Paths::harden();
 
 		return $count;
 	}

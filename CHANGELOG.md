@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.1.0 - 2026-09-05
+
+Correctness release. Everything here is a defect a site could hit without opting
+into anything, or a claim the shipped documents made that was not true.
+
+### Fixed
+
+- The managed Cloudflare Cache Rule instructed the edge to cache responses the
+  origin marks `no-store, private`. `cloudflare.edge_ttl` now defaults to `0`, so
+  the rule compiles as `respect_origin`. A positive lifetime still compiles as
+  `override_origin`, but the expression is then narrowed to requests with no query
+  string, because overriding the origin cannot be made safe for the unbounded set
+  of query parameters the origin refuses.
+- Trashing, unpublishing, or renaming a post never cleared its cached page. The
+  `save_post` handler returns early for posts that are not publicly viewable, and
+  a status change reaches it with the new status already applied, so a withdrawn
+  page kept returning 200 for the rest of its stale window.
+- Saving settings orphaned the whole cache. `generation` is part of the cache key
+  and is bumped on every save; nothing deleted the now-unreachable entries.
+- The capture pipeline ran when no page-cache drop-in was installed, which is the
+  state directly after activation.
+- A full purge deleted the `.htaccess` and `index.html` that keep the cache
+  directory unreadable from the web.
+- The private-fragments AJAX endpoint was registered even when the feature was off.
+
+### Removed
+
+- The WordPress revision limit control. It filtered `wp_revisions_to_keep`
+  unconditionally at 5 on every activation, whether or not its own module was
+  enabled, discarding revision history irreversibly on the next save.
+- The `X-GT-Performance-Bypass` request header. Its reason code claimed a
+  signature that nothing ever computed or verified, so any client could force a
+  full uncached render on every request.
+- The "Remove unused CSS" setting. The engine flattens native CSS nesting, drops
+  `@import` stylesheets, prunes escaped utility class names, and runs during the
+  visitor request; the damage was silent and cached. Define `GTPERF_UNUSED_CSS` in
+  `wp-config.php` to run it anyway. It returns as a supported feature once
+  generation moves out of the request and the differential safety net lands.
+- Multisite activation. One compiled config and one cache root are shared across a
+  network, so the last subsite to save decided every other subsite's cache
+  behavior.
+
+### Added
+
+- `LICENSE`, and a `Third-party libraries` section disclosing the three bundled
+  MIT libraries.
+- `Update URI: false`, so nothing claiming the unclaimed `gt-performance`
+  directory slug can push a package to existing installs.
+- A golden-file HTML regression fixture, and a Plugin Check job in CI that runs
+  against the built ZIP rather than the working tree.
+- `Upgrade Notice` entries, including the one 1.0.4 shipped without.
+
+### Changed
+
+- Documentation no longer describes WordPress.org as the update authority. The
+  plugin is not listed in the directory yet.
+
 ## 1.0.7 - 2026-09-01
 
 ### Fixed

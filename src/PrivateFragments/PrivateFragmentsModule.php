@@ -21,6 +21,13 @@ final class PrivateFragmentsModule implements Module {
 
 	public function register(): void {
 		add_shortcode( 'gtperf_private_island', array( $this, 'shortcode' ) );
+
+		// Every other entry point already refuses when the feature is off; the AJAX
+		// route answered regardless, so a disabled feature kept a public endpoint open.
+		if ( ! (bool) Settings::get( 'private_fragments.enabled', false ) ) {
+			return;
+		}
+
 		add_filter( 'gt_performance_html', array( $this, 'prepareHtml' ), 90 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ), PHP_INT_MAX );
 		add_action( 'wp_ajax_gtperf_private_fragments', array( $this, 'respond' ) );

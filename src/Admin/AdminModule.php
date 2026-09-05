@@ -34,6 +34,7 @@ use GTPerformance\Fleet\PolicyService;
 use GTPerformance\Integrations\RecommendedDefaults;
 use GTPerformance\Optimization\Css\ReportRepository;
 use GTPerformance\Optimization\Css\SelectorSafelist;
+use GTPerformance\Optimization\Css\UnusedCssOptimizer;
 use GTPerformance\Optimization\Css\TrainingRepository;
 use GTPerformance\Redis\ConnectionTester;
 use GTPerformance\Redis\ObjectCacheInstaller;
@@ -265,11 +266,16 @@ final class AdminModule implements Module {
 		if ( is_array( $new ) ) {
 			Settings::compile( $new );
 		}
-		if (
-			is_array( $old )
-			&& is_array( $new )
-			&& ( $old['cdn'] ?? array() ) !== ( $new['cdn'] ?? array() )
-		) {
+		if ( ! is_array( $old ) || ! is_array( $new ) ) {
+			return;
+		}
+
+		// `generation` is part of the cache key and Settings::sanitize() bumps it on
+		// every save, so any save makes every stored entry unreachable. Nothing else
+		// ever deletes them, so without this each save leaks the whole store to disk.
+		$generationChanged = (int) ( $old['generation'] ?? 0 ) !== (int) ( $new['generation'] ?? 0 );
+
+		if ( $generationChanged || ( $old['cdn'] ?? array() ) !== ( $new['cdn'] ?? array() ) ) {
 			( new Purger() )->purgeAll();
 		}
 	}
@@ -745,7 +751,7 @@ final class AdminModule implements Module {
 		<section class="gtp-stat-grid" aria-label="<?php esc_attr_e( 'Performance status', 'gt-performance' ); ?>">
 			<?php $this->stat( __( 'Page cache', 'gt-performance' ), $cacheReady ? __( 'Active', 'gt-performance' ) : __( 'Needs setup', 'gt-performance' ), $cacheReady ? 'success' : 'warning' ); ?>
 			<?php $this->stat( __( 'Cloudflare', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? __( 'Connected', 'gt-performance' ) : __( 'Not connected', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? 'success' : 'neutral' ); ?>
-			<?php $this->stat( __( 'Unused CSS', 'gt-performance' ), ! empty( $settings['css']['enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ), ! empty( $settings['css']['enabled'] ) ? 'success' : 'neutral' ); ?>
+			<?php $this->stat( __( 'Unused CSS', 'gt-performance' ), UnusedCssOptimizer::available() ? __( 'Enabled', 'gt-performance' ) : __( 'Off', 'gt-performance' ), UnusedCssOptimizer::available() ? 'warning' : 'neutral' ); ?>
 			<?php $this->stat( __( 'CSS files ready', 'gt-performance' ), number_format_i18n( $cssReady ), $cssReady > 0 ? 'success' : 'neutral' ); ?>
 		</section>
 		<div class="gtp-dashboard-grid">
@@ -777,7 +783,7 @@ final class AdminModule implements Module {
 				<?php elseif ( empty( $settings['cloudflare']['enabled'] ) ) : ?>
 					<p><?php esc_html_e( 'Origin caching is ready. Connect Cloudflare Free to cache eligible HTML closer to visitors.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cloudflare' ) ); ?>"><?php esc_html_e( 'Configure Cloudflare', 'gt-performance' ); ?></a>
-				<?php elseif ( ! empty( $settings['css']['enabled'] ) && 0 === $cssReady ) : ?>
+				<?php elseif ( UnusedCssOptimizer::available() && 0 === $cssReady ) : ?>
 					<p><?php esc_html_e( 'Unused CSS is enabled but no ready result exists yet. Visit a public page, then watch the CSS report.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'css-reports' ) ); ?>"><?php esc_html_e( 'Open CSS Reports', 'gt-performance' ); ?></a>
 				<?php else : ?>
@@ -841,7 +847,7 @@ final class AdminModule implements Module {
 		$this->settingsFormOpen();
 
 		$this->panelOpen( __( 'Unused CSS', 'gt-performance' ), __( 'Analyze rendered HTML on this server and deliver only matching selectors.', 'gt-performance' ) );
-		$this->checkbox( 'css', 'enabled', __( 'Remove unused CSS', 'gt-performance' ), __( 'Generate page-specific CSS when an eligible page is rendered.', 'gt-performance' ), $settings );
+		$this->cssAvailabilityNotice();
 		$this->cssDeliveryOptions( $settings );
 		$this->number( 'css', 'critical_budget', __( 'Hybrid inline CSS limit', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ), '1', __( 'If the critical segment exceeds this limit, the plugin delivers all used CSS as a generated file instead of enlarging the HTML.', 'gt-performance' ) );
 		$this->checkbox( 'css', 'keep_dynamic_states', __( 'Preserve dynamic states', 'gt-performance' ), __( 'Keep selectors used for hover, focus, open, checked, and other interactive states.', 'gt-performance' ), $settings );
@@ -948,7 +954,6 @@ final class AdminModule implements Module {
 			__( 'Disabling Heartbeat everywhere can break post locks, autosaves, and plugins that depend on periodic admin requests.', 'gt-performance' )
 		);
 		$this->number( 'bloat', 'heartbeat_seconds', __( 'Heartbeat interval', 'gt-performance' ), __( 'Slow the admin Heartbeat API without disabling autosave locks.', 'gt-performance' ), $settings, 15, 120, __( 'seconds', 'gt-performance' ) );
-		$this->number( 'bloat', 'limit_revisions', __( 'WordPress revision limit', 'gt-performance' ), __( 'Filter the number of revisions WordPress retains for each post.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
 		$this->number( 'bloat', 'autosave_interval', __( 'Autosave interval', 'gt-performance' ), __( 'Increase the editor autosave interval to reduce background requests.', 'gt-performance' ), $settings, 15, 3600, __( 'seconds', 'gt-performance' ) );
 		$this->select(
 			'bloat',
@@ -2697,6 +2702,26 @@ PHP;
 			'message' => __( 'The requested GT Performance action could not be completed. Check the settings and try again.', 'gt-performance' ),
 			'type'    => 'error',
 		);
+	}
+
+	/**
+	 * Explain the state of the unused-CSS engine in place of the removed toggle.
+	 */
+	private function cssAvailabilityNotice(): void {
+		if ( UnusedCssOptimizer::available() ) {
+			?>
+			<p class="gtp-callout gtp-callout--warning">
+				<?php esc_html_e( 'Unused CSS generation is running because GTPERF_UNUSED_CSS is defined in wp-config.php. This engine has known defects with native CSS nesting, @import, and escaped utility class names, and it runs during the visitor request. Verify pages after every theme or plugin change.', 'gt-performance' ); ?>
+			</p>
+			<?php
+			return;
+		}
+		?>
+		<p class="gtp-callout">
+			<?php esc_html_e( 'Unused CSS generation is off. It corrupted native CSS nesting, dropped @import stylesheets, and pruned escaped utility class names silently into the cache, so the setting was removed rather than left as an invitation. The delivery options below apply when the engine is re-enabled.', 'gt-performance' ); ?>
+			<code>define( 'GTPERF_UNUSED_CSS', true );</code>
+		</p>
+		<?php
 	}
 
 	private function cssModeLabel( string $mode ): string {

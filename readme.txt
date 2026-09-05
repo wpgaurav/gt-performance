@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.7
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,16 @@ No. It accepts only short-lived, one-use GT Performance setting bundles signed w
 
 Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence. The Integrations screen provides a copy-ready example.
 
+== Third-party libraries ==
+
+GT Performance bundles three MIT-licensed PHP libraries in `vendor/`. All three are GPL-compatible and are used server-side only.
+
+* [matthiasmullie/minify](https://github.com/matthiasmullie/minify) - CSS and JavaScript minification. MIT.
+* [sabberworm/php-css-parser](https://github.com/MyIntervals/PHP-CSS-Parser) - CSS parsing for the unused-CSS engine. MIT.
+* [symfony/css-selector](https://github.com/symfony/css-selector) - CSS selector to XPath translation. MIT.
+
+The full GPL-2.0 text this plugin is licensed under ships as `LICENSE` in the plugin directory.
+
 == External Services ==
 
 GT Performance works entirely on your server by default and sends no data anywhere. Each integration below contacts a third-party service only after you enable it and, where credentials are involved, only with credentials you supply. There is no telemetry, no account requirement, and the plugin never contacts servers of its own.
@@ -97,7 +107,28 @@ GT Performance also sends requests to your own site's URLs for cache warming, pu
 
 GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
+== Upgrade Notice ==
+
+= 1.1.0 =
+Breaking. The WordPress revision limit control is removed (it pruned revisions on every site that activated the plugin), the "Remove unused CSS" toggle is removed, the Cloudflare edge cache lifetime now defaults to respecting your origin, and the plugin no longer activates on multisite. Review the Optimization and Cloudflare tabs after updating.
+
+= 1.0.4 =
+Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
+
 == Changelog ==
+
+= 1.1.0 =
+* Fixed the managed Cloudflare Cache Rule telling the edge to cache responses this plugin marks private. The edge cache lifetime now defaults to respecting your origin's Cache-Control header. If you set a positive lifetime, the rule is narrowed to requests with no query string, because overriding the origin cannot be made safe for query strings the origin refuses to cache.
+* Removed the WordPress revision limit control. It filtered `wp_revisions_to_keep` on every site that activated the plugin, whether or not the database module was enabled, so posts lost revision history that could not be recovered.
+* Trashing, unpublishing, or renaming a post now clears its cached page. Previously a withdrawn page kept being served from the cache for the rest of its stale window, and a renamed post kept serving its old URL ahead of the redirect WordPress would issue.
+* Saving settings now clears the page cache. Every save invalidates every stored entry, and nothing removed the unreachable files, so the cache directory grew without limit.
+* The cache capture pipeline no longer runs when the page-cache drop-in is not installed, which is the state directly after activation. It was doing the full render, optimization, and two file writes for a cache nothing could read.
+* Removed the `X-GT-Performance-Bypass` request header. It was never signed despite its internal name, so any client could force a full uncached render on every request.
+* A full cache purge no longer deletes the .htaccess and index.html files that keep the cache directory unreadable from the web.
+* The private fragments AJAX endpoint is no longer registered when the feature is disabled.
+* Removed the "Remove unused CSS" setting. The engine flattens native CSS nesting, drops @import stylesheets, prunes escaped utility class names such as those Tailwind generates, and runs during the visitor's request. Those defects were silent and were cached. The engine can still be run by defining `GTPERF_UNUSED_CSS` in wp-config.php, and returns as a supported feature once generation moves out of the request.
+* GT Performance no longer activates on WordPress multisite. Its compiled configuration and cache directory are shared across a network, so one site's settings decided another site's cache behavior.
+* Added a LICENSE file, disclosed the three bundled MIT libraries, and corrected documentation that described WordPress.org as the update authority. The plugin is not listed in the directory yet.
 
 = 1.0.7 =
 * The private island shortcode now escapes its fallback text where it is returned. The rendered output is unchanged; the escaping simply happens at the point of output.
