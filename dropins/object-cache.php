@@ -187,9 +187,20 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 				return false;
 			}
 
-			// allowed_classes => false: a cached payload is data. Without it a crafted
-			// value in Redis instantiates arbitrary classes and runs their __wakeup().
-			$data = @unserialize( $payload, array( 'allowed_classes' => false ) );
+			// Deliberately unrestricted.
+			//
+			// `allowed_classes => false` was tried and reverted: WordPress caches real
+			// objects, so every one of them came back as __PHP_Incomplete_Class. The
+			// update_plugins transient is a stdClass, which made wp_version_check() and
+			// any plugin reading it fatal on the next request. A curated allowlist has
+			// the same failure for every plugin that caches an object of its own.
+			//
+			// The boundary here is access to Redis itself. Anything that can write a
+			// crafted payload into the cache can already read every session token and
+			// option the site has cached, so restricting classes buys very little and
+			// costs correctness. Keep Redis bound to localhost or an authenticated,
+			// private network.
+			$data = @unserialize( $payload );
 			if ( ! is_array( $data ) || ! array_key_exists( 'value', $data ) ) {
 				$found = false;
 				return false;

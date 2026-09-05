@@ -73,7 +73,10 @@ final class DropinInstaller {
 	 * from an autoloaded option, so the common case costs no extra I/O.
 	 */
 	public static function syncVersion(): void {
-		$signature = GTPERF_VERSION . '|' . GTPERF_DIR;
+		// Content, not just version. A drop-in edited without a version bump would
+		// otherwise never be republished, leaving the stale copy running.
+		$source    = GTPERF_DIR . '/dropins/advanced-cache.php';
+		$signature = GTPERF_VERSION . '|' . GTPERF_DIR . '|' . ( is_file( $source ) ? (string) filemtime( $source ) : '' );
 		if ( (string) get_option( self::VERSION_OPTION, '' ) === $signature ) {
 			return;
 		}

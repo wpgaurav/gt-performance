@@ -153,4 +153,22 @@ final class DropinInstallerTest extends TestCase {
 		self::assertInstanceOf( \WP_Error::class, $result );
 		self::assertSame( $foreign, file_get_contents( $this->installer->target() ) );
 	}
+
+	/**
+	 * A drop-in whose contents change without a version bump must still be
+	 * republished. It is not hypothetical: a corrected object-cache drop-in shipped
+	 * while the broken copy stayed installed, because the recorded signature was the
+	 * version alone and the version had not moved.
+	 */
+	public function test_the_signature_tracks_content_not_only_the_version(): void {
+		foreach ( array( 'src/Cache/DropinInstaller.php', 'src/Redis/ObjectCacheInstaller.php' ) as $path ) {
+			$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
+
+			self::assertStringContainsString(
+				'filemtime( $source )',
+				$source,
+				$path . ' must include the bundled file in its signature.'
+			);
+		}
+	}
 }

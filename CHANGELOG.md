@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 - 2026-09-05
+## 1.0.8 - 2026-09-05
 
 Correctness release. Everything here is a defect a site could hit without opting
 into anything, or a claim the shipped documents made that was not true.

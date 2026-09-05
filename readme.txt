@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,7 +109,7 @@ GT Performance stores a list of script hostname patterns such as `connect.facebo
 
 == Upgrade Notice ==
 
-= 1.1.0 =
+= 1.0.8 =
 Breaking. The WordPress revision limit control is removed (it pruned revisions on every site that activated the plugin), the "Remove unused CSS" toggle is removed, the Cloudflare edge cache lifetime now defaults to respecting your origin, and the plugin no longer activates on multisite. Review the Optimization and Cloudflare tabs after updating.
 
 = 1.0.4 =
@@ -117,7 +117,7 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 
 == Changelog ==
 
-= 1.1.0 =
+= 1.0.8 =
 * Adds Safe Mode. Define `GTPERF_SAFE_MODE` in wp-config.php and every HTML transformation stops and no page is served from or written to the cache, without changing a single setting or touching the drop-in. It is the answer to "something looks wrong and I cannot tell which option did it".
 * Adds automatic cleanup. Cached pages past their lifetime, entries left unreachable by a settings change, generated CSS and JavaScript nothing has requested in two weeks, and the diagnostic log are now reclaimed hourly, and the cache is capped at a configurable number of entries. Nothing removed cached files before, so one settings save could leave hundreds of megabytes on disk permanently.
 * Adds a "Remove all data when the plugin is deleted" option. The uninstall routine has always been gated on a setting that nothing wrote, so deleting the plugin left its options, database tables, drop-ins, and the Redis credentials file behind whatever you chose.

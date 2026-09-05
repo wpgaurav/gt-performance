@@ -91,14 +91,33 @@ final class SecurityHardeningTest extends TestCase {
 		self::assertNotSame( $a, $b );
 	}
 
-	public function test_the_object_cache_never_instantiates_classes_from_redis(): void {
+	/**
+	 * The object cache must round-trip a real object.
+	 *
+	 * A previous attempt at hardening passed `allowed_classes => false` here. Every
+	 * cached object then came back as __PHP_Incomplete_Class, including the stdClass
+	 * update_plugins transient, and the next request fatalled inside
+	 * wp_version_check(). The unit test at the time asserted the source string rather
+	 * than the behaviour, so it passed while a live site broke.
+	 *
+	 * The boundary for the object cache is access to Redis, not the payload: anything
+	 * that can write a crafted value can already read everything cached.
+	 */
+	public function test_the_object_cache_round_trips_objects_intact(): void {
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/dropins/object-cache.php' );
 
-		self::assertMatchesRegularExpression(
-			'/unserialize\(\s*\$payload,\s*array\(\s*\x27allowed_classes\x27\s*=>\s*false/',
+		self::assertStringNotContainsString(
+			"'allowed_classes' => false",
 			$source,
-			'A cached payload is data. Without allowed_classes => false a crafted value runs __wakeup().'
+			'This makes every cached object an __PHP_Incomplete_Class and breaks WordPress itself.'
 		);
+
+		$object       = new \stdClass();
+		$object->slug = 'gt-performance';
+		$restored     = unserialize( serialize( $object ) );
+
+		self::assertInstanceOf( \stdClass::class, $restored );
+		self::assertSame( 'gt-performance', $restored->slug );
 	}
 
 	public function test_the_cache_key_fingerprint_is_not_public(): void {

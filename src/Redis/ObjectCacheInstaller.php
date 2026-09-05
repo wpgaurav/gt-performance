@@ -52,12 +52,25 @@ final class ObjectCacheInstaller {
 	 * loaded the old drop-in for this request, so the replacement is active from
 	 * the next request onward.
 	 */
+	/**
+	 * What must match for the installed drop-in to be considered current.
+	 *
+	 * The version alone is not enough: a drop-in whose contents change without a
+	 * version bump would never be republished, and the stale copy keeps running.
+	 * That is not hypothetical — it kept a broken unserialize() live on a site after
+	 * the corrected build had already been installed. filemtime() is one stat, which
+	 * is the point: status() and installedVersion() each read the whole 20 KB file,
+	 * so this ran three reads on every request.
+	 */
+	private static function signature(): string {
+		$source = GTPERF_DIR . '/dropins/object-cache.php';
+
+		return GTPERF_VERSION . '|' . GTPERF_DIR . '|' . ( is_file( $source ) ? (string) filemtime( $source ) : '' );
+	}
+
 	public static function syncVersion(): void {
-		// The recorded version matching is the overwhelmingly common case, and it is
-		// answerable from an option. Only when it differs is the drop-in worth reading
-		// from disk, which status() and installedVersion() each did separately, so a
-		// 20 KB file was read three times on every request.
-		if ( GTPERF_VERSION === (string) get_option( self::VERSION_OPTION, '' ) ) {
+		$signature = self::signature();
+		if ( (string) get_option( self::VERSION_OPTION, '' ) === $signature ) {
 			return;
 		}
 
@@ -66,19 +79,18 @@ final class ObjectCacheInstaller {
 			return;
 		}
 
-		if ( GTPERF_VERSION === $installer->installedVersion() ) {
-			if ( GTPERF_VERSION !== (string) get_option( self::VERSION_OPTION, '' ) ) {
-				update_option( self::VERSION_OPTION, GTPERF_VERSION, false );
-			}
-			return;
-		}
-
+		// No version comparison here. Getting past the signature check already means
+		// the bundled drop-in changed, and the installed copy can carry the same
+		// version string while holding different code — which is exactly how a broken
+		// object cache stayed installed after the corrected build had shipped.
+		// Republishing is only reached on a real change, so it costs nothing in the
+		// common case.
 		$result = $installer->publish();
 		if ( is_wp_error( $result ) ) {
 			return;
 		}
 
-		update_option( self::VERSION_OPTION, GTPERF_VERSION, false );
+		update_option( self::VERSION_OPTION, $signature, false );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
 		wp_cache_delete( 'cron', 'options' );

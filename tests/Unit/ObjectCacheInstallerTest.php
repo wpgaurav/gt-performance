@@ -37,7 +37,44 @@ final class ObjectCacheInstallerTest extends TestCase {
 		ObjectCacheInstaller::syncVersion();
 
 		self::assertSame( GTPERF_VERSION, $this->installer->installedVersion() );
-		self::assertSame( GTPERF_VERSION, $GLOBALS['gtperf_test_options']['gt_performance_object_cache_dropin_version'] );
+
+		// The recorded signature covers the bundled file, not just the version, so a
+		// drop-in edited without a version bump is still republished. A version-only
+		// signature left a broken object cache installed after the fix had shipped.
+		$recorded = (string) $GLOBALS['gtperf_test_options']['gt_performance_object_cache_dropin_version'];
+		self::assertStringStartsWith( GTPERF_VERSION . '|', $recorded );
+		self::assertSame( 3, substr_count( $recorded, '|' ) + 1, 'version|dir|mtime' );
+	}
+
+	public function testAContentChangeWithoutAVersionBumpIsRepublished(): void {
+		// Start from an owned drop-in so syncVersion() has something to keep current.
+		file_put_contents(
+			$this->installer->target(),
+			"<?php\n/** GT Performance Redis object-cache drop-in v0.0.0-stale */\n"
+		);
+		ObjectCacheInstaller::syncVersion();
+		$recorded = (string) ( $GLOBALS['gtperf_test_options']['gt_performance_object_cache_dropin_version'] ?? '' );
+
+		self::assertNotSame( '', $recorded, 'The first sync must record a signature.' );
+
+		// Same version, newer bundled file.
+		touch( GTPERF_DIR . '/dropins/object-cache.php', time() + 10 );
+		// PHP caches stat results per process; production calls syncVersion once per
+		// request, but this test calls it twice.
+		clearstatcache( true, GTPERF_DIR . '/dropins/object-cache.php' );
+		file_put_contents( $this->installer->target(), "<?php\n/** GT Performance Redis object-cache drop-in v0.0.0-stale */\n" );
+
+		ObjectCacheInstaller::syncVersion();
+
+		self::assertNotSame(
+			$recorded,
+			(string) ( $GLOBALS['gtperf_test_options']['gt_performance_object_cache_dropin_version'] ?? '' ),
+			'A changed drop-in must produce a new signature.'
+		);
+		self::assertSame( GTPERF_VERSION, $this->installer->installedVersion() );
+
+		touch( GTPERF_DIR . '/dropins/object-cache.php' );
+		clearstatcache( true, GTPERF_DIR . '/dropins/object-cache.php' );
 	}
 
 	public function testForeignDropinRemainsUntouched(): void {
