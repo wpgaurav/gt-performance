@@ -51,6 +51,14 @@ spl_autoload_register(
 	}
 );
 
+// Distribution channels add capabilities by dropping a channel.php into their own
+// area of src/. A package that ships none matches nothing here, so what a channel
+// adds is decided by what the build includes rather than by a runtime flag.
+$gt_performance_channels = glob( GTPERF_DIR . '/src/*/channel.php' );
+foreach ( is_array( $gt_performance_channels ) ? $gt_performance_channels : array() as $gt_performance_channel ) {
+	require_once $gt_performance_channel;
+}
+
 register_activation_hook( __FILE__, array( \GTPerformance\Core\Activator::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( \GTPerformance\Core\Deactivator::class, 'deactivate' ) );
 

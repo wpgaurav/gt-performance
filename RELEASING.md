@@ -59,6 +59,36 @@ if [[ "$(gh repo view --json visibility --jq .visibility)" == "PUBLIC" ]]; then
 fi
 ```
 
+## Two packages ship from one tree
+
+`./bin/build-package.sh all` produces both. `wporg` and `fluentcart` build them
+individually.
+
+| | `dist/gt-performance-<v>.zip` | `dist/gt-performance-<v>-fluentcart.zip` |
+|---|---|---|
+| Channel | WordPress.org submission | Self-hosted, sold through gauravtiwari.org |
+| `src/Licensing/` | excluded | included |
+| Update path | WordPress.org, once listed | FluentCart `get_license_version` |
+| `Plugin URI` | `/gt-performance/` | `/product/gt-performance/` |
+
+The WordPress.org artifact is the one a reviewer reads, so the build proves rather
+than assumes that it is clean: it fails if `src/Licensing` survived, if any shared
+file mentions licensing, or if an unexpected entry appears at the top level. That
+last check exists because a scratch directory in the repo root once shipped into a
+production install and served 531 KB of internal notes over HTTP.
+
+Shared code must never name the licensing subsystem, because the WordPress.org
+package does not contain it. A channel adds itself through `src/<Area>/channel.php`,
+which `gt-performance.php` discovers by shape, and extends the admin through
+`gt_performance_admin_tabs`, `gt_performance_admin_tab_labels`,
+`gt_performance_render_tab_<tab>` and `gt_performance_admin_notices`.
+`DistributionChannelTest` enforces the separation.
+
+The FluentCart endpoint keys on the **product** id (1170147), not a variation id;
+a variation id answers "Product not found". The update check itself is
+unauthenticated, but the download URL is only returned for an activated license,
+which is why the self-hosted package needs the licenser at all.
+
 ## Deploy to WordPress.org
 
 GT Performance is **not yet listed** in the WordPress.org plugin directory: there is no SVN target and no directory update authority. Verify with `https://plugins.svn.wordpress.org/gt-performance/` before promising a deploy. GitHub releases are the source-of-truth archive, and the plugin ships `Update URI: false` so nothing on the directory can push to existing installs while the slug is unclaimed.

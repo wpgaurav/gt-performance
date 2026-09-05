@@ -13,3 +13,6 @@
 
 # Local release staging (packages + one-off release scripts)
 /__release-*/
+
+# Session scratch: audit notes, plans, one-off snippets. Never shipped.
+__work/

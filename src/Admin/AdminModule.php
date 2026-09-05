@@ -61,6 +61,21 @@ final class AdminModule implements Module {
 
 	private string $pageHook = '';
 
+	/**
+	 * Tabs this build offers.
+	 *
+	 * A distribution channel can add one without shared code naming it. The
+	 * FluentCart package uses this for its License screen; the WordPress.org package
+	 * ships no channel, so the list is exactly self::TABS.
+	 *
+	 * @return list<string>
+	 */
+	private static function tabs(): array {
+		$tabs = array_map( 'strval', (array) apply_filters( 'gt_performance_admin_tabs', self::TABS ) );
+
+		return array_values( array_unique( array_merge( self::TABS, $tabs ) ) );
+	}
+
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_init', array( $this, 'settings' ) );
@@ -304,6 +319,20 @@ final class AdminModule implements Module {
 						$this->renderTools( $settings );
 						break;
 					default:
+						/**
+						 * Render a tab this build does not know about.
+						 *
+						 * A channel that added a tab through gt_performance_admin_tabs
+						 * renders it here. Nothing is echoed unless a listener echoes it,
+						 * and the dashboard remains the fallback for a genuinely unknown tab.
+						 *
+						 * @param array<string, mixed> $settings Current settings.
+						 */
+						if ( has_action( 'gt_performance_render_tab_' . $tab ) ) {
+							do_action( 'gt_performance_render_tab_' . $tab, $settings ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Prefixed by the literal above.
+							break;
+						}
+
 						$this->renderDashboard( $settings );
 				}
 				?>
@@ -521,6 +550,17 @@ final class AdminModule implements Module {
 			'integrations' => __( 'Integrations', 'gt-performance' ),
 			'tools'        => __( 'Tools', 'gt-performance' ),
 		);
+
+		/**
+		 * Tab labels, keyed by tab slug.
+		 *
+		 * A channel that registered a tab through gt_performance_admin_tabs supplies
+		 * its label here. Only tabs the build actually offers are rendered.
+		 *
+		 * @param array<string, string> $tabs Tab labels.
+		 */
+		$tabs = array_map( 'strval', (array) apply_filters( 'gt_performance_admin_tab_labels', $tabs ) );
+		$tabs = array_intersect_key( $tabs, array_flip( self::tabs() ) );
 		?>
 		<header class="gtp-admin__header">
 			<div>
@@ -2092,7 +2132,7 @@ PHP;
 	private function redirect( string $notice, string $tab ): never {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by the calling action handler.
 		$return = isset( $_POST['gtperf_return'] ) ? sanitize_key( (string) wp_unslash( $_POST['gtperf_return'] ) ) : '';
-		if ( '' !== $return && in_array( $return, self::TABS, true ) ) {
+		if ( '' !== $return && in_array( $return, self::tabs(), true ) ) {
 			$tab = $return;
 		}
 
@@ -2113,14 +2153,14 @@ PHP;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab routing against a fixed allowlist; no state changes.
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
 
-		return in_array( $tab, self::TABS, true ) ? $tab : 'dashboard';
+		return in_array( $tab, self::tabs(), true ) ? $tab : 'dashboard';
 	}
 
 	private function tabUrl( string $tab ): string {
 		return add_query_arg(
 			array(
 				'page' => self::PAGE_SLUG,
-				'tab'  => in_array( $tab, self::TABS, true ) ? $tab : 'dashboard',
+				'tab'  => in_array( $tab, self::tabs(), true ) ? $tab : 'dashboard',
 			),
 			admin_url( 'admin.php' )
 		);
@@ -2231,10 +2271,20 @@ PHP;
 			'quick-action-invalid'      => array( __( 'That quick action is not available.', 'gt-performance' ), 'warning' ),
 		);
 
-		if ( isset( $notices[ $notice ] ) ) {
+		/**
+		 * Notices for actions this build does not know about.
+		 *
+		 * A distribution channel adds its own here, so shared admin code carries no
+		 * string belonging to a subsystem the package may not contain.
+		 *
+		 * @param array<string, array{0:string,1:string}> $notices Notice map.
+		 */
+		$notices = (array) apply_filters( 'gt_performance_admin_notices', $notices );
+
+		if ( isset( $notices[ $notice ] ) && is_array( $notices[ $notice ] ) ) {
 			return array(
-				'message' => $notices[ $notice ][0],
-				'type'    => $notices[ $notice ][1],
+				'message' => (string) $notices[ $notice ][0],
+				'type'    => (string) $notices[ $notice ][1],
 			);
 		}
 
