@@ -34,6 +34,7 @@ final class QueueModule implements Module {
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
 		add_action( 'gt_performance_enqueue_purge', array( $this, 'enqueuePurge' ) );
 		add_action( 'gt_performance_enqueue_font_localization', array( $this, 'enqueueFontLocalization' ) );
+		add_action( \GTPerformance\Cache\GarbageCollector::HOOK, array( $this, 'collectGarbage' ) );
 		add_action( 'gt_performance_purged_all', array( $this, 'scheduleWarm' ) );
 		add_action( ImageVariantGenerator::ENQUEUE_HOOK, array( $this, 'enqueueImageVariants' ), 10, 2 );
 	}
@@ -54,6 +55,10 @@ final class QueueModule implements Module {
 		}
 
 		wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtperf_every_minute', 'gt_performance_run_queue' );
+
+		if ( ! wp_next_scheduled( \GTPerformance\Cache\GarbageCollector::HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', \GTPerformance\Cache\GarbageCollector::HOOK );
+		}
 		$this->logger->log( 'warning', 'Queue cron was missing and has been rescheduled' );
 	}
 
@@ -180,6 +185,10 @@ final class QueueModule implements Module {
 		}
 
 		$this->jobs->enqueue( \GTPerformance\Optimization\FontOptimizer::JOB_TYPE, array( 'url' => $url ), 60, 0 );
+	}
+
+	public function collectGarbage(): void {
+		( new \GTPerformance\Cache\GarbageCollector( $this->logger ) )->collect();
 	}
 
 	public function run( int $limit = 5 ): int {

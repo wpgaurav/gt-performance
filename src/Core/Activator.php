@@ -50,6 +50,10 @@ final class Activator {
 			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'gtperf_every_minute', 'gt_performance_run_queue' );
 		}
 
+		if ( ! wp_next_scheduled( \GTPerformance\Cache\GarbageCollector::HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', \GTPerformance\Cache\GarbageCollector::HOOK );
+		}
+
 		remove_filter( 'cron_schedules', array( Plugin::class, 'cronSchedules' ) );
 	}
 }

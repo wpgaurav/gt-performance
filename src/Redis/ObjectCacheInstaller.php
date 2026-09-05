@@ -53,6 +53,14 @@ final class ObjectCacheInstaller {
 	 * the next request onward.
 	 */
 	public static function syncVersion(): void {
+		// The recorded version matching is the overwhelmingly common case, and it is
+		// answerable from an option. Only when it differs is the drop-in worth reading
+		// from disk, which status() and installedVersion() each did separately, so a
+		// 20 KB file was read three times on every request.
+		if ( GTPERF_VERSION === (string) get_option( self::VERSION_OPTION, '' ) ) {
+			return;
+		}
+
 		$installer = new self();
 		if ( 'owned' !== $installer->status() ) {
 			return;

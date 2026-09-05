@@ -358,6 +358,41 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			echo '<p>GT Performance Redis: ' . esc_html( (string) $this->cache_hits ) . ' hits, ' . esc_html( (string) $this->cache_misses ) . ' misses.</p>';
 		}
 
+		/**
+		 * How long to stop trying after a failed connection, in seconds.
+		 *
+		 * Without this a Redis that is down costs every single request the full
+		 * connection timeout before falling back to the database, so an object cache
+		 * meant to make the site faster takes it down harder than having none at all.
+		 */
+		private const BREAKER_SECONDS = 30;
+
+		private function breakerFile(): string {
+			return sys_get_temp_dir() . '/gtperf-redis-down-' . md5( $this->basePrefix() );
+		}
+
+		private function breakerOpen(): bool {
+			$file = $this->breakerFile();
+			$time = @filemtime( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+
+			if ( false === $time ) {
+				return false;
+			}
+
+			if ( ( time() - $time ) < self::BREAKER_SECONDS ) {
+				return true;
+			}
+
+			@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+
+			return false;
+		}
+
+		private function tripBreaker(): void {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.PHP.NoSilencedErrors.Discouraged
+			@file_put_contents( $this->breakerFile(), '1', LOCK_EX );
+		}
+
 		private function connect(): void {
 			if ( ! class_exists( '\\Redis' ) ) {
 				return;
@@ -366,6 +401,10 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 			try {
 				$this->config = $this->configuration();
 				if ( ! (bool) $this->config['enabled'] ) {
+					return;
+				}
+
+				if ( $this->breakerOpen() ) {
 					return;
 				}
 
@@ -379,6 +418,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 					? $redis->pconnect( $host, $port, $timeout, 'gt-performance-' . md5( $this->basePrefix() ) )
 					: $redis->connect( $host, $port, $timeout );
 				if ( ! $connected ) {
+					$this->tripBreaker();
 					return;
 				}
 				$redis->setOption( \Redis::OPT_READ_TIMEOUT, (float) $this->config['read_timeout'] );
@@ -390,15 +430,18 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 						? $redis->auth( array( $username, $password ) )
 						: $redis->auth( $password );
 					if ( ! $authenticated ) {
+						$this->tripBreaker();
 						return;
 					}
 				}
 				if ( ! $redis->select( (int) $this->config['database'] ) ) {
+					$this->tripBreaker();
 					return;
 				}
 				$this->redis = $redis;
 			} catch ( \Throwable ) {
 				$this->redis = null;
+				$this->tripBreaker();
 			}
 		}
 

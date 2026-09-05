@@ -63,6 +63,7 @@ final class Settings {
 					'wp-postpass_',
 				),
 				'separate_mobile'      => false,
+				'entry_budget'         => 5000,
 				'preload'              => true,
 				'preload_max_urls'     => 200,
 			),
@@ -259,6 +260,8 @@ final class Settings {
 
 		$merged['generation'] = max( 1, (int) $current['generation'] + 1 );
 		$merged['debug']      = (bool) ( $merged['debug'] ?? false );
+
+		$merged['cache']['entry_budget'] = max( 0, min( 200000, (int) ( $merged['cache']['entry_budget'] ?? 5000 ) ) );
 
 		foreach ( array( 'fresh_ttl', 'stale_ttl', 'browser_ttl', 'stale_if_error' ) as $key ) {
 			$merged['cache'][ $key ] = max( 0, (int) ( $merged['cache'][ $key ] ?? $defaults['cache'][ $key ] ) );
