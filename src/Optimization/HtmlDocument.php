@@ -21,6 +21,19 @@ namespace GTPerformance\Optimization;
  * restores it verbatim after serialization, and removes the encoding PI at the
  * DOM level so unrelated markup containing "<?xml" (such as an SVG data URI) is
  * never disturbed.
+ *
+ * It does NOT fix the two defects that matter most. libxml lowercases every
+ * camelCase name in inline SVG (`viewBox` becomes `viewbox`, `clipPath` becomes
+ * `clippath`), which silently stops those elements rendering, and saveHTML()
+ * entity-encodes all non-ASCII, which turns a CSS `content:"->"` into literal
+ * text and inflates a non-Latin page by roughly 3x.
+ *
+ * As of 1.1.0 the font, embed and CDN optimizers use WP_HTML_Tag_Processor and
+ * never reserialise the document. The unused-CSS engine is the ONLY remaining
+ * consumer, because matching CSS selectors requires a real DOM, and that engine
+ * ships disabled behind the GTPERF_UNUSED_CSS constant. HtmlDocumentBoundaryTest
+ * pins that: if a second consumer appears, the corruption becomes reachable again
+ * and the test fails.
  */
 final class HtmlDocument {
 	/**

@@ -33,6 +33,7 @@ final class QueueModule implements Module {
 		add_action( 'gt_performance_run_queue', array( $this, 'runScheduled' ) );
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
 		add_action( 'gt_performance_enqueue_purge', array( $this, 'enqueuePurge' ) );
+		add_action( 'gt_performance_enqueue_font_localization', array( $this, 'enqueueFontLocalization' ) );
 		add_action( 'gt_performance_purged_all', array( $this, 'scheduleWarm' ) );
 		add_action( ImageVariantGenerator::ENQUEUE_HOOK, array( $this, 'enqueueImageVariants' ), 10, 2 );
 	}
@@ -171,6 +172,14 @@ final class QueueModule implements Module {
 			20,
 			5
 		);
+	}
+
+	public function enqueueFontLocalization( string $url ): void {
+		if ( '' === $url ) {
+			return;
+		}
+
+		$this->jobs->enqueue( \GTPerformance\Optimization\FontOptimizer::JOB_TYPE, array( 'url' => $url ), 60, 0 );
 	}
 
 	public function run( int $limit = 5 ): int {

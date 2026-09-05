@@ -392,3 +392,78 @@ if ( ! function_exists( 'sanitize_email' ) ) {
 		return false === filter_var( $value, FILTER_VALIDATE_EMAIL ) ? '' : $value;
 	}
 }
+
+// Output-escaping shims. EmbedOptimizer builds markup, so its tests need these.
+if ( ! function_exists( 'esc_attr' ) ) {
+	function esc_attr( string $text ): string {
+		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( string $text ): string {
+		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( 'esc_html__' ) ) {
+	function esc_html__( string $text, ?string $domain = null ): string {
+		unset( $domain );
+
+		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+// WordPress's HTML API, loaded from the wordpress-no-content dev dependency.
+//
+// MediaOptimizer, FontOptimizer and CDN\UrlRewriter all rewrite markup through
+// WP_HTML_Tag_Processor, and each returns the input untouched when the class is
+// absent. Without this the optimizer tests passed by testing nothing.
+$gtperf_html_api = dirname( __DIR__ ) . '/vendor/roots/wordpress-no-content/wp-includes/html-api';
+if ( is_dir( $gtperf_html_api ) ) {
+	// WP_Token_Map backs the named-character-reference table.
+	require_once dirname( $gtperf_html_api ) . '/class-wp-token-map.php';
+
+	// The tag processor calls two helpers that live outside html-api. utf8.php is
+	// self-contained; wp_kses_uri_attributes() is a bare list, and requiring kses.php
+	// for it would pull in most of WordPress.
+	if ( ! function_exists( '_wp_can_use_pcre_u' ) ) {
+		function _wp_can_use_pcre_u( $set = null ) {
+			unset( $set );
+
+			return (bool) @preg_match( '/^./u', 'a' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+	}
+	require_once dirname( $gtperf_html_api ) . '/utf8.php';
+	// WordPress 6.9's set_attribute() runs esc_url() over URI attributes, so the
+	// rewriter's output is escaped by the processor itself in production too.
+	if ( ! function_exists( 'esc_url' ) ) {
+		function esc_url( string $url, ?array $protocols = null, string $context = 'display' ): string {
+			unset( $protocols, $context );
+			$url = str_replace( array( ' ', '"', "'", '<', '>' ), array( '%20', '%22', '%27', '%3C', '%3E' ), trim( $url ) );
+
+			return $url;
+		}
+	}
+
+	if ( ! function_exists( 'wp_kses_uri_attributes' ) ) {
+		/**
+		 * @return list<string>
+		 */
+		function wp_kses_uri_attributes(): array {
+			return array(
+				'action', 'archive', 'background', 'cite', 'classid', 'codebase', 'data',
+				'formaction', 'href', 'icon', 'longdesc', 'manifest', 'poster', 'profile',
+				'src', 'usemap', 'xmlns',
+			);
+		}
+	}
+
+	require_once $gtperf_html_api . '/html5-named-character-references.php';
+	foreach ( array( 'span', 'text-replacement', 'decoder', 'attribute-token', 'doctype-info', 'tag-processor' ) as $gtperf_html_class ) {
+		$gtperf_html_file = $gtperf_html_api . '/class-wp-html-' . $gtperf_html_class . '.php';
+		if ( is_file( $gtperf_html_file ) ) {
+			require_once $gtperf_html_file;
+		}
+	}
+}

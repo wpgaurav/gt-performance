@@ -202,13 +202,14 @@ final class UnusedCssOptimizer {
 	 */
 	private function appendFile( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): array {
 		$artifact = $this->artifacts->write( $css, $kind );
-		$binary   = hex2bin( $artifact['hash'] );
 		$link     = $document->createElement( 'link' );
 		$link->setAttribute( 'rel', 'stylesheet' );
 		$link->setAttribute( 'href', $artifact['url'] );
 		$link->setAttribute( 'data-gt-performance', $kind );
-		$link->setAttribute( 'integrity', 'sha256-' . base64_encode( false === $binary ? '' : $binary ) );
-		$link->setAttribute( 'crossorigin', 'anonymous' );
+		// No integrity/crossorigin: the artifact is same-origin, written atomically and
+		// already content-hashed in its filename, so SRI adds nothing. It also forced the
+		// link cross-origin, and a pull zone without Access-Control-Allow-Origin then made
+		// the browser drop the stylesheet and render the page unstyled.
 		$head->appendChild( $link );
 
 		return array(

@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace GTPerformance\CDN;
 
-use GTPerformance\Optimization\HtmlDocument;
-
 final class UrlRewriter {
 	private string $cdnBase;
 
@@ -120,43 +118,89 @@ final class UrlRewriter {
 		return is_string( $rewritten ) ? $rewritten : $css;
 	}
 
+	/**
+	 * Rewrite same-site asset URLs onto the CDN host.
+	 *
+	 * This used to round-trip the whole document through DOMDocument, which
+	 * lowercased inline-SVG camelCase attributes and entity-encoded all non-ASCII
+	 * text on every page it touched. WP_HTML_Tag_Processor walks the same tags
+	 * without reserialising anything it was not asked to change.
+	 */
 	public function rewriteHtml( string $html ): string {
-		if ( '' === trim( $html ) || ! str_contains( $html, '<' ) ) {
+		if ( '' === trim( $html ) || ! str_contains( $html, '<' ) || ! class_exists( '\WP_HTML_Tag_Processor' ) ) {
 			return $html;
 		}
 
-		$documentHelper = new HtmlDocument();
-		$document       = $documentHelper->load( $html );
-		if ( null === $document ) {
-			return $html;
-		}
+		$processor = new \WP_HTML_Tag_Processor( $html );
+		$changed   = false;
 
-		$singleUrlAttributes = array( 'src', 'href', 'poster', 'data-src', 'data-lazy-src', 'data-original', 'data-bg' );
-		foreach ( $document->getElementsByTagName( '*' ) as $element ) {
-			foreach ( $singleUrlAttributes as $attribute ) {
-				if ( $element->hasAttribute( $attribute ) ) {
-					$element->setAttribute( $attribute, $this->rewrite( $element->getAttribute( $attribute ) ) );
+		while ( $processor->next_tag() ) {
+			$tag = (string) $processor->get_tag();
+
+			// An SVG sprite reference resolves against the SVG document, and browsers
+			// refuse to resolve one across origins. Moving it to the CDN host makes every
+			// icon disappear.
+			if ( 'USE' === $tag ) {
+				continue;
+			}
+
+			// Subresource Integrity binds a hash to a same-origin fetch. Moving the URL
+			// cross-origin without CORS makes the browser drop the resource entirely.
+			if ( null !== $processor->get_attribute( 'integrity' ) ) {
+				continue;
+			}
+
+			foreach ( array( 'src', 'href', 'poster', 'data-src', 'data-lazy-src', 'data-original', 'data-bg' ) as $attribute ) {
+				$value = $processor->get_attribute( $attribute );
+				if ( ! is_string( $value ) || '' === $value ) {
+					continue;
+				}
+				$rewritten = $this->rewrite( $value );
+				if ( $rewritten !== $value ) {
+					$processor->set_attribute( $attribute, $rewritten );
+					$changed = true;
+
+					// A font fetched from another origin needs CORS on both sides; without
+					// the attribute the browser discards the preload and fetches twice.
+					if ( 'LINK' === $tag && 'font' === strtolower( (string) $processor->get_attribute( 'as' ) ) ) {
+						$processor->set_attribute( 'crossorigin', 'anonymous' );
+					}
 				}
 			}
 
 			foreach ( array( 'srcset', 'data-srcset' ) as $attribute ) {
-				if ( $element->hasAttribute( $attribute ) ) {
-					$element->setAttribute( $attribute, $this->rewriteSrcset( $element->getAttribute( $attribute ) ) );
+				$value = $processor->get_attribute( $attribute );
+				if ( ! is_string( $value ) || '' === $value ) {
+					continue;
+				}
+				$rewritten = $this->rewriteSrcset( $value );
+				if ( $rewritten !== $value ) {
+					$processor->set_attribute( $attribute, $rewritten );
+					$changed = true;
 				}
 			}
 
-			if ( $element->hasAttribute( 'style' ) ) {
-				$element->setAttribute( 'style', $this->rewriteCss( $element->getAttribute( 'style' ) ) );
+			$style = $processor->get_attribute( 'style' );
+			if ( is_string( $style ) && '' !== $style ) {
+				$rewritten = $this->rewriteCss( $style );
+				if ( $rewritten !== $style ) {
+					$processor->set_attribute( 'style', $rewritten );
+					$changed = true;
+				}
 			}
 		}
 
-		foreach ( $document->getElementsByTagName( 'style' ) as $style ) {
-			$style->nodeValue = $this->rewriteCss( (string) $style->nodeValue );
-		}
+		$html = $changed ? $processor->get_updated_html() : $html;
 
-		$output = $documentHelper->save( $document );
+		// <style> element content is text, not attributes, so the tag processor cannot
+		// reach it. Match the element itself rather than reparsing the document.
+		$out = preg_replace_callback(
+			'#(<style\b[^>]*>)(.*?)(</style\s*>)#is',
+			fn ( array $m ): string => $m[1] . $this->rewriteCss( $m[2] ) . $m[3],
+			$html
+		);
 
-		return is_string( $output ) && '' !== trim( $output ) ? $output : $html;
+		return is_string( $out ) ? $out : $html;
 	}
 
 	private static function normalizeBase( string $url ): string {
