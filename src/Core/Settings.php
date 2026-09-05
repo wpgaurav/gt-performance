@@ -49,6 +49,7 @@ final class Settings {
 					'gtperf_verify',
 					'gtperf_safe_mode',
 					'gtperf_css_preview',
+					'gtperf_css_build',
 				),
 				'bypass_paths'         => array(
 					'/wp-admin/',
@@ -122,6 +123,7 @@ final class Settings {
 				),
 			),
 			'css'        => array(
+				'enabled'              => false,
 				'mode'                 => 'file',
 				'critical_budget'      => 14336,
 				'keep_dynamic_states'  => true,
@@ -359,6 +361,7 @@ final class Settings {
 			array( 'xcloud', 'free_edge_cache_enabled' ),
 			array( 'xcloud', 'enterprise_available' ),
 			array( 'cdn', 'enabled' ),
+			array( 'css', 'enabled' ),
 			array( 'css', 'keep_dynamic_states' ),
 			array( 'javascript', 'minify' ),
 			array( 'javascript', 'defer' ),

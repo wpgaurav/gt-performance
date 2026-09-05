@@ -11,7 +11,6 @@ namespace GTPerformance\Tests\Unit;
 
 use GTPerformance\Optimization\Css\UnusedCssOptimizer;
 use GTPerformance\Optimization\EmbedOptimizer;
-use GTPerformance\Optimization\HtmlDocument;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -20,11 +19,9 @@ use PHPUnit\Framework\TestCase;
  * `content` value, non-Latin body text, and a literal `</body>` inside inline
  * script bodies.
  *
- * These assertions are written against the pipeline as it behaves today, so they
- * are a regression detector rather than a description of code that does not exist
- * yet. The characterization test below deliberately asserts the current damage;
- * when HtmlDocument is replaced by WP_HTML_Tag_Processor it must be inverted, and
- * failing then is the point.
+ * Nothing in the plugin parses and re-serialises a document any more, so this is a
+ * regression detector: if any optimizer starts round-tripping the DOM again, these
+ * constructs are the first things it will damage.
  */
 final class GoldenHtmlTest extends TestCase {
 	private function fixture(): string {
@@ -36,11 +33,10 @@ final class GoldenHtmlTest extends TestCase {
 		return $html;
 	}
 
-	public function testUnusedCssEngineIsUnreachableWithoutTheConstant(): void {
+	public function testTheUnusedCssEngineIsOffUnlessTurnedOn(): void {
 		self::assertFalse(
 			UnusedCssOptimizer::available(),
-			'The unused-CSS engine must stay unreachable unless GTPERF_UNUSED_CSS is defined. '
-			. 'It is the only default-reachable path into the DOM round-trip.'
+			'The engine is opt-in, and off by default.'
 		);
 	}
 
@@ -57,32 +53,6 @@ final class GoldenHtmlTest extends TestCase {
 		self::assertStringContainsString( '"</body> inside a JSON-LD string"', $html );
 	}
 
-	/**
-	 * Characterization: what the DOM round-trip destroys today.
-	 *
-	 * Every caller of HtmlDocument is opt-in as of 1.1.0, which is why this damage
-	 * is scheduled rather than urgent. Invert these assertions when the class goes.
-	 */
-	public function testDomRoundTripStillDamagesSvgAndNonAscii(): void {
-		$document = new HtmlDocument();
-		$previous = libxml_use_internal_errors( true );
-		$dom      = $document->load( $this->fixture() );
-		libxml_clear_errors();
-		libxml_use_internal_errors( $previous );
-
-		self::assertNotNull( $dom );
-		$output = $document->save( $dom );
-		self::assertIsString( $output );
-
-		self::assertStringNotContainsString( 'viewBox', $output, 'Known defect: SVG camelCase is lowercased.' );
-		self::assertStringContainsString( 'viewbox', $output );
-		self::assertStringNotContainsString( 'नमस्ते', $output, 'Known defect: non-ASCII is entity-encoded.' );
-
-		// The script masking does hold: inline script bodies survive verbatim, which is
-		// the one corruption already fixed and must not regress.
-		self::assertStringContainsString( '"</body> inside a JSON-LD string"', $output );
-		self::assertStringContainsString( 'var closing = "</body>";', $output );
-	}
 
 	/**
 	 * The point of the 1.1.0 parser migration: the embed optimizer now rewrites

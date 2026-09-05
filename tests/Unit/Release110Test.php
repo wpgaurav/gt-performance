@@ -70,15 +70,15 @@ final class Release110Test extends TestCase {
 	}
 
 	/**
-	 * Six corruption defects sat behind this one checkbox, four of them silent and
-	 * written straight into the cache. The engine stays reachable through a
-	 * wp-config constant, but never through a settings screen.
+	 * The engine is a supported, opt-in feature again now its defects are fixed, but
+	 * it rewrites the stylesheets of a live site, so it must never default to on.
 	 */
-	public function test_the_unused_css_toggle_is_gone(): void {
+	public function test_the_unused_css_engine_is_opt_in(): void {
 		$defaults = Settings::defaults();
 
-		self::assertArrayNotHasKey( 'enabled', $defaults['css'] );
-		self::assertArrayHasKey( 'mode', $defaults['css'], 'Delivery options survive for when the engine returns.' );
+		self::assertArrayHasKey( 'enabled', $defaults['css'] );
+		self::assertFalse( $defaults['css']['enabled'], 'Rewriting a site\'s CSS is not a default.' );
+		self::assertArrayHasKey( 'mode', $defaults['css'] );
 	}
 
 	/**

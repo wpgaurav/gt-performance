@@ -485,3 +485,74 @@ if ( is_dir( $gtperf_html_api ) ) {
 		}
 	}
 }
+
+// Transients, backed by a per-process store.
+if ( ! function_exists( 'get_transient' ) ) {
+	/**
+	 * @return mixed
+	 */
+	function &gtperf_test_transients(): array {
+		static $store = array();
+
+		return $store;
+	}
+
+	function get_transient( string $transient ): mixed {
+		$store = &gtperf_test_transients();
+
+		return $store[ $transient ] ?? false;
+	}
+
+	function set_transient( string $transient, mixed $value, int $expiration = 0 ): bool {
+		unset( $expiration );
+		$store               = &gtperf_test_transients();
+		$store[ $transient ] = $value;
+
+		return true;
+	}
+
+	function delete_transient( string $transient ): bool {
+		$store = &gtperf_test_transients();
+		unset( $store[ $transient ] );
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'current_time' ) ) {
+	function current_time( string $type = 'mysql', bool|int $gmt = 0 ): string {
+		unset( $gmt );
+
+		return 'timestamp' === $type ? (string) time() : gmdate( 'Y-m-d H:i:s' );
+	}
+}
+
+// A $wpdb stand-in for the repositories that record generation state. It accepts
+// writes and returns nothing, which is what these tests need: the subject is the
+// CSS the engine produces, not the row it logs alongside.
+if ( ! isset( $GLOBALS['wpdb'] ) ) {
+	$GLOBALS['wpdb'] = new class() {
+		public string $prefix = 'wp_';
+
+		/**
+		 * @param array<int, mixed> $arguments Ignored.
+		 */
+		public function __call( string $name, array $arguments ): mixed {
+			unset( $name, $arguments );
+
+			return null;
+		}
+
+		public function prepare( string $query, mixed ...$arguments ): string {
+			unset( $arguments );
+
+			return $query;
+		}
+	};
+}
+
+if ( ! function_exists( 'wp_salt' ) ) {
+	function wp_salt( string $scheme = 'auth' ): string {
+		return 'gt-performance-test-salt-' . $scheme;
+	}
+}

@@ -9,23 +9,40 @@ declare(strict_types=1);
 
 namespace GTPerformance\Optimization\Css;
 
+use GTPerformance\Core\Settings;
+
 final class StylesheetCollector {
 	/**
+	 * Attribute stamped on every candidate before the document is parsed.
+	 *
+	 * The generated CSS replaces these tags, and the replacement happens on the HTML
+	 * string. Serialising the document instead would lowercase every camelCase name
+	 * in inline SVG and entity-encode all non-ASCII, so the DOM here is only ever
+	 * read from.
+	 */
+	public const MARKER = 'data-gtp-css';
+
+	/**
 	 * @param list<string> $exclusions Excluded URL or inline style ID fragments.
-	 * @return array{stylesheets:list<Stylesheet>,nodes:list<\DOMNode>}
+	 * @return array{stylesheets:list<Stylesheet>,nodes:list<\DOMNode>,markers:list<string>}
 	 */
 	public function collect( \DOMDocument $document, array $exclusions = array() ): array {
 		$xpath       = new \DOMXPath( $document );
 		$stylesheets = array();
 		$nodes       = array();
-		$siteHost    = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$siteHost     = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$allowedHosts = $this->allowedHosts( $siteHost );
 
 		// A stylesheet's position is part of the cascade. Query links and inline
 		// styles together so consolidating them never moves every inline block
 		// behind every external file.
 		$nodesInOrder = $xpath->query(
-			'//link[not(ancestor::noscript)][contains(concat(" ", normalize-space(@rel), " "), " stylesheet ")][@href]'
-			. ' | //style[not(ancestor::noscript)][not(@data-gt-performance)]'
+			// An exact rel only. `rel="alternate stylesheet"` is a theme the visitor has
+			// not chosen and `disabled` is off by definition; both were being collected,
+			// merged into the active CSS and then removed from the page, which turned an
+			// unselected colour scheme into the live one.
+			'//link[not(ancestor::noscript)][translate(normalize-space(@rel),"STYLEH","styleh")="stylesheet"][@href][not(@disabled)]'
+			. ' | //style[not(ancestor::noscript)][not(@data-gt-performance)][not(@disabled)]'
 		);
 		if ( false !== $nodesInOrder ) {
 			foreach ( $nodesInOrder as $node ) {
@@ -54,7 +71,7 @@ final class StylesheetCollector {
 				}
 
 				$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-				if ( '' !== $host && $host !== $siteHost ) {
+				if ( '' !== $host && ! in_array( $host, $allowedHosts, true ) ) {
 					continue;
 				}
 
@@ -74,10 +91,50 @@ final class StylesheetCollector {
 			}
 		}
 
+		$markers = array();
+		foreach ( $nodes as $node ) {
+			$marker = $node->getAttribute( self::MARKER );
+			if ( '' !== $marker ) {
+				$markers[] = $marker;
+			}
+		}
+
 		return array(
 			'stylesheets' => $stylesheets,
 			'nodes'       => $nodes,
+			'markers'     => $markers,
 		);
+	}
+
+	/**
+	 * Hosts whose stylesheets belong to this site.
+	 *
+	 * Matching the site host alone means the engine silently does nothing on any
+	 * site that serves its assets from a CDN subdomain — including one configured by
+	 * this plugin's own CDN feature, which rewrites exactly these URLs.
+	 *
+	 * @return list<string>
+	 */
+	private function allowedHosts( string $siteHost ): array {
+		$hosts = array( $siteHost );
+
+		$cdn = (string) Settings::get( 'cdn.url', '' );
+		if ( '' !== $cdn ) {
+			$cdnHost = strtolower( (string) wp_parse_url( $cdn, PHP_URL_HOST ) );
+			if ( '' !== $cdnHost ) {
+				$hosts[] = $cdnHost;
+			}
+		}
+
+		/**
+		 * Hosts the unused-CSS engine may read stylesheets from.
+		 *
+		 * @param list<string> $hosts    Lowercase hostnames.
+		 * @param string       $siteHost This site's hostname.
+		 */
+		$hosts = array_map( 'strval', (array) apply_filters( 'gt_performance_css_allowed_hosts', $hosts, $siteHost ) );
+
+		return array_values( array_unique( array_filter( array_map( 'strtolower', $hosts ) ) ) );
 	}
 
 	private function effectiveMedia( \DOMElement $link ): string {

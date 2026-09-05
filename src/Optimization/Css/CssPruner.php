@@ -28,14 +28,52 @@ final class CssPruner {
 	 * @param list<string> $safelist Selector fragments.
 	 */
 	public function prune( string $css, \DOMDocument $document, string $segment = 'used', array $safelist = array(), bool $preserveDynamicStates = true ): string {
-		$protected  = $this->protectUnicodeEscapes( $css );
-		$stylesheet = ( new Parser( $protected['css'] ) )->parse();
-		$xpath      = new \DOMXPath( $document );
-		$critical   = $this->criticalPaths( $document );
+		$protected = $this->protectUnicodeEscapes( $css );
 
-		$this->pruneList( $stylesheet, $xpath, $segment, $critical, $safelist, $preserveDynamicStates );
+		try {
+			$stylesheet = ( new Parser( $protected['css'] ) )->parse();
+		} catch ( \Throwable ) {
+			// Unparseable input is not a licence to guess. Keeping an unused rule costs
+			// bytes; dropping a used one breaks the page.
+			return 'remaining' === $segment ? '' : $css;
+		}
+
+		// The bundled parser silently mangles constructs it does not model. Native
+		// nesting loses every nested block (`.card{color:red;&:hover{…}}` renders as
+		// `.card{color:red}`), and a `@layer a, b;` statement renders as
+		// `.x{color:red{}}`, which swallows everything after it. Neither raises an
+		// error, so the only safe test is whether a plain round trip preserves the
+		// structure. When it does not, this stylesheet is passed through untouched.
+		if ( ! $this->roundTripIsFaithful( $protected['css'], $stylesheet ) ) {
+			return 'remaining' === $segment ? '' : $css;
+		}
+
+		$xpath    = new \DOMXPath( $document );
+		$critical = $this->criticalPaths( $document );
+
+		$this->pruneList( $stylesheet, $xpath, $segment, $critical, $safelist, $preserveDynamicStates, $protected['escapes'] );
 
 		return strtr( $stylesheet->render( OutputFormat::createCompact() ), $protected['escapes'] );
+	}
+
+	/**
+	 * Whether parsing and re-rendering preserved the stylesheet's block structure.
+	 *
+	 * Brace count is the cheapest signal that survives minification differences but
+	 * not lost or invented blocks, which is exactly the failure mode here.
+	 */
+	private function roundTripIsFaithful( string $source, \Sabberworm\CSS\CSSList\Document $stylesheet ): bool {
+		try {
+			$rendered = $stylesheet->render( OutputFormat::createCompact() );
+		} catch ( \Throwable ) {
+			return false;
+		}
+
+		return substr_count( $this->withoutComments( $source ), '{' ) === substr_count( $rendered, '{' );
+	}
+
+	private function withoutComments( string $css ): string {
+		return (string) preg_replace( '#/\*.*?\*/#s', '', $css );
 	}
 
 	/**
@@ -89,10 +127,11 @@ final class CssPruner {
 	}
 
 	/**
-	 * @param array<string, true> $critical Critical DOM paths.
-	 * @param list<string>        $safelist Selector fragments.
+	 * @param array<string, true>  $critical Critical DOM paths.
+	 * @param list<string>         $safelist Selector fragments.
+	 * @param array<string,string> $escapes  Tokenised CSS escapes to restore before matching.
 	 */
-	private function pruneList( CSSList $cssList, \DOMXPath $xpath, string $segment, array $critical, array $safelist, bool $preserveDynamicStates ): void {
+	private function pruneList( CSSList $cssList, \DOMXPath $xpath, string $segment, array $critical, array $safelist, bool $preserveDynamicStates, array $escapes = array() ): void {
 		foreach ( $cssList->getContents() as $item ) {
 			if ( $item instanceof DeclarationBlock ) {
 				// Custom properties are dependencies, not merely visual rules on the
@@ -108,7 +147,7 @@ final class CssPruner {
 				foreach ( $item->getSelectors() as $selectorObject ) {
 					$selector = $selectorObject->getSelector();
 
-					$match = $this->matches( $selector, $xpath, $critical, $safelist, $preserveDynamicStates );
+					$match = $this->matches( $selector, $xpath, $critical, $safelist, $preserveDynamicStates, $escapes );
 					if ( 'used' === $segment && $match['used'] ) {
 						$kept[] = $selectorObject;
 					} elseif ( 'critical' === $segment && $match['critical'] ) {
@@ -131,7 +170,7 @@ final class CssPruner {
 				if ( str_contains( $class, 'keyframe' ) ) {
 					continue;
 				}
-				$this->pruneList( $item, $xpath, $segment, $critical, $safelist, $preserveDynamicStates );
+				$this->pruneList( $item, $xpath, $segment, $critical, $safelist, $preserveDynamicStates, $escapes );
 				if ( array() === $item->getContents() ) {
 					$cssList->remove( $item );
 				}
@@ -150,11 +189,21 @@ final class CssPruner {
 	}
 
 	/**
-	 * @param array<string, true> $critical Critical DOM paths.
-	 * @param list<string>        $safelist Selector fragments.
+	 * @param array<string, true>  $critical Critical DOM paths.
+	 * @param list<string>         $safelist Selector fragments.
+	 * @param array<string,string> $escapes  Tokenised CSS escapes to restore before matching.
 	 * @return array{used:bool,critical:bool}
 	 */
-	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist, bool $preserveDynamicStates ): array {
+	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist, bool $preserveDynamicStates, array $escapes = array() ): array {
+		// Escapes were tokenised before parsing so the parser would not decode them.
+		// Matching must see the real selector: `.\32 xl\:flex` matches its element,
+		// but `.__GTPERF_CSS_ESCAPE_…__xl\:flex` matches nothing, so every escaped
+		// utility class — the shape Tailwind generates for every responsive variant —
+		// was pruned as unused.
+		if ( $escapes ) {
+			$selector = strtr( $selector, $escapes );
+		}
+
 		if ( $this->safelist->matches( $selector, $safelist ) ) {
 			return array(
 				'used'     => true,

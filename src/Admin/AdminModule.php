@@ -750,7 +750,7 @@ final class AdminModule implements Module {
 		$this->settingsFormOpen();
 
 		$this->panelOpen( __( 'Unused CSS', 'gt-performance' ), __( 'Analyze rendered HTML on this server and deliver only matching selectors.', 'gt-performance' ) );
-		$this->cssAvailabilityNotice();
+		$this->checkbox( 'css', 'enabled', __( 'Remove unused CSS', 'gt-performance' ), __( 'Analyze each rendered page on this server and serve only the CSS it actually uses.', 'gt-performance' ), $settings, __( 'Rewrites the stylesheets your theme and plugins load. Verify a few pages after enabling, and after any theme or plugin update. Stylesheets using constructs the analyzer cannot model are passed through untouched rather than pruned.', 'gt-performance' ) );
 		$this->cssDeliveryOptions( $settings );
 		$this->number( 'css', 'critical_budget', __( 'Hybrid inline CSS limit', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ), '1', __( 'If the critical segment exceeds this limit, the plugin delivers all used CSS as a generated file instead of enlarging the HTML.', 'gt-performance' ) );
 		$this->checkbox( 'css', 'keep_dynamic_states', __( 'Preserve dynamic states', 'gt-performance' ), __( 'Keep selectors used for hover, focus, open, checked, and other interactive states.', 'gt-performance' ), $settings );
@@ -2292,26 +2292,6 @@ PHP;
 			'message' => __( 'The requested GT Performance action could not be completed. Check the settings and try again.', 'gt-performance' ),
 			'type'    => 'error',
 		);
-	}
-
-	/**
-	 * Explain the state of the unused-CSS engine in place of the removed toggle.
-	 */
-	private function cssAvailabilityNotice(): void {
-		if ( UnusedCssOptimizer::available() ) {
-			?>
-			<p class="gtp-callout gtp-callout--warning">
-				<?php esc_html_e( 'Unused CSS generation is running because GTPERF_UNUSED_CSS is defined in wp-config.php. This engine has known defects with native CSS nesting, @import, and escaped utility class names, and it runs during the visitor request. Verify pages after every theme or plugin change.', 'gt-performance' ); ?>
-			</p>
-			<?php
-			return;
-		}
-		?>
-		<p class="gtp-callout">
-			<?php esc_html_e( 'Unused CSS generation is off. It corrupted native CSS nesting, dropped @import stylesheets, and pruned escaped utility class names silently into the cache, so the setting was removed rather than left as an invitation. The delivery options below apply when the engine is re-enabled.', 'gt-performance' ); ?>
-			<code>define( 'GTPERF_UNUSED_CSS', true );</code>
-		</p>
-		<?php
 	}
 
 	private function cssModeLabel( string $mode ): string {

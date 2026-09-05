@@ -11,7 +11,6 @@ namespace GTPerformance\Optimization\Css;
 
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Settings;
-use GTPerformance\Optimization\HtmlDocument;
 
 final class UnusedCssOptimizer {
 	public function __construct(
@@ -26,16 +25,35 @@ final class UnusedCssOptimizer {
 	/**
 	 * Whether the unused-CSS engine may run.
 	 *
-	 * The engine currently corrupts native CSS nesting, drops @import sheets, prunes
-	 * escaped utility selectors, and runs synchronously in the visitor's request. It
-	 * is not a setting any more, because a settings checkbox is an invitation and
-	 * these defects are silent and cached. Define GTPERF_UNUSED_CSS in wp-config.php
-	 * to run it anyway. It returns as a supported feature once generation moves out
-	 * of band and the differential safety net lands.
+	 * Off by default: it rewrites the stylesheets of a live site, which deserves a
+	 * deliberate decision rather than a default. GTPERF_UNUSED_CSS force-enables it
+	 * for a staging environment where changing the option is inconvenient.
 	 */
 	public static function available(): bool {
-		return defined( 'GTPERF_UNUSED_CSS' ) && GTPERF_UNUSED_CSS;
+		if ( defined( 'GTPERF_UNUSED_CSS' ) && GTPERF_UNUSED_CSS ) {
+			return true;
+		}
+
+		return (bool) Settings::get( 'css.enabled', false );
 	}
+
+	/**
+	 * Milliseconds the background generator may spend on one page.
+	 *
+	 * Only the generator's loopback request reaches the pruner, so this bounds a
+	 * queue worker rather than a visitor. It exists so one pathological stylesheet
+	 * cannot occupy the queue indefinitely.
+	 */
+	private const TIME_BUDGET_MS = 20000;
+
+	/** Transient prefix for reusable generated markup. */
+	private const REUSE_PREFIX = 'gtperf_css_reuse_';
+
+	public const JOB_TYPE = 'generate_css';
+	public const JOB_HOOK = 'gt_performance_job_generate_css';
+
+	/** Query parameter marking the generator's own loopback request. */
+	public const GENERATOR_PARAM = 'gtperf_css_build';
 
 	public function optimize( string $html ): string {
 		if ( ! self::available() ) {
@@ -51,13 +69,35 @@ final class UnusedCssOptimizer {
 		if ( ! ( new Rollout() )->allows( $url, $rollout, (bool) $preview ) ) {
 			return $html;
 		}
+		// Pruning is CPU-bound and measured multiple seconds on a real page, so it
+		// never happens in a visitor's request. Either an artifact for this page shape
+		// already exists and is applied, or one is queued and this response goes out
+		// unchanged. The generator's own loopback request is the only caller that
+		// actually builds one.
+		$reuseKey = $this->reuseKey( $html, $mode );
+		$reused   = $this->reusableOutput( $html, $reuseKey );
+		if ( null !== $reused ) {
+			return $reused;
+		}
+
+		if ( ! $this->isGeneratorRequest() ) {
+			$this->requestGeneration( $url );
+
+			return $html;
+		}
+
 		$fingerprint = $this->reports->begin( $url, $mode );
 		$started     = microtime( true );
 		$previous = libxml_use_internal_errors( true );
 
 		try {
-			$htmlDocument = new HtmlDocument();
-			$document     = $htmlDocument->load( $html );
+			// Stamp every candidate in the HTML string first, then parse a document from
+			// the stamped markup. The document is only ever read: matching CSS selectors
+			// needs a real DOM, but serialising one back out lowercases inline-SVG
+			// camelCase and entity-encodes all non-ASCII. Replacement happens on the
+			// string, keyed by the stamps.
+			$marked   = $this->markCandidates( $html );
+			$document = $this->readOnlyDocument( $marked );
 			if ( null === $document ) {
 				throw new \RuntimeException( 'The HTML document could not be parsed.' );
 			}
@@ -97,7 +137,13 @@ final class UnusedCssOptimizer {
 
 			$stylesheets = array();
 			foreach ( $collected['stylesheets'] as $stylesheet ) {
-				$stylesheets[] = "\n@media " . $stylesheet->media . " {\n" . $stylesheet->css . "\n}\n";
+				// Only wrap when the media query actually narrows anything. Wrapping
+				// `media="all"` in `@media all { … }` is a no-op for the cascade but not
+				// for `@import`, which browsers ignore unless it is at the top of the
+				// sheet — so every imported stylesheet silently vanished from the page.
+				$stylesheets[] = 'all' === strtolower( trim( $stylesheet->media ) )
+					? "\n" . $stylesheet->css . "\n"
+					: "\n@media " . $stylesheet->media . " {\n" . $this->withoutImports( $stylesheet->css ) . "\n}\n";
 			}
 			$css = implode( '', $stylesheets );
 
@@ -109,43 +155,64 @@ final class UnusedCssOptimizer {
 				throw new \RuntimeException( 'The used CSS result was empty.' );
 			}
 
-			foreach ( $collected['nodes'] as $node ) {
-				$node->parentNode?->removeChild( $node );
-			}
+			if ( $this->duration( $started ) > self::TIME_BUDGET_MS ) {
+				$this->reports->complete(
+					$fingerprint,
+					$mode,
+					'skipped',
+					'',
+					array(
+						'url'         => $url,
+						'reason'      => 'Pruning exceeded the request time budget.',
+						'duration_ms' => $this->duration( $started ),
+					)
+				);
 
-			$head = $document->getElementsByTagName( 'head' )->item( 0 );
-			if ( ! $head instanceof \DOMElement ) {
-				throw new \RuntimeException( 'The HTML document has no head element.' );
+				return $html;
 			}
 
 			$outputs  = array();
+			$injected = '';
 			$fallback = '';
 			if ( 'inline' === $mode ) {
-				$outputs[] = $this->appendInline( $document, $head, $used, 'used' );
+				[ $markup, $meta ] = $this->inlineTag( $used, 'used' );
+				$injected         .= $markup;
+				$outputs[]         = $meta;
 			} elseif ( 'hybrid' === $mode ) {
 				$critical  = $this->pruner->pruneMany( $stylesheets, $document, 'critical', $safelist, $preserveDynamicStates );
 				$remaining = $this->pruner->pruneMany( $stylesheets, $document, 'remaining', $safelist, $preserveDynamicStates );
 				$budget    = (int) Settings::get( 'css.critical_budget', 14336 );
 
 				if ( strlen( $critical ) > $budget ) {
-					$outputs[] = $this->appendFile( $document, $head, $used, 'used' );
-					$fallback  = 'critical_budget_exceeded';
+					[ $markup, $meta ] = $this->fileTag( $used, 'used' );
+					$injected         .= $markup;
+					$outputs[]         = $meta;
+					$fallback          = 'critical_budget_exceeded';
 				} else {
 					if ( '' !== trim( $critical ) ) {
-						$outputs[] = $this->appendInline( $document, $head, $critical, 'critical' );
+						[ $markup, $meta ] = $this->inlineTag( $critical, 'critical' );
+						$injected         .= $markup;
+						$outputs[]         = $meta;
 					}
 					if ( '' !== trim( $remaining ) ) {
-						$outputs[] = $this->appendFile( $document, $head, $remaining, 'remaining' );
+						[ $markup, $meta ] = $this->fileTag( $remaining, 'remaining' );
+						$injected         .= $markup;
+						$outputs[]         = $meta;
 					}
 				}
 			} else {
-				$outputs[] = $this->appendFile( $document, $head, $used, 'used' );
+				[ $markup, $meta ] = $this->fileTag( $used, 'used' );
+				$injected         .= $markup;
+				$outputs[]         = $meta;
 			}
 
-			$output = $htmlDocument->save( $document );
-			if ( null === $output ) {
+			$markers = array_map( 'strval', (array) $collected['markers'] );
+			$output  = $this->replaceStylesheets( $html, $markers, $injected );
+			if ( '' === trim( $output ) ) {
 				throw new \RuntimeException( 'The optimized HTML result was empty.' );
 			}
+
+			$this->rememberOutput( $reuseKey, $markers, $injected, $outputs );
 
 			$files = array_values(
 				array_filter(
@@ -182,43 +249,282 @@ final class UnusedCssOptimizer {
 	}
 
 	/**
-	 * @return array{delivery:string,kind:string,bytes:int}
+	 * Inline the generated CSS.
+	 *
+	 * @return array{0:string,1:array{delivery:string,kind:string,bytes:int}}
 	 */
-	private function appendInline( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): array {
-		$style = $document->createElement( 'style' );
-		$style->setAttribute( 'data-gt-performance', $kind );
-		$style->appendChild( $document->createTextNode( $css ) );
-		$head->appendChild( $style );
-
+	private function inlineTag( string $css, string $kind ): array {
 		return array(
-			'delivery' => 'inline',
-			'kind'     => $kind,
-			'bytes'    => strlen( $css ),
+			'<style data-gt-performance="' . esc_attr( $kind ) . '">' . $css . '</style>',
+			array(
+				'delivery' => 'inline',
+				'kind'     => $kind,
+				'bytes'    => strlen( $css ),
+			),
 		);
 	}
 
 	/**
-	 * @return array{delivery:string,kind:string,bytes:int,path:string,url:string}
+	 * Write the generated CSS to a content-hashed file and link it.
+	 *
+	 * No integrity/crossorigin: the artifact is same-origin, written atomically and
+	 * already content-hashed in its filename, so SRI adds nothing. It also forced the
+	 * link cross-origin, and a pull zone without Access-Control-Allow-Origin then made
+	 * the browser drop the stylesheet and render the page unstyled.
+	 *
+	 * @return array{0:string,1:array{delivery:string,kind:string,bytes:int,path:string,url:string}}
 	 */
-	private function appendFile( \DOMDocument $document, \DOMElement $head, string $css, string $kind ): array {
+	private function fileTag( string $css, string $kind ): array {
 		$artifact = $this->artifacts->write( $css, $kind );
-		$link     = $document->createElement( 'link' );
-		$link->setAttribute( 'rel', 'stylesheet' );
-		$link->setAttribute( 'href', $artifact['url'] );
-		$link->setAttribute( 'data-gt-performance', $kind );
-		// No integrity/crossorigin: the artifact is same-origin, written atomically and
-		// already content-hashed in its filename, so SRI adds nothing. It also forced the
-		// link cross-origin, and a pull zone without Access-Control-Allow-Origin then made
-		// the browser drop the stylesheet and render the page unstyled.
-		$head->appendChild( $link );
 
 		return array(
-			'delivery' => 'file',
-			'kind'     => $kind,
-			'bytes'    => strlen( $css ),
-			'path'     => $artifact['path'],
-			'url'      => $artifact['url'],
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This replaces stylesheets already in the buffered HTML; the enqueue phase is long past.
+			'<link rel="stylesheet" href="' . esc_url( (string) $artifact['url'] ) . '" data-gt-performance="' . esc_attr( $kind ) . '">',
+			array(
+				'delivery' => 'file',
+				'kind'     => $kind,
+				'bytes'    => strlen( $css ),
+				'path'     => (string) $artifact['path'],
+				'url'      => (string) $artifact['url'],
+			),
 		);
+	}
+
+	/**
+	 * Whether this request is the generator building an artifact.
+	 */
+	private function isGeneratorRequest(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Presence only; the value is a shared secret checked below.
+		$token = isset( $_GET[ self::GENERATOR_PARAM ] ) ? sanitize_text_field( wp_unslash( (string) $_GET[ self::GENERATOR_PARAM ] ) ) : '';
+
+		return '' !== $token && hash_equals( self::generatorToken(), $token );
+	}
+
+	/**
+	 * A per-site token so only this plugin can ask for the expensive path.
+	 */
+	private static function generatorToken(): string {
+		return substr( hash_hmac( 'sha256', 'gtperf-css-generator', wp_salt( 'auth' ) ), 0, 32 );
+	}
+
+	/**
+	 * Queue a background build for this URL, at most one in flight per page.
+	 */
+	private function requestGeneration( string $url ): void {
+		$lock = 'gtperf_css_build_' . hash( 'sha256', $url );
+		if ( false !== get_transient( $lock ) ) {
+			return;
+		}
+
+		set_transient( $lock, 1, 10 * MINUTE_IN_SECONDS );
+
+		/**
+		 * Ask the queue to generate used CSS for a URL.
+		 *
+		 * @param string $url Page URL.
+		 */
+		do_action( 'gt_performance_enqueue_css', $url );
+	}
+
+	/**
+	 * Background worker: render the page once and store its generated CSS.
+	 *
+	 * @param array<string, mixed> $payload Job payload.
+	 */
+	public function generateQueued( array $payload ): void {
+		$url = (string) ( $payload['url'] ?? '' );
+		if ( '' === $url || ! self::available() ) {
+			return;
+		}
+
+		$response = wp_safe_remote_get(
+			add_query_arg( self::GENERATOR_PARAM, self::generatorToken(), $url ),
+			array(
+				'timeout'     => 30,
+				'redirection' => 2,
+			)
+		);
+
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			$this->logger->log( 'warning', 'CSS generation request failed', array( 'url' => $url ) );
+		}
+	}
+
+	/**
+	 * A key identifying "the same page, cssly speaking".
+	 *
+	 * Built from the stylesheet references and the class and tag vocabulary of the
+	 * document, because those are the only inputs that change what pruning produces.
+	 * Two pages sharing a template therefore share one artifact.
+	 */
+	private function reuseKey( string $html, string $mode ): string {
+		// Both the references AND the inline CSS itself: two pages can share a class
+		// vocabulary while carrying different <style> content, and keying on the
+		// references alone served one page's generated CSS to the other.
+		$sheets = array();
+		if ( preg_match_all( '#<link\b[^>]*rel=["\']?stylesheet["\']?[^>]*>#i', $html, $matches ) ) {
+			$sheets = $matches[0];
+		}
+		if ( preg_match_all( '#<style\b[^>]*>(.*?)</style\s*>#is', $html, $matches ) ) {
+			foreach ( $matches[1] as $inline ) {
+				$sheets[] = hash( 'sha256', $inline );
+			}
+		}
+
+		$classes = array();
+		if ( preg_match_all( '#\sclass=(["\'])(.*?)\1#is', $html, $matches ) ) {
+			foreach ( $matches[2] as $value ) {
+				$parts = preg_split( '/\s+/', $value );
+				foreach ( is_array( $parts ) ? $parts : array() as $class ) {
+					if ( '' !== $class ) {
+						$classes[ $class ] = true;
+					}
+				}
+			}
+		}
+		ksort( $classes );
+
+		$tags = array();
+		if ( preg_match_all( '#<([a-z][a-z0-9-]*)#i', $html, $matches ) ) {
+			foreach ( $matches[1] as $tag ) {
+				$tags[ strtolower( $tag ) ] = true;
+			}
+		}
+		ksort( $tags );
+
+		return hash(
+			'sha256',
+			$mode . '|' . (int) Settings::get( 'generation', 1 ) . '|'
+			. implode( '|', $sheets ) . '|'
+			. implode( ' ', array_keys( $classes ) ) . '|'
+			. implode( ' ', array_keys( $tags ) )
+		);
+	}
+
+	/**
+	 * Serve a previously generated artifact for an identical page shape.
+	 */
+	private function reusableOutput( string $html, string $key ): ?string {
+		$cached = get_transient( self::REUSE_PREFIX . $key );
+		if ( ! is_array( $cached ) || ! isset( $cached['markup'], $cached['markers'] ) ) {
+			return null;
+		}
+
+		foreach ( (array) ( $cached['files'] ?? array() ) as $file ) {
+			// An artifact reclaimed by garbage collection must not be linked again.
+			if ( ! is_file( (string) $file ) ) {
+				delete_transient( self::REUSE_PREFIX . $key );
+
+				return null;
+			}
+		}
+
+		return $this->replaceStylesheets( $html, array_map( 'strval', (array) $cached['markers'] ), (string) $cached['markup'] );
+	}
+
+	/**
+	 * @param list<string>               $markers Consolidated stylesheet stamps.
+	 * @param list<array<string, mixed>> $outputs Generated artifacts.
+	 */
+	private function rememberOutput( string $key, array $markers, string $markup, array $outputs ): void {
+		$files = array();
+		foreach ( $outputs as $output ) {
+			if ( isset( $output['path'] ) && '' !== (string) $output['path'] ) {
+				$files[] = (string) $output['path'];
+			}
+		}
+
+		set_transient(
+			self::REUSE_PREFIX . $key,
+			array(
+				'markup'  => $markup,
+				'markers' => $markers,
+				'files'   => $files,
+			),
+			DAY_IN_SECONDS
+		);
+	}
+
+	/**
+	 * Drop @import rules that are about to be wrapped in a media block.
+	 *
+	 * They cannot survive there, and leaving them in place produces CSS a browser
+	 * treats as invalid from that point on. A narrowed media query is rare enough
+	 * that losing an import inside one is better than corrupting the block.
+	 */
+	private function withoutImports( string $css ): string {
+		return (string) preg_replace( '#@import\s+[^;]+;#i', '', $css );
+	}
+
+	/**
+	 * Stamp every stylesheet candidate so it can be found again in the string.
+	 *
+	 * WP_HTML_Tag_Processor only ever rewrites the attributes it is asked to, so this
+	 * pass leaves the rest of the document byte-identical.
+	 */
+	private function markCandidates( string $html ): string {
+		if ( ! class_exists( '\WP_HTML_Tag_Processor' ) ) {
+			return $html;
+		}
+
+		$processor = new \WP_HTML_Tag_Processor( $html );
+		$index     = 0;
+
+		while ( $processor->next_tag() ) {
+			$tag = (string) $processor->get_tag();
+			if ( 'LINK' !== $tag && 'STYLE' !== $tag ) {
+				continue;
+			}
+			if ( null !== $processor->get_attribute( 'data-gt-performance' ) ) {
+				continue;
+			}
+			if ( 'LINK' === $tag && ! str_contains( strtolower( (string) $processor->get_attribute( 'rel' ) ), 'stylesheet' ) ) {
+				continue;
+			}
+
+			$processor->set_attribute( StylesheetCollector::MARKER, (string) $index );
+			++$index;
+		}
+
+		return 0 === $index ? $html : $processor->get_updated_html();
+	}
+
+	/**
+	 * Parse a document for selector matching only. It is never serialised back out.
+	 */
+	private function readOnlyDocument( string $html ): ?\DOMDocument {
+		$document = new \DOMDocument( '1.0', 'UTF-8' );
+
+		return $document->loadHTML(
+			'<?xml encoding="utf-8" ?>' . $html,
+			LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+		) ? $document : null;
+	}
+
+	/**
+	 * Remove the stylesheets that were consolidated and insert the generated ones.
+	 *
+	 * @param list<string> $markers Stamps of the tags that were consolidated.
+	 */
+	private function replaceStylesheets( string $html, array $markers, string $injected ): string {
+		$marked = $this->markCandidates( $html );
+
+		foreach ( $markers as $marker ) {
+			$attribute = preg_quote( StylesheetCollector::MARKER . '="' . $marker . '"', '#' );
+
+			// A <style> element carries its CSS as content; a <link> is void.
+			$marked = (string) preg_replace( '#<style\b[^>]*' . $attribute . '[^>]*>.*?</style\s*>#is', '', $marked, 1 );
+			$marked = (string) preg_replace( '#<link\b[^>]*' . $attribute . '[^>]*>#is', '', $marked, 1 );
+		}
+
+		// Anything still stamped was left in place, so take the stamp back off.
+		$marked = (string) preg_replace( '#\s' . preg_quote( StylesheetCollector::MARKER, '#' ) . '="\d+"#i', '', $marked );
+
+		$position = strripos( $marked, '</head>' );
+
+		return false === $position
+			? $marked . $injected
+			: substr( $marked, 0, $position ) . $injected . substr( $marked, $position );
 	}
 
 	private function requestUrl(): string {

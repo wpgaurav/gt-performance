@@ -34,6 +34,7 @@ final class QueueModule implements Module {
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
 		add_action( 'gt_performance_enqueue_purge', array( $this, 'enqueuePurge' ) );
 		add_action( 'gt_performance_enqueue_font_localization', array( $this, 'enqueueFontLocalization' ) );
+		add_action( 'gt_performance_enqueue_css', array( $this, 'enqueueCssGeneration' ) );
 		add_action( \GTPerformance\Cache\GarbageCollector::HOOK, array( $this, 'collectGarbage' ) );
 		add_action( 'gt_performance_purged_all', array( $this, 'scheduleWarm' ) );
 		add_action( ImageVariantGenerator::ENQUEUE_HOOK, array( $this, 'enqueueImageVariants' ), 10, 2 );
@@ -186,6 +187,14 @@ final class QueueModule implements Module {
 		}
 
 		$this->jobs->enqueue( \GTPerformance\Optimization\FontOptimizer::JOB_TYPE, array( 'url' => $url ), 60, 0 );
+	}
+
+	public function enqueueCssGeneration( string $url ): void {
+		if ( '' === $url || ! $this->sameSite( $url ) ) {
+			return;
+		}
+
+		$this->jobs->enqueue( \GTPerformance\Optimization\Css\UnusedCssOptimizer::JOB_TYPE, array( 'url' => $url ), 70, 0 );
 	}
 
 	public function collectGarbage(): void {

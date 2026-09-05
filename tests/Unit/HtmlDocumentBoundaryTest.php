@@ -44,24 +44,35 @@ final class HtmlDocumentBoundaryTest extends TestCase {
 	 * document inherits that. Only the unused-CSS engine may, because matching
 	 * selectors needs a real DOM and that engine ships disabled.
 	 */
-	public function test_only_the_disabled_css_engine_round_trips_the_dom(): void {
+	public function test_nothing_round_trips_the_dom_any_more(): void {
 		self::assertSame(
-			array( 'Optimization/Css/UnusedCssOptimizer.php' ),
+			array(),
 			$this->consumers(),
-			'A new HtmlDocument consumer would make SVG and non-ASCII corruption reachable again. '
-			. 'Use WP_HTML_Tag_Processor instead, as FontOptimizer, EmbedOptimizer and CDN\\UrlRewriter do.'
+			'Serialising a parsed document lowercases inline-SVG camelCase and entity-encodes '
+			. 'all non-ASCII, and the result is written into the page cache. Use '
+			. 'WP_HTML_Tag_Processor for attributes, or match the element directly.'
+		);
+
+		self::assertFileDoesNotExist(
+			dirname( __DIR__, 2 ) . '/src/Optimization/HtmlDocument.php',
+			'The helper existed only to make the round trip survivable. Nothing round trips now.'
 		);
 	}
 
-	public function test_the_only_consumer_is_gated_behind_a_constant(): void {
+	/**
+	 * The CSS engine still needs a document to match selectors against, but it must
+	 * only ever read it.
+	 */
+	public function test_the_css_engine_parses_for_matching_and_never_serialises(): void {
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/Optimization/Css/UnusedCssOptimizer.php' );
 
-		self::assertStringContainsString( "defined( 'GTPERF_UNUSED_CSS' )", $source );
-		self::assertStringContainsString( 'if ( ! self::available() )', $source );
+		self::assertStringContainsString( 'readOnlyDocument', $source );
+		self::assertStringNotContainsString( '->saveHTML(', $source );
+		self::assertStringContainsString( 'replaceStylesheets', $source, 'Emission happens on the HTML string.' );
 	}
 
 	public function test_the_migrated_optimizers_use_the_tag_processor(): void {
-		foreach ( array( 'Optimization/FontOptimizer.php', 'Optimization/EmbedOptimizer.php', 'CDN/UrlRewriter.php' ) as $path ) {
+		foreach ( array( 'Optimization/FontOptimizer.php', 'Optimization/EmbedOptimizer.php', 'CDN/UrlRewriter.php', 'Optimization/MediaOptimizer.php' ) as $path ) {
 			$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/' . $path );
 
 			// Match construction, not the word: these files explain in prose why they no
