@@ -92,14 +92,10 @@ final class CommandTest extends TestCase {
 			static function ( Command $command ): void {
 				$command->cloudflare( array( 'sync' ), array( 'page-url' => 'https://example.com/' ) );
 			},
-			static function ( Command $command ): void {
-				$command->fleet( array( 'export' ), array( 'file' => '/tmp/ignored.json' ) );
-			},
 		);
 		$messages = array(
 			'--page-url is supported only by cache purge, explain, and verify.',
 			'--page-url is supported only by cloudflare purge.',
-			'--file is supported only by fleet import.',
 		);
 
 		foreach ( $cases as $index => $invoke ) {
@@ -171,12 +167,6 @@ final class CommandTest extends TestCase {
 					$command->database( array( 'typo' ) );
 				},
 				'Unknown database action. Use preview or run.',
-			),
-			'fleet'      => array(
-				static function ( Command $command ): void {
-					$command->fleet( array( 'typo' ), array() );
-				},
-				'Unknown fleet action. Use export or import.',
 			),
 		);
 	}

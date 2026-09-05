@@ -33,8 +33,6 @@ final class RecommendedIntegrationDefaultsTest extends TestCase {
 		self::assertTrue( $profiles['compatibility']['integrations']['akismet'] );
 		self::assertTrue( $profiles['compatibility']['integrations']['jetpack'] );
 		self::assertSame( 'automatic', $profiles['compatibility']['integrations']['perfmatters_owner'] );
-		self::assertTrue( $profiles['private_fragments']['private_fragments']['cart_count'] );
-		self::assertTrue( $profiles['private_fragments']['private_fragments']['account_link'] );
 		self::assertContains( 'css', $profiles['cdn']['cdn']['file_types'] );
 		self::assertNotContains( 'html', $profiles['cdn']['cdn']['file_types'] );
 	}

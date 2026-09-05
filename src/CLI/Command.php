@@ -15,14 +15,12 @@ use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\WpCacheConstant;
 use GTPerformance\Cloudflare\ClientFactory;
 use GTPerformance\Cloudflare\RuleManager;
-use GTPerformance\Commerce\SafetyLab;
 use GTPerformance\Core\Paths;
 use GTPerformance\Core\Settings;
 use GTPerformance\Database\Cleaner;
 use GTPerformance\Diagnostics\CacheInspector;
 use GTPerformance\Diagnostics\CronHealth;
 use GTPerformance\Diagnostics\PurgeVerifier;
-use GTPerformance\Fleet\PolicyService;
 use GTPerformance\Queue\QueueModule;
 use GTPerformance\Redis\ObjectCacheInstaller;
 use GTPerformance\XCloud\EdgeOwnership;
@@ -411,59 +409,6 @@ final class Command {
 			);
 		}
 		\WP_CLI\Utils\format_items( 'table', $rows, array( 'type', 'count' ) );
-	}
-
-	/**
-	 * Run the non-destructive commerce cache Safety Lab.
-	 */
-	public function safety(): void {
-		$result = ( new SafetyLab() )->run();
-		\WP_CLI::line( (string) wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-		if ( 'fail' === (string) $result['status'] ) {
-			\WP_CLI::halt( 1 );
-		}
-	}
-
-	/**
-	 * Create or apply a signed fleet policy.
-	 *
-	 * ## OPTIONS
-	 *
-	 * [<action>]
-	 * : export or import. Defaults to export.
-	 *
-	 * [--file=<path>]
-	 * : JSON bundle to import. Export prints JSON to standard output.
-	 *
-	 * @param list<string>          $args      Positional arguments.
-	 * @param array<string, string> $assocArgs Named arguments.
-	 */
-	public function fleet( array $args, array $assocArgs ): void {
-		$action = $this->action( $args, 'export', array( 'export', 'import' ), 'fleet' );
-		if ( null === $action ) {
-			return;
-		}
-		if ( 'export' === $action && array_key_exists( 'file', $assocArgs ) ) {
-			\WP_CLI::error( '--file is supported only by fleet import.' );
-			return;
-		}
-
-		$service = new PolicyService();
-		if ( 'import' === $action ) {
-			$file = (string) ( $assocArgs['file'] ?? '' );
-			if ( '' === $file || ! is_readable( $file ) ) {
-				\WP_CLI::error( 'Use --file with a readable signed policy bundle.' );
-			}
-			$json   = file_get_contents( $file );
-			$result = $service->applyJson( is_string( $json ) ? $json : '' );
-		} else {
-			$result = $service->create();
-		}
-
-		if ( is_wp_error( $result ) ) {
-			\WP_CLI::error( $result->get_error_message() );
-		}
-		\WP_CLI::line( (string) wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 	}
 
 	/**

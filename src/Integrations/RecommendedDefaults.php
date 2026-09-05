@@ -49,12 +49,6 @@ final class RecommendedDefaults {
 					'jetpack'           => true,
 				),
 			),
-			'private_fragments' => array(
-				'private_fragments' => array(
-					'cart_count'   => true,
-					'account_link' => true,
-				),
-			),
 			'redis'            => array(
 				'redis' => array(
 					'host'               => (string) $defaults['redis']['host'],
@@ -62,12 +56,6 @@ final class RecommendedDefaults {
 					'database'           => (int) $defaults['redis']['database'],
 					'connection_timeout' => (float) $defaults['redis']['connection_timeout'],
 					'read_timeout'       => (float) $defaults['redis']['read_timeout'],
-				),
-			),
-			'fleet'            => array(
-				'fleet' => array(
-					'allow_imports'  => true,
-					'policy_modules' => array_values( array_map( 'strval', (array) $defaults['fleet']['policy_modules'] ) ),
 				),
 			),
 		);

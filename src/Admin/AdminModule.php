@@ -18,8 +18,6 @@ use GTPerformance\Cloudflare\ConnectionDiagnostics;
 use GTPerformance\Cloudflare\RuleManager;
 use GTPerformance\Cloudflare\TokenProvisioner;
 use GTPerformance\Cloudflare\TokenCipher;
-use GTPerformance\Commerce\SafetyLab;
-use GTPerformance\Commerce\SafetyReportRepository;
 use GTPerformance\Compatibility\PluginDetector;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Paths;
@@ -29,13 +27,10 @@ use GTPerformance\Database\Cleaner;
 use GTPerformance\Diagnostics\CacheInspector;
 use GTPerformance\Diagnostics\PurgeReceiptRepository;
 use GTPerformance\Diagnostics\PurgeVerifier;
-use GTPerformance\Fleet\FleetRepository;
-use GTPerformance\Fleet\PolicyService;
 use GTPerformance\Integrations\RecommendedDefaults;
 use GTPerformance\Optimization\Css\ReportRepository;
 use GTPerformance\Optimization\Css\SelectorSafelist;
 use GTPerformance\Optimization\Css\UnusedCssOptimizer;
-use GTPerformance\Optimization\Css\TrainingRepository;
 use GTPerformance\Redis\ConnectionTester;
 use GTPerformance\Redis\ObjectCacheInstaller;
 use GTPerformance\XCloud\EdgeOwnership;
@@ -61,9 +56,6 @@ final class AdminModule implements Module {
 		'cloudflare',
 		'cdn',
 		'integrations',
-		'safety',
-		'css-reports',
-		'fleet',
 		'tools',
 	);
 
@@ -86,13 +78,7 @@ final class AdminModule implements Module {
 		add_action( 'admin_post_gtperf_cloudflare_diagnose', array( $this, 'cloudflareDiagnose' ) );
 		add_action( 'admin_post_gtperf_cloudflare_token', array( $this, 'cloudflareProvisionToken' ) );
 		add_action( 'admin_post_gtperf_purge_verify', array( $this, 'purgeVerify' ) );
-		add_action( 'admin_post_gtperf_commerce_safety', array( $this, 'commerceSafety' ) );
-		add_action( 'admin_post_gtperf_css_training', array( $this, 'cssTraining' ) );
-		add_action( 'admin_post_gtperf_css_regenerate', array( $this, 'cssRegenerate' ) );
-		add_action( 'admin_post_gtperf_fleet_export', array( $this, 'fleetExport' ) );
-		add_action( 'admin_post_gtperf_fleet_import', array( $this, 'fleetImport' ) );
 		add_action( 'admin_post_gtperf_database_clean', array( $this, 'databaseClean' ) );
-		add_action( 'wp_ajax_gtperf_css_report', array( $this, 'cssReport' ) );
 	}
 
 	public function menu(): void {
@@ -229,14 +215,6 @@ final class AdminModule implements Module {
 			$input['xcloud']['api_token'] = ( new SecretCipher( 'xcloud' ) )->encrypt( $xcloudToken );
 		}
 
-		$input['fleet'] = isset( $input['fleet'] ) && is_array( $input['fleet'] ) ? $input['fleet'] : array();
-		$fleetSecret    = trim( (string) ( $input['fleet']['signing_secret'] ?? '' ) );
-		if ( '' === $fleetSecret ) {
-			$input['fleet']['signing_secret'] = (string) ( $current['fleet']['signing_secret'] ?? '' );
-		} elseif ( ! str_starts_with( $fleetSecret, 'sodium:' ) && ! str_starts_with( $fleetSecret, 'openssl:' ) ) {
-			$input['fleet']['signing_secret'] = ( new SecretCipher( 'fleet' ) )->encrypt( $fleetSecret );
-		}
-
 		$patterns   = SelectorSafelist::split( $input['css']['safelist'] ?? array() );
 		$validation = ( new SelectorSafelist() )->validate( array_map( 'sanitize_text_field', $patterns ) );
 		if ( $validation['invalid'] ) {
@@ -313,15 +291,6 @@ final class AdminModule implements Module {
 					case 'integrations':
 						$this->renderIntegrations( $settings );
 						break;
-					case 'safety':
-						$this->renderSafetyLab();
-						break;
-					case 'css-reports':
-						$this->renderCssReports();
-						break;
-					case 'fleet':
-						$this->renderFleet( $settings );
-						break;
 					case 'tools':
 						$this->renderTools( $settings );
 						break;
@@ -332,23 +301,6 @@ final class AdminModule implements Module {
 			</main>
 		</div>
 		<?php
-	}
-
-	public function cssReport(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You are not allowed to view this report.', 'gt-performance' ) ), 403 );
-		}
-		check_ajax_referer( 'gtperf_css_report', 'nonce' );
-
-		$repository = new ReportRepository();
-		$reports    = $repository->recent();
-
-		wp_send_json_success(
-			array(
-				'rows'    => $this->reportRows( $reports ),
-				'summary' => $repository->summary( $reports ),
-			)
-		);
 	}
 
 	public function installDropin(): void {
@@ -529,104 +481,10 @@ final class AdminModule implements Module {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$result = ( new PurgeVerifier() )->verify( $url );
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $result->get_error_code(), 'safety' );
+			$this->redirect( $result->get_error_code(), 'tools' );
 		}
 
-		$this->redirect( 'verified' === (string) $result['status'] ? 'purge-verified' : 'purge-warning', 'safety' );
-	}
-
-	public function commerceSafety(): void {
-		$this->guard( 'gtperf_commerce_safety' );
-		$result = ( new SafetyLab() )->run();
-		$this->redirect( 'pass' === (string) $result['status'] ? 'commerce-safety-pass' : 'commerce-safety-review', 'safety' );
-	}
-
-	public function cssTraining(): void {
-		$this->guard( 'gtperf_css_training' );
-		// Capability and nonce checks above authorize this explicit command field.
-		// phpcs:disable WordPress.Security.NonceVerification.Missing
-		$command = isset( $_POST['command'] ) ? sanitize_key( wp_unslash( $_POST['command'] ) ) : '';
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-		$training = new TrainingRepository();
-
-		switch ( $command ) {
-			case 'start':
-				$training->start( get_current_user_id() );
-				$notice = 'css-training-started';
-				break;
-			case 'stop':
-				$training->stop();
-				$notice = 'css-training-stopped';
-				break;
-			case 'publish':
-				$training->publish();
-				( new Purger() )->purgeAll();
-				$notice = 'css-training-published';
-				break;
-			case 'rollback':
-				$training->rollback();
-				( new Purger() )->purgeAll();
-				$notice = 'css-training-rolled-back';
-				break;
-			case 'clear':
-				$training->clear();
-				$notice = 'css-training-cleared';
-				break;
-			default:
-				$notice = 'quick-action-invalid';
-		}
-
-		$this->redirect( $notice, 'css-reports' );
-	}
-
-	public function cssRegenerate(): void {
-		$this->guard( 'gtperf_css_regenerate' );
-		// Capability and nonce checks above authorize these explicit operation fields.
-		// phpcs:disable WordPress.Security.NonceVerification.Missing
-		$command = isset( $_POST['command'] ) ? sanitize_key( wp_unslash( $_POST['command'] ) ) : '';
-		$url     = isset( $_POST['url'] ) ? $this->sameSitePublicUrl( sanitize_url( wp_unslash( $_POST['url'] ) ) ) : null;
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-		if ( 'all' === $command ) {
-			Settings::save( Settings::all() );
-			( new Purger() )->purgeAll();
-			$this->redirect( 'css-regenerated-all', 'css-reports' );
-		}
-
-		if ( 'url' !== $command || null === $url ) {
-			$this->redirect( 'css-regenerate-invalid', 'css-reports' );
-		}
-
-		( new ReportRepository() )->invalidateUrl( $url );
-		( new Purger() )->purgeUrl( $url );
-		$this->warmCssUrl( $url );
-		$this->redirect( 'css-regenerated-url', 'css-reports' );
-	}
-
-	public function fleetExport(): void {
-		$this->guard( 'gtperf_fleet_export' );
-		$result = ( new PolicyService() )->create();
-		if ( is_wp_error( $result ) ) {
-			$this->redirect( $result->get_error_code(), 'fleet' );
-		}
-
-		nocache_headers();
-		header( 'Content-Type: application/json; charset=UTF-8' );
-		header( 'Content-Disposition: attachment; filename="gt-performance-policy-' . gmdate( 'Ymd-His' ) . '.json"' );
-		echo wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON download generated from sanitized settings.
-		exit;
-	}
-
-	public function fleetImport(): void {
-		$this->guard( 'gtperf_fleet_import' );
-		// Capability and nonce checks above authorize this explicit JSON field.
-		// phpcs:disable WordPress.Security.NonceVerification.Missing
-		$json = isset( $_POST['policy_bundle'] ) && is_string( $_POST['policy_bundle'] )
-			? sanitize_textarea_field( wp_unslash( $_POST['policy_bundle'] ) )
-			: '';
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-		$result = ( new PolicyService() )->applyJson( is_string( $json ) ? $json : '' );
-		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'fleet-policy-applied', 'fleet' );
+		$this->redirect( 'verified' === (string) $result['status'] ? 'purge-verified' : 'purge-warning', 'tools' );
 	}
 
 	public function databaseClean(): void {
@@ -652,9 +510,6 @@ final class AdminModule implements Module {
 			'cloudflare'   => __( 'Cloudflare', 'gt-performance' ),
 			'cdn'          => __( 'CDN', 'gt-performance' ),
 			'integrations' => __( 'Integrations', 'gt-performance' ),
-			'safety'       => __( 'Safety Lab', 'gt-performance' ),
-			'css-reports'  => __( 'CSS Reports', 'gt-performance' ),
-			'fleet'        => __( 'Fleet', 'gt-performance' ),
 			'tools'        => __( 'Tools', 'gt-performance' ),
 		);
 		?>
@@ -785,7 +640,6 @@ final class AdminModule implements Module {
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cloudflare' ) ); ?>"><?php esc_html_e( 'Configure Cloudflare', 'gt-performance' ); ?></a>
 				<?php elseif ( UnusedCssOptimizer::available() && 0 === $cssReady ) : ?>
 					<p><?php esc_html_e( 'Unused CSS is enabled but no ready result exists yet. Visit a public page, then watch the CSS report.', 'gt-performance' ); ?></p>
-					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'css-reports' ) ); ?>"><?php esc_html_e( 'Open CSS Reports', 'gt-performance' ); ?></a>
 				<?php else : ?>
 					<p><?php esc_html_e( 'The core layers are configured. Review exceptions before enabling aggressive JavaScript or media transformations.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'exceptions' ) ); ?>"><?php esc_html_e( 'Review exceptions', 'gt-performance' ); ?></a>
@@ -866,7 +720,6 @@ final class AdminModule implements Module {
 			),
 			__( 'The same URL always stays in the same rollout group. Choose 0% to stop serving generated CSS immediately without deleting reports.', 'gt-performance' )
 		);
-		$this->inlineLink( __( 'See generated CSS files and processing status', 'gt-performance' ), $this->tabUrl( 'css-reports' ) );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'JavaScript', 'gt-performance' ), __( 'Apply transformations only to scripts that are not excluded and do not appear transactional.', 'gt-performance' ) );
@@ -1383,9 +1236,6 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Private Islands', 'gt-performance' ), __( 'Keep the public page shell cacheable while explicitly registered cart and account fragments render through a private no-store request.', 'gt-performance' ) );
-		$this->checkbox( 'private_fragments', 'enabled', __( 'Enable Private Islands', 'gt-performance' ), __( 'Load registered cart and account fragments through a signed private request.', 'gt-performance' ), $settings, __( 'The public page stays cacheable, but each fragment adds a separate no-store request. Test its theme placement and signed endpoint before enabling sitewide.', 'gt-performance' ) );
-		$this->checkbox( 'private_fragments', 'cart_count', __( 'Commerce cart count fragment', 'gt-performance' ), __( 'Register commerce_cart_count for WooCommerce, EDD, and extension-provided FluentCart counts.', 'gt-performance' ), $settings );
-		$this->checkbox( 'private_fragments', 'account_link', __( 'Account link fragment', 'gt-performance' ), __( 'Register commerce_account_link so sign-in and account links never need to be stored in public HTML.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Service safeguards', 'gt-performance' ), __( 'These protections activate only when the matching plugin is active.', 'gt-performance' ) );
@@ -1486,100 +1336,6 @@ final class AdminModule implements Module {
 		<?php
 	}
 
-	private function renderSafetyLab(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display of a sanitized diagnostic URL; no state changes.
-		$url = isset( $_GET['gtperf_url'] ) ? esc_url_raw( wp_unslash( $_GET['gtperf_url'] ) ) : home_url( '/' );
-		$url = '' !== $url ? $url : home_url( '/' );
-		$inspection = ( new CacheInspector() )->inspect( $url );
-		$receipts   = ( new PurgeReceiptRepository() )->recent( 10 );
-		$runs       = ( new SafetyReportRepository() )->recent( 5 );
-
-		$this->pageIntro( __( 'Cache and commerce Safety Lab', 'gt-performance' ), __( 'Explain a URL, prove an exact purge, and run non-destructive cache-policy checks against active commerce integrations.', 'gt-performance' ) );
-		?>
-		<section class="gtp-panel">
-			<div class="gtp-panel__header">
-				<div>
-					<h3><?php esc_html_e( 'Explain this page', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'The explanation uses the same compiled policy and cache key as the request path.', 'gt-performance' ); ?></p>
-				</div>
-			</div>
-			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="gtp-inline-form">
-				<input type="hidden" name="page" value="gt-performance">
-				<input type="hidden" name="tab" value="safety">
-				<label for="gtp-inspect-url" class="screen-reader-text"><?php esc_html_e( 'URL to inspect', 'gt-performance' ); ?></label>
-				<input id="gtp-inspect-url" class="regular-text" type="url" name="gtperf_url" value="<?php echo esc_attr( $url ); ?>" required>
-				<?php submit_button( __( 'Explain URL', 'gt-performance' ), 'secondary', 'submit', false ); ?>
-			</form>
-			<?php if ( is_wp_error( $inspection ) ) : ?>
-				<p class="gtp-panel-note gtp-text-danger"><?php echo esc_html( $inspection->get_error_message() ); ?></p>
-			<?php else : ?>
-				<dl class="gtp-definition-list">
-					<div><dt><?php esc_html_e( 'Decision', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $inspection['cacheable'] ? __( 'Cacheable', 'gt-performance' ) : __( 'Bypass', 'gt-performance' ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Reason', 'gt-performance' ); ?></dt><dd><code><?php echo esc_html( (string) $inspection['reason'] ); ?></code></dd></div>
-					<div><dt><?php esc_html_e( 'Origin artifact', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ucfirst( (string) $inspection['origin']['state'] ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Origin bytes', 'gt-performance' ); ?></dt><dd><?php echo esc_html( size_format( (int) $inspection['origin']['bytes'] ) ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Cache key fingerprint', 'gt-performance' ); ?></dt><dd><code><?php echo esc_html( (string) $inspection['cache_hash_short'] ); ?></code></dd></div>
-					<div><dt><?php esc_html_e( 'Cloudflare expectation', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ucfirst( (string) $inspection['cloudflare']['expectation'] ) ); ?></dd></div>
-				</dl>
-				<div class="gtp-code-detail">
-					<strong><?php esc_html_e( 'Deterministic cache key', 'gt-performance' ); ?></strong>
-					<code><?php echo esc_html( (string) $inspection['cache_key'] ); ?></code>
-				</div>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gtp-panel-actions">
-					<input type="hidden" name="action" value="gtperf_purge_verify">
-					<input type="hidden" name="url" value="<?php echo esc_attr( $url ); ?>">
-					<?php wp_nonce_field( 'gtperf_purge_verify' ); ?>
-					<?php submit_button( __( 'Purge and verify this URL', 'gt-performance' ), 'secondary', 'submit', false ); ?>
-				</form>
-			<?php endif; ?>
-		</section>
-
-		<section class="gtp-panel gtp-operation-panel">
-			<div>
-				<h3><?php esc_html_e( 'Commerce Safety Lab', 'gt-performance' ); ?></h3>
-				<p><?php esc_html_e( 'Simulate every registered path, cookie, and query bypass, then make fresh read-only requests to configured cart, checkout, account, and receipt routes. It never creates an order or captures payment.', 'gt-performance' ); ?></p>
-			</div>
-			<?php $this->actionButton( 'gtperf_commerce_safety', __( 'Run safety checks', 'gt-performance' ) ); ?>
-		</section>
-
-		<?php $this->renderSafetyHistory( $receipts, $runs ); ?>
-		<?php
-	}
-
-	/**
-	 * @param list<array<string, mixed>> $receipts Purge receipts.
-	 * @param list<array<string, mixed>> $runs     Commerce safety runs.
-	 */
-	private function renderSafetyHistory( array $receipts, array $runs ): void {
-		?>
-		<div class="gtp-dashboard-grid">
-			<section class="gtp-panel">
-				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Recent purge receipts', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Only response fingerprints and cache headers are retained.', 'gt-performance' ); ?></p></div></div>
-				<?php if ( ! $receipts ) : ?>
-					<p class="gtp-panel-note"><?php esc_html_e( 'No verified purge has run yet.', 'gt-performance' ); ?></p>
-				<?php endif; ?>
-				<?php foreach ( $receipts as $receipt ) : ?>
-					<div class="gtp-history-row"><div><strong><?php echo esc_html( $this->displayUrl( (string) ( $receipt['url'] ?? '' ) ) ); ?></strong><small><?php echo esc_html( (string) ( $receipt['created_at'] ?? '' ) ); ?></small></div><span class="gtp-status gtp-status--<?php echo esc_attr( 'verified' === ( $receipt['status'] ?? '' ) ? 'success' : 'warning' ); ?>"><?php echo esc_html( ucfirst( (string) ( $receipt['status'] ?? 'warning' ) ) ); ?></span></div>
-				<?php endforeach; ?>
-			</section>
-			<section class="gtp-panel">
-				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Recent commerce runs', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Policy failures and live-response warnings remain visible for review.', 'gt-performance' ); ?></p></div></div>
-				<?php if ( ! $runs ) : ?>
-					<p class="gtp-panel-note"><?php esc_html_e( 'No commerce safety run has completed yet.', 'gt-performance' ); ?></p>
-				<?php endif; ?>
-				<?php foreach ( $runs as $run ) : ?>
-					<?php
-					$adapterNames = implode( ', ', array_map( 'strval', (array) ( $run['adapters'] ?? array() ) ) );
-					/* translators: 1: number of policy checks, 2: number of live checks. */
-					$checkSummary = sprintf( __( '%1$d policy checks, %2$d live checks', 'gt-performance' ), (int) ( $run['summary']['policy_checks'] ?? 0 ), (int) ( $run['summary']['live_checks'] ?? 0 ) );
-					?>
-					<div class="gtp-history-row"><div><strong><?php echo esc_html( '' !== $adapterNames ? $adapterNames : __( 'No active adapters', 'gt-performance' ) ); ?></strong><small><?php echo esc_html( $checkSummary ); ?></small></div><span class="gtp-status gtp-status--<?php echo esc_attr( 'pass' === ( $run['status'] ?? '' ) ? 'success' : 'warning' ); ?>"><?php echo esc_html( ucfirst( (string) ( $run['status'] ?? 'warning' ) ) ); ?></span></div>
-				<?php endforeach; ?>
-			</section>
-		</div>
-		<?php
-	}
-
 	private function renderRedisConstants(): void {
 		$example = <<<'PHP'
 define( 'WP_REDIS_HOST', '127.0.0.1' );
@@ -1645,183 +1401,6 @@ PHP;
 		<?php
 	}
 
-	private function renderCssReports(): void {
-		$repository = new ReportRepository();
-		$reports    = $repository->recent();
-		$summary    = $repository->summary( $reports );
-		$training   = ( new TrainingRepository() )->state();
-		$approved   = array_map( 'strval', (array) Settings::get( 'css.trained_selectors', array() ) );
-
-		$this->pageIntro( __( 'Unused CSS reports', 'gt-performance' ), __( 'Live generation status for page-specific CSS. This screen refreshes while it is open, so processing and failures are visible.', 'gt-performance' ) );
-		$this->renderCssTraining( $training, $approved );
-		$this->renderCssRegeneration();
-		?>
-		<section class="gtp-stat-grid gtp-report-summary" aria-label="<?php esc_attr_e( 'CSS generation summary', 'gt-performance' ); ?>">
-			<?php $this->reportStat( 'processing', __( 'Processing', 'gt-performance' ), $summary['processing'], 'warning' ); ?>
-			<?php $this->reportStat( 'ready', __( 'Ready', 'gt-performance' ), $summary['ready'], 'success' ); ?>
-			<?php $this->reportStat( 'stale', __( 'Stale', 'gt-performance' ), $summary['stale'], 'neutral' ); ?>
-			<?php $this->reportStat( 'failed', __( 'Failed', 'gt-performance' ), $summary['failed'], 'danger' ); ?>
-		</section>
-		<section class="gtp-panel gtp-report-panel" data-gtp-css-report>
-			<div class="gtp-panel__header">
-				<div>
-					<h3><?php esc_html_e( 'Generated pages', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Ready entries are current for the saved settings generation. Stale entries will regenerate on the next uncached visit.', 'gt-performance' ); ?></p>
-				</div>
-				<span class="gtp-live-indicator"><span aria-hidden="true"></span><?php esc_html_e( 'Live', 'gt-performance' ); ?></span>
-			</div>
-			<div class="gtp-table-wrap">
-				<table class="widefat striped gtp-report-table">
-					<thead>
-						<tr>
-							<th scope="col"><?php esc_html_e( 'Page', 'gt-performance' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Status', 'gt-performance' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Delivery', 'gt-performance' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Output', 'gt-performance' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Updated', 'gt-performance' ); ?></th>
-						</tr>
-					</thead>
-					<tbody data-gtp-css-report-rows>
-						<?php echo $this->reportRows( $reports ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Generated by escaped renderer below. ?>
-					</tbody>
-				</table>
-			</div>
-			<p class="gtp-report-note" aria-live="polite" data-gtp-report-note><?php esc_html_e( 'Waiting for CSS generation activity.', 'gt-performance' ); ?></p>
-		</section>
-		<?php
-	}
-
-	private function renderCssRegeneration(): void {
-		?>
-		<section class="gtp-panel">
-			<div class="gtp-panel__header">
-				<div>
-					<h3><?php esc_html_e( 'Regenerate used CSS', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Invalidate generated CSS, purge the matching origin and edge cache, and rebuild the page with the current settings.', 'gt-performance' ); ?></p>
-				</div>
-			</div>
-			<form class="gtp-inline-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="gtperf_css_regenerate">
-				<label for="gtp-css-regenerate-url" class="screen-reader-text"><?php esc_html_e( 'Public page URL', 'gt-performance' ); ?></label>
-				<input id="gtp-css-regenerate-url" class="regular-text" type="url" name="url" value="<?php echo esc_attr( home_url( '/' ) ); ?>" required>
-				<?php wp_nonce_field( 'gtperf_css_regenerate' ); ?>
-				<button class="button button-secondary" type="submit" name="command" value="url"><?php esc_html_e( 'Regenerate URL CSS', 'gt-performance' ); ?></button>
-				<button class="button button-secondary" type="submit" name="command" value="all" formnovalidate><?php esc_html_e( 'Regenerate all CSS', 'gt-performance' ); ?></button>
-			</form>
-			<p class="gtp-report-note"><?php esc_html_e( 'Regenerate all marks every existing report stale and purges the full page cache. Pages rebuild through the normal preload queue and subsequent public visits.', 'gt-performance' ); ?></p>
-		</section>
-		<?php
-	}
-
-	/**
-	 * @param array<string, mixed> $training CSS training state.
-	 * @param list<string>         $approved Published selectors.
-	 */
-	private function renderCssTraining( array $training, array $approved ): void {
-		$candidates = array_map( 'strval', (array) ( $training['candidates'] ?? array() ) );
-		$previewUrl = add_query_arg( 'gtperf_css_preview', wp_create_nonce( 'gtperf_css_preview' ), home_url( '/' ) );
-		?>
-		<section class="gtp-panel">
-			<div class="gtp-panel__header">
-				<div>
-					<h3><?php esc_html_e( 'Unused CSS Training Mode', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Browse menus, dialogs, tabs, validation states, and cart drawers while signed in. Only structural element IDs and classes are observed; text, values, cookies, and customer data are never captured.', 'gt-performance' ); ?></p>
-				</div>
-				<span class="gtp-status gtp-status--<?php echo esc_attr( ! empty( $training['active'] ) ? 'warning' : 'neutral' ); ?>"><?php echo esc_html( ! empty( $training['active'] ) ? __( 'Recording', 'gt-performance' ) : __( 'Stopped', 'gt-performance' ) ); ?></span>
-			</div>
-			<dl class="gtp-definition-list">
-				<div><dt><?php esc_html_e( 'Candidate selectors', 'gt-performance' ); ?></dt><dd><?php echo esc_html( number_format_i18n( count( $candidates ) ) ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'Published selectors', 'gt-performance' ); ?></dt><dd><?php echo esc_html( number_format_i18n( count( $approved ) ) ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'Session expiration', 'gt-performance' ); ?></dt><dd><?php echo ! empty( $training['active'] ) ? esc_html( wp_date( get_option( 'time_format' ), (int) $training['expires_at'] ) ) : '&ndash;'; ?></dd></div>
-			</dl>
-			<div class="gtp-panel-actions gtp-panel-actions--wrap">
-				<?php $this->cssTrainingButton( ! empty( $training['active'] ) ? 'stop' : 'start', ! empty( $training['active'] ) ? __( 'Stop training', 'gt-performance' ) : __( 'Start one-hour training', 'gt-performance' ) ); ?>
-				<?php if ( $candidates ) : ?>
-					<?php $this->cssTrainingButton( 'publish', __( 'Publish candidates', 'gt-performance' ) ); ?>
-				<?php endif; ?>
-				<?php if ( $approved ) : ?>
-					<?php $this->cssTrainingButton( 'rollback', __( 'Restore previous selectors', 'gt-performance' ) ); ?>
-				<?php endif; ?>
-				<?php if ( $candidates ) : ?>
-					<?php $this->cssTrainingButton( 'clear', __( 'Clear candidates', 'gt-performance' ) ); ?>
-				<?php endif; ?>
-				<a class="button button-secondary" href="<?php echo esc_url( $previewUrl ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Preview homepage CSS', 'gt-performance' ); ?></a>
-			</div>
-			<?php if ( $candidates ) : ?>
-				<div class="gtp-token-list" aria-label="<?php esc_attr_e( 'Observed selector candidates', 'gt-performance' ); ?>">
-					<?php foreach ( array_slice( $candidates, 0, 30 ) as $selector ) : ?>
-						<code><?php echo esc_html( $selector ); ?></code>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
-		</section>
-		<?php
-	}
-
-	private function cssTrainingButton( string $command, string $label ): void {
-		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="gtperf_css_training">
-			<input type="hidden" name="command" value="<?php echo esc_attr( $command ); ?>">
-			<?php wp_nonce_field( 'gtperf_css_training' ); ?>
-			<?php submit_button( $label, 'secondary', 'submit', false ); ?>
-		</form>
-		<?php
-	}
-
-	/**
-	 * @param array<string, mixed> $settings Settings.
-	 */
-	private function renderFleet( array $settings ): void {
-		$repository = new FleetRepository();
-		$events     = $repository->events();
-		$hasSecret  = '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) || defined( 'GTPERF_FLEET_SIGNING_SECRET' );
-
-		$this->pageIntro( __( 'Fleet Console', 'gt-performance' ), __( 'Move a reviewed GT Performance policy between your sites without copying credentials or opening a remote code channel.', 'gt-performance' ) );
-		$this->settingsFormOpen();
-		$this->panelOpen( __( 'Fleet policy receiver', 'gt-performance' ), __( 'Policies are signed with a key derived from the shared signing secret, expire after five minutes, and are accepted only once.', 'gt-performance' ) );
-		$this->checkbox( 'fleet', 'enabled', __( 'Enable Fleet Console', 'gt-performance' ), __( 'Allow this site to create and receive signed configuration-only policy bundles.', 'gt-performance' ), $settings );
-		$this->checkbox( 'fleet', 'allow_imports', __( 'Allow signed policy imports', 'gt-performance' ), __( 'Disable this to make the site export-only while keeping its current configuration.', 'gt-performance' ), $settings );
-		$this->password( 'fleet', 'signing_secret', __( 'Fleet signing secret', 'gt-performance' ), __( 'Choose one long passphrase and save the same value on every site in the fleet. Encrypted in WordPress; leave blank to keep the saved secret. GTPERF_FLEET_SIGNING_SECRET in wp-config.php takes precedence.', 'gt-performance' ), '' !== (string) ( $settings['fleet']['signing_secret'] ?? '' ) );
-		$this->textarea( 'fleet', 'policy_modules', __( 'Included policy modules', 'gt-performance' ), __( 'One module per line. Credentials and secrets are removed even if their parent module is selected.', 'gt-performance' ), $settings, "cache\ncss\ncommerce\nintegrations" );
-		$this->panelClose();
-		$this->settingsFormClose();
-		?>
-
-		<section class="gtp-stat-grid" aria-label="<?php esc_attr_e( 'Fleet status', 'gt-performance' ); ?>">
-			<?php $this->stat( __( 'Signing secret', 'gt-performance' ), $hasSecret ? __( 'Saved', 'gt-performance' ) : __( 'Required', 'gt-performance' ), $hasSecret ? 'success' : 'warning' ); ?>
-			<?php $this->stat( __( 'Applied policies', 'gt-performance' ), number_format_i18n( count( $events ) ), $events ? 'success' : 'neutral' ); ?>
-			<?php $this->stat( __( 'Site identity', 'gt-performance' ), substr( $repository->siteId(), 0, 8 ), 'neutral' ); ?>
-		</section>
-
-		<div class="gtp-dashboard-grid">
-			<section class="gtp-panel gtp-operation">
-				<div><h3><?php esc_html_e( 'Export current policy', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Download a short-lived signed JSON bundle containing only the selected modules.', 'gt-performance' ); ?></p></div>
-				<?php $this->actionButton( 'gtperf_fleet_export', __( 'Download policy', 'gt-performance' ) ); ?>
-			</section>
-			<section class="gtp-panel">
-				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Import signed policy', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Paste a fresh bundle from another site that uses the same signing secret.', 'gt-performance' ); ?></p></div></div>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="gtp-policy-import">
-					<input type="hidden" name="action" value="gtperf_fleet_import">
-					<?php wp_nonce_field( 'gtperf_fleet_import' ); ?>
-					<label for="gtp-policy-bundle" class="screen-reader-text"><?php esc_html_e( 'Signed policy JSON', 'gt-performance' ); ?></label>
-					<textarea id="gtp-policy-bundle" name="policy_bundle" rows="7" required></textarea>
-					<?php submit_button( __( 'Verify and apply', 'gt-performance' ), 'secondary', 'submit', false ); ?>
-				</form>
-			</section>
-		</div>
-
-		<?php if ( $events ) : ?>
-			<section class="gtp-panel">
-				<div class="gtp-panel__header"><div><h3><?php esc_html_e( 'Recent fleet activity', 'gt-performance' ); ?></h3><p><?php esc_html_e( 'Bundle identifiers prevent replay. Credentials are never included in this log.', 'gt-performance' ); ?></p></div></div>
-				<?php foreach ( $events as $event ) : ?>
-					<div class="gtp-history-row"><div><strong><code><?php echo esc_html( substr( (string) ( $event['bundle_id'] ?? '' ), 0, 12 ) ); ?></code></strong><small><?php echo esc_html( (string) ( $event['created_at'] ?? '' ) ); ?></small></div><span class="gtp-status gtp-status--success"><?php echo esc_html( ucfirst( (string) ( $event['status'] ?? 'applied' ) ) ); ?></span></div>
-				<?php endforeach; ?>
-			</section>
-		<?php endif; ?>
-		<?php
-	}
-
 	/**
 	 * @param array<string, mixed> $settings Settings.
 	 */
@@ -1848,7 +1427,53 @@ PHP;
 			<div class="gtp-inline-link"><a href="<?php echo esc_url( $this->tabUrl( 'dashboard' ) ); ?>"><?php esc_html_e( 'Install drop-ins, purge, and sync Cloudflare on the dashboard', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 		</section>
 		<?php
+		$this->renderPurgeReceipts();
 		$this->renderDatabaseOptimization( $settings );
+	}
+
+	/**
+	 * Verified purge receipts.
+	 *
+	 * These used to live on the Safety Lab tab alongside commerce checks that could
+	 * not fail by construction. The checks are gone; the receipts are real evidence
+	 * and belong next to the runtime status they describe.
+	 */
+	private function renderPurgeReceipts(): void {
+		$receipts = ( new PurgeReceiptRepository() )->recent( 10 );
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Verified purge receipts', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'What a purge actually removed, and what the public response looked like afterwards.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<?php if ( ! $receipts ) : ?>
+				<p class="gtp-panel-note"><?php esc_html_e( 'No purge has been verified yet. Use "Purge and verify this URL" in the admin bar.', 'gt-performance' ); ?></p>
+			<?php else : ?>
+				<table class="widefat striped">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'URL', 'gt-performance' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Status', 'gt-performance' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Edge', 'gt-performance' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'When', 'gt-performance' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $receipts as $receipt ) : ?>
+						<tr>
+							<td><code><?php echo esc_html( (string) ( $receipt['url'] ?? '' ) ); ?></code></td>
+							<td><?php echo esc_html( (string) ( $receipt['status'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $receipt['cloudflare'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $receipt['checked_at'] ?? '' ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</section>
+		<?php
 	}
 
 	/**
@@ -2125,78 +1750,6 @@ PHP;
 		return is_array( $result ) ? array_map( 'intval', $result ) : array();
 	}
 
-	/**
-	 * @param list<array<string, mixed>> $reports Reports.
-	 */
-	private function reportRows( array $reports ): string {
-		ob_start();
-		if ( ! $reports ) {
-			?>
-			<tr><td colspan="5"><?php esc_html_e( 'No CSS generation has run yet. Enable unused CSS and visit a public page to create the first report.', 'gt-performance' ); ?></td></tr>
-			<?php
-			return (string) ob_get_clean();
-		}
-
-		foreach ( $reports as $report ) {
-			$metadata = is_array( $report['metadata'] ?? null ) ? $report['metadata'] : array();
-			$url      = (string) ( $metadata['url'] ?? home_url( '/' ) );
-			$status   = (string) ( $report['status'] ?? 'failed' );
-			$bytes    = (int) ( $metadata['generated_bytes'] ?? 0 );
-			$updated  = (string) ( $report['last_used_at'] ?? '' );
-			?>
-			<tr>
-				<td>
-					<a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $this->displayUrl( $url ) ); ?></a>
-					<?php if ( ! empty( $metadata['error'] ) ) : ?>
-						<span class="gtp-report-error"><?php echo esc_html( (string) $metadata['error'] ); ?></span>
-					<?php elseif ( ! empty( $metadata['reason'] ) ) : ?>
-						<span class="gtp-report-detail"><?php echo esc_html( (string) $metadata['reason'] ); ?></span>
-					<?php endif; ?>
-				</td>
-				<td><span class="gtp-status gtp-status--<?php echo esc_attr( $this->statusTone( $status ) ); ?><?php echo 'processing' === $status ? ' is-processing' : ''; ?>"><?php echo esc_html( ucfirst( $status ) ); ?></span></td>
-				<td><?php echo esc_html( $this->cssModeLabel( (string) ( $report['mode'] ?? 'file' ) ) ); ?></td>
-				<td>
-					<?php echo $bytes > 0 ? esc_html( size_format( $bytes ) ) : '&ndash;'; ?>
-					<?php if ( isset( $metadata['original_bytes'] ) && (int) $metadata['original_bytes'] > 0 ) : ?>
-						<span class="gtp-report-detail"><?php echo esc_html( $this->savingsLabel( (int) $metadata['original_bytes'], $bytes ) ); ?></span>
-					<?php endif; ?>
-				</td>
-				<td><?php echo '' !== $updated ? esc_html( human_time_diff( strtotime( $updated . ' UTC' ), time() ) . ' ' . __( 'ago', 'gt-performance' ) ) : '&ndash;'; ?></td>
-			</tr>
-			<?php
-		}
-
-		return (string) ob_get_clean();
-	}
-
-	private function sameSitePublicUrl( string $url ): ?string {
-		$url      = esc_url_raw( $url );
-		$host     = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-		$homeHost = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
-		$scheme   = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
-		$port     = wp_parse_url( $url, PHP_URL_PORT );
-		$homePort = wp_parse_url( home_url( '/' ), PHP_URL_PORT );
-
-		return '' !== $host
-			&& hash_equals( $homeHost, $host )
-			&& in_array( $scheme, array( 'http', 'https' ), true )
-			&& $port === $homePort
-			? $url
-			: null;
-	}
-
-	private function warmCssUrl( string $url ): void {
-		wp_safe_remote_get(
-			$url,
-			array(
-				'timeout'     => 15,
-				'redirection' => 3,
-				'headers'     => array( 'X-GT-Preload' => '1' ),
-				'user-agent'  => 'GT-Performance-CSS-Regenerator/' . GTPERF_VERSION,
-			)
-		);
-	}
-
 	private function settingsFormOpen(): void {
 		?>
 		<form method="post" action="options.php" class="gtp-settings-form">
@@ -2269,9 +1822,7 @@ PHP;
 			'xcloud.enabled'                 => 'xcloud',
 			'cdn.enabled'                    => 'cdn',
 			'integrations.auto_protection'   => 'compatibility',
-			'private_fragments.enabled'      => 'private_fragments',
 			'redis.enabled'                  => 'redis',
-			'fleet.enabled'                  => 'fleet',
 		);
 
 		return $profiles[ $section . '.' . $key ] ?? '';
@@ -2464,26 +2015,11 @@ PHP;
 		<?php
 	}
 
-	private function inlineLink( string $label, string $url ): void {
-		?>
-		<div class="gtp-inline-link"><a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $label ); ?> <span aria-hidden="true">&rarr;</span></a></div>
-		<?php
-	}
-
 	private function stat( string $label, string $value, string $tone ): void {
 		?>
 		<div class="gtp-stat gtp-stat--<?php echo esc_attr( $tone ); ?>">
 			<span><?php echo esc_html( $label ); ?></span>
 			<strong><?php echo esc_html( $value ); ?></strong>
-		</div>
-		<?php
-	}
-
-	private function reportStat( string $key, string $label, int $value, string $tone ): void {
-		?>
-		<div class="gtp-stat gtp-stat--<?php echo esc_attr( $tone ); ?>">
-			<span><?php echo esc_html( $label ); ?></span>
-			<strong data-gtp-count="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( number_format_i18n( $value ) ); ?></strong>
 		</div>
 		<?php
 	}
@@ -2637,11 +2173,6 @@ PHP;
 			'purge-warning'             => array( __( 'The purge completed, but one or more verification signals need review.', 'gt-performance' ), 'warning' ),
 			'commerce-safety-pass'      => array( __( 'Every active commerce cache-policy check and live protection check passed.', 'gt-performance' ), 'success' ),
 			'commerce-safety-review'    => array( __( 'The commerce run completed with warnings or policy failures. Review the Safety Lab history.', 'gt-performance' ), 'warning' ),
-			'css-training-started'      => array( __( 'CSS Training Mode is recording structural selectors for one hour.', 'gt-performance' ), 'success' ),
-			'css-training-stopped'      => array( __( 'CSS Training Mode stopped. Candidate selectors remain available for review.', 'gt-performance' ), 'success' ),
-			'css-training-published'    => array( __( 'The candidate selectors were published and page caches were invalidated for safe regeneration.', 'gt-performance' ), 'success' ),
-			'css-training-rolled-back'  => array( __( 'The previous trained selector set was restored and page caches were invalidated.', 'gt-performance' ), 'success' ),
-			'css-training-cleared'      => array( __( 'The CSS training candidates were cleared.', 'gt-performance' ), 'success' ),
 			'css-regenerated-url'       => array( __( 'Used CSS for the selected URL was invalidated, purged, and regenerated.', 'gt-performance' ), 'success' ),
 			'css-regenerated-all'       => array( __( 'All used CSS was invalidated and the page cache was purged for regeneration.', 'gt-performance' ), 'success' ),
 			'css-regenerate-invalid'    => array( __( 'Enter a valid public URL from this WordPress site.', 'gt-performance' ), 'error' ),
@@ -2668,7 +2199,6 @@ PHP;
 			'gtperf_diagnostic_url'        => array( __( 'Enter a valid URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'gtperf_purge_verification_http' => array( __( 'The purge ran, but GT Performance could not fetch the public page for verification.', 'gt-performance' ), 'warning' ),
 			'gtperf_fleet_secret'          => array( __( 'Save the same fleet signing secret on every site before creating or applying fleet policies.', 'gt-performance' ), 'warning' ),
-			'gtperf_fleet_disabled'        => array( __( 'Enable Fleet Console and signed policy imports before applying a bundle.', 'gt-performance' ), 'warning' ),
 			'gtperf_fleet_json'            => array( __( 'The pasted fleet policy is not valid JSON.', 'gt-performance' ), 'error' ),
 			'gtperf_fleet_signature'       => array( __( 'The fleet policy signature is invalid or the five-minute import window expired.', 'gt-performance' ), 'error' ),
 			'gtperf_fleet_replay'          => array( __( 'That fleet policy was already applied and cannot be replayed.', 'gt-performance' ), 'warning' ),
@@ -2732,35 +2262,5 @@ PHP;
 		);
 
 		return $labels[ $mode ] ?? $mode;
-	}
-
-	private function statusTone( string $status ): string {
-		return match ( $status ) {
-			'ready' => 'success',
-			'processing' => 'warning',
-			'failed' => 'danger',
-			default => 'neutral',
-		};
-	}
-
-	private function displayUrl( string $url ): string {
-		$host = (string) wp_parse_url( $url, PHP_URL_HOST );
-		$path = (string) wp_parse_url( $url, PHP_URL_PATH );
-
-		return $host . ( '' === $path ? '/' : $path );
-	}
-
-	private function savingsLabel( int $original, int $generated ): string {
-		if ( $original <= 0 || $generated <= 0 || $generated >= $original ) {
-			return '';
-		}
-
-		$percent = (int) round( ( 1 - $generated / $original ) * 100 );
-
-		return sprintf(
-			/* translators: %d: percentage smaller than source CSS. */
-			__( '%d%% smaller', 'gt-performance' ),
-			$percent
-		);
 	}
 }

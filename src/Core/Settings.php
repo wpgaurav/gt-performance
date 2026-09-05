@@ -124,7 +124,6 @@ final class Settings {
 				'critical_budget'      => 14336,
 				'keep_dynamic_states'  => true,
 				'rollout_percent'       => 100,
-				'trained_selectors'     => array(),
 				'safelist'             => array(),
 				'excluded_stylesheets' => array(),
 			),
@@ -215,17 +214,6 @@ final class Settings {
 				'fluentcart'  => true,
 				'edd'         => true,
 				'woocommerce' => true,
-			),
-			'private_fragments' => array(
-				'enabled'       => false,
-				'cart_count'    => true,
-				'account_link'  => true,
-			),
-			'fleet'      => array(
-				'enabled'        => false,
-				'allow_imports'  => true,
-				'signing_secret' => '',
-				'policy_modules' => array( 'cache', 'cloudflare', 'cdn', 'css', 'javascript', 'media', 'fonts', 'database', 'bloat', 'commerce', 'integrations', 'private_fragments' ),
 			),
 			'integrations' => array(
 				'auto_protection'   => true,
@@ -403,9 +391,6 @@ final class Settings {
 			array( 'commerce', 'fluentcart' ),
 			array( 'commerce', 'edd' ),
 			array( 'commerce', 'woocommerce' ),
-			array( 'private_fragments', 'enabled' ),
-			array( 'private_fragments', 'cart_count' ),
-			array( 'private_fragments', 'account_link' ),
 			array( 'fleet', 'enabled' ),
 			array( 'fleet', 'allow_imports' ),
 			array( 'integrations', 'auto_protection' ),
@@ -436,8 +421,6 @@ final class Settings {
 		$safelist                                  = \GTPerformance\Optimization\Css\SelectorSafelist::split( $merged['css']['safelist'] ?? array() );
 		$safelist                                  = array_map( 'sanitize_text_field', $safelist );
 		$merged['css']['safelist']                 = ( new \GTPerformance\Optimization\Css\SelectorSafelist() )->validate( $safelist )['valid'];
-		$trained                                   = self::sanitizeList( $merged['css']['trained_selectors'] ?? array() );
-		$merged['css']['trained_selectors']        = ( new \GTPerformance\Optimization\Css\SelectorObservation() )->sanitizeMany( $trained );
 		$merged['css']['excluded_stylesheets']    = self::sanitizeList( $merged['css']['excluded_stylesheets'] ?? array() );
 		$merged['fleet']['signing_secret']         = (string) ( $merged['fleet']['signing_secret'] ?? '' );
 		$merged['fleet']['policy_modules']         = array_values(
