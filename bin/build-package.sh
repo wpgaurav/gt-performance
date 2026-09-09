@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTPERF_PACKAGE_VERSION:-1.0.8}"
+VERSION="${GTPERF_PACKAGE_VERSION:-1.0.10}"
 CHANNELS="${1:-all}"
 
 build_channel() {
@@ -98,6 +98,8 @@ build_channel() {
 	# GPL submission is the commercial-residue signal a reviewer stops on.
 	if [[ "${channel}" == "wporg" ]]; then
 		perl -0pi -e 's{^Plugin URI: .*$}{Plugin URI: https://gauravtiwari.org/gt-performance/}m' "${plugin_dir}/gt-performance.php"
+		# Directory-hosted plugins must use WordPress.org update authority.
+		perl -0pi -e 's{^Update URI: .*\n}{}m' "${plugin_dir}/gt-performance.php"
 	fi
 
 	# An exclude list only stops what it already knows about. A scratch directory in

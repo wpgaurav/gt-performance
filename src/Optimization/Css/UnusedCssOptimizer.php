@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\Optimization\Css;
 
 use GTPerformance\Core\Logger;
+use GTPerformance\Cache\RequestContext;
 use GTPerformance\Core\Settings;
 
 final class UnusedCssOptimizer {
@@ -75,12 +76,12 @@ final class UnusedCssOptimizer {
 		// unchanged. The generator's own loopback request is the only caller that
 		// actually builds one.
 		$reuseKey = $this->reuseKey( $html, $mode );
-		$reused   = $this->reusableOutput( $html, $reuseKey );
+		$reused   = self::isGeneratorRequest() ? null : $this->reusableOutput( $html, $reuseKey );
 		if ( null !== $reused ) {
 			return $reused;
 		}
 
-		if ( ! $this->isGeneratorRequest() ) {
+		if ( ! self::isGeneratorRequest() ) {
 			$this->requestGeneration( $url );
 
 			return $html;
@@ -227,6 +228,7 @@ final class UnusedCssOptimizer {
 				isset( $files[0]['path'] ) ? (string) $files[0]['path'] : '',
 				array(
 					'url'             => $url,
+					'reuse_key'       => $reuseKey,
 					'stylesheets'     => count( $collected['stylesheets'] ),
 					'original_bytes'  => strlen( $css ),
 					'generated_bytes' => array_sum( array_column( $outputs, 'bytes' ) ),
@@ -293,11 +295,21 @@ final class UnusedCssOptimizer {
 	/**
 	 * Whether this request is the generator building an artifact.
 	 */
-	private function isGeneratorRequest(): bool {
+	public static function isGeneratorRequest(): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Presence only; the value is a shared secret checked below.
 		$token = isset( $_GET[ self::GENERATOR_PARAM ] ) ? sanitize_text_field( wp_unslash( (string) $_GET[ self::GENERATOR_PARAM ] ) ) : '';
 
 		return '' !== $token && hash_equals( self::generatorToken(), $token );
+	}
+
+	/** Remove only the authenticated build parameter; preserve all safety inputs. */
+	public static function publicRequest( RequestContext $request ): RequestContext {
+		if ( ! self::isGeneratorRequest() ) {
+			return $request;
+		}
+		$query = $request->query;
+		unset( $query[ self::GENERATOR_PARAM ] );
+		return new RequestContext( $request->method, $request->scheme, $request->host, $request->path, $query, $request->cookies, $request->headers, $request->userAgent );
 	}
 
 	/**
@@ -333,10 +345,26 @@ final class UnusedCssOptimizer {
 	 */
 	public function generateQueued( array $payload ): void {
 		$url = (string) ( $payload['url'] ?? '' );
-		if ( '' === $url || ! self::available() ) {
+		if ( '' === $url ) {
 			return;
 		}
 
+		$mode = (string) Settings::get( 'css.mode', 'file' );
+		$fingerprint = $this->reports->begin( $url, $mode );
+		if ( ! Maintenance::enabled() || ! Maintenance::eligible( $url ) ) {
+			$this->reports->complete(
+				$fingerprint,
+				$mode,
+				'skipped',
+				'',
+				array(
+					'url' => $url,
+					'reason' => 'Generation is paused or this URL is excluded by the current settings.',
+				)
+			);
+			delete_transient( 'gtperf_css_build_' . hash( 'sha256', $url ) );
+			return;
+		}
 		$response = wp_safe_remote_get(
 			add_query_arg( self::GENERATOR_PARAM, self::generatorToken(), $url ),
 			array(
@@ -346,58 +374,37 @@ final class UnusedCssOptimizer {
 		);
 
 		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
-			$this->logger->log( 'warning', 'CSS generation request failed', array( 'url' => $url ) );
+
+			$error = is_wp_error( $response ) ? $response->get_error_message() : 'CSS generation returned HTTP ' . wp_remote_retrieve_response_code( $response ) . '.';
+			$this->reports->fail( hash( 'sha256', $url . '|' . Settings::get( 'css.mode', 'file' ) ), (string) Settings::get( 'css.mode', 'file' ), $url, $error );
+			throw new \RuntimeException( 'CSS generation request failed. See the CSS report for details.' );
 		}
+
+		$report = $this->reports->find( $url, (string) Settings::get( 'css.mode', 'file' ) );
+		if ( null === $report || ! in_array( $report['status'], array( 'ready', 'skipped' ), true ) ) {
+			if ( null === $report || 'failed' !== $report['status'] ) {
+				$this->reports->fail( hash( 'sha256', $url . '|' . Settings::get( 'css.mode', 'file' ) ), (string) Settings::get( 'css.mode', 'file' ), $url, 'No completed build. Check the page-cache drop-in, exclusions, and loopback access.' );
+			}
+			throw new \RuntimeException( 'The page returned without a completed CSS report. Check cache setup, exclusions, and loopback requests.' );
+		}
+		if ( 'ready' === $report['status'] ) {
+			( new \GTPerformance\Cache\Purger() )->purgeUrl( $url );
+		}
+		delete_transient( 'gtperf_css_build_' . hash( 'sha256', $url ) );
 	}
 
 	/**
-	 * A key identifying "the same page, cssly speaking".
-	 *
-	 * Built from the stylesheet references and the class and tag vocabulary of the
-	 * document, because those are the only inputs that change what pruning produces.
-	 * Two pages sharing a template therefore share one artifact.
+	 * Reuse only the same URL, selector inputs and current CSS revisions.
 	 */
 	private function reuseKey( string $html, string $mode ): string {
-		// Both the references AND the inline CSS itself: two pages can share a class
-		// vocabulary while carrying different <style> content, and keying on the
-		// references alone served one page's generated CSS to the other.
-		$sheets = array();
-		if ( preg_match_all( '#<link\b[^>]*rel=["\']?stylesheet["\']?[^>]*>#i', $html, $matches ) ) {
-			$sheets = $matches[0];
-		}
-		if ( preg_match_all( '#<style\b[^>]*>(.*?)</style\s*>#is', $html, $matches ) ) {
-			foreach ( $matches[1] as $inline ) {
-				$sheets[] = hash( 'sha256', $inline );
-			}
-		}
-
-		$classes = array();
-		if ( preg_match_all( '#\sclass=(["\'])(.*?)\1#is', $html, $matches ) ) {
-			foreach ( $matches[2] as $value ) {
-				$parts = preg_split( '/\s+/', $value );
-				foreach ( is_array( $parts ) ? $parts : array() as $class ) {
-					if ( '' !== $class ) {
-						$classes[ $class ] = true;
-					}
-				}
-			}
-		}
-		ksort( $classes );
-
-		$tags = array();
-		if ( preg_match_all( '#<([a-z][a-z0-9-]*)#i', $html, $matches ) ) {
-			foreach ( $matches[1] as $tag ) {
-				$tags[ strtolower( $tag ) ] = true;
-			}
-		}
-		ksort( $tags );
-
+		// Attribute values, IDs and DOM relationships affect selector matching too.
+		// Keep reuse scoped to the URL and exact markup to avoid cross-page pruning.
 		return hash(
 			'sha256',
-			$mode . '|' . (int) Settings::get( 'generation', 1 ) . '|'
-			. implode( '|', $sheets ) . '|'
-			. implode( ' ', array_keys( $classes ) ) . '|'
-			. implode( ' ', array_keys( $tags ) )
+			$this->requestUrl() . '|' . $mode . '|'
+			. (int) Settings::get( 'generation', 1 ) . '|'
+			. (string) get_option( 'gtperf_css_revision', 1 ) . '|'
+			. (string) get_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $this->requestUrl() ) ) . '|' . $html
 		);
 	}
 
@@ -531,7 +538,7 @@ final class UnusedCssOptimizer {
 		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		$path = is_string( $path ) ? $path : '/';
 
-		return esc_url_raw( home_url( $path ) );
+		return esc_url_raw( remove_query_arg( array( self::GENERATOR_PARAM, 'gtperf_css_preview' ), home_url( $path ) ) );
 	}
 
 	private function duration( float $started ): int {

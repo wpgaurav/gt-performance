@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.10 - 2026-09-05
+
+### Added
+
+- Unused CSS status on the Optimization tab: queued, processing, ready, stale, failed, and skipped results; original and generated sizes; reduction percentage; build duration; and failure details.
+- Manual status refresh, per-URL and per-result force regeneration, and full regeneration in bounded background batches. Known eligible URLs and the homepage are queued; other pages rebuild when visited.
+- Counts across all stored reports, with the latest 50 results shown in the table. Current savings exclude stale results and missing generated files.
+
+### Fixed
+
+- Signed CSS generator requests were blocked by page-cache and commerce query rules. The authenticated build parameter is now excluded from the policy context while other request protections remain intact. Build responses remain private and are never cached.
+- Generator tokens no longer become part of report URLs or CSS reuse keys.
+- HTTP errors and responses without completed CSS reports now fail the background job so its retry policy applies. Successful generation purges the public page cache so visitors receive the new CSS.
+- CSS reuse now accounts for the URL, full markup, and CSS revisions, preventing mismatches involving IDs, attribute values, and DOM relationships. Forced builds bypass existing results.
+- Regeneration controls check saved rollout, exclusions, safe mode, and optimization ownership, and avoid duplicating active jobs. Disabled or newly excluded jobs record a skipped result.
+- Consistent padding and spacing across status cards, statistics, reports, and regeneration controls.
+- Clearer help text across optimization and cache settings.
+- WordPress.org builds omit the self-hosted Update URI header. FluentCart URL handling uses WordPress parsing helpers, and the early Redis drop-in documents its filesystem fallback.
+
 ## 1.0.8 - 2026-09-05
 
 Correctness release. Everything here is a defect a site could hit without opting

@@ -1026,6 +1026,92 @@ summary.gtp-notice-pill:focus-visible {
 	min-width: 260px;
 }
 
+/* The CSS status panel shares the settings panels' inset and 20px rhythm. */
+.gtp-css-status {
+	display: grid;
+	gap: 20px;
+	min-width: 0;
+	padding: 20px 0;
+}
+
+.gtp-css-report {
+	display: grid;
+	gap: 20px;
+	min-width: 0;
+}
+
+.gtp-css-status p,
+.gtp-css-status .gtp-stat-grid {
+	margin: 0;
+}
+
+.gtp-css-summary,
+.gtp-css-results {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+}
+
+.gtp-css-refresh {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.gtp-css-refresh p:empty {
+	display: none;
+}
+
+.gtp-css-operations {
+	display: grid;
+	gap: 20px;
+}
+
+.gtp-css-operations > form {
+	display: grid;
+	justify-items: start;
+	gap: 12px;
+	margin: 0;
+	padding-top: 20px;
+	border-top: 1px solid var(--gtp-border);
+}
+
+.gtp-css-operations label {
+	font-weight: 600;
+}
+
+.gtp-css-url-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	width: 100%;
+}
+
+.gtp-css-url-controls input[type="url"] {
+	flex: 1 1 260px;
+	min-width: 0;
+	min-height: 36px;
+	margin: 0;
+}
+
+.gtp-css-status .button {
+	min-height: 36px;
+	margin: 0;
+}
+
+.gtp-css-status .gtp-report-table td {
+	overflow-wrap: anywhere;
+}
+
+.gtp-css-status .gtp-report-table td form {
+	margin-top: 12px;
+}
+
+.gtp-css-status .gtp-report-table td form:only-child {
+	margin-top: 0;
+}
+
 .gtp-report-detail,
 .gtp-report-error {
 	display: block;

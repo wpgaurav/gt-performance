@@ -213,6 +213,35 @@
 		});
 	};
 
+	const setupCssReport = () => {
+		const button = document.querySelector('[data-gtp-css-refresh]');
+		const report = document.querySelector('[data-gtp-css-report]');
+		const message = document.querySelector('[data-gtp-css-message]');
+		if (!button || !report || !message) return;
+		button.addEventListener('click', async () => {
+			button.disabled = true;
+			report.setAttribute('aria-busy', 'true');
+			message.textContent = '';
+			try {
+				const response = await fetch(gtPerformanceAdmin.ajaxUrl, {
+					method: 'POST',
+					body: new URLSearchParams({action: "gtperf_css_report", nonce: gtPerformanceAdmin.nonce}),
+					signal: AbortSignal.timeout(30000)
+				});
+				const result = await response.json();
+				if (!response.ok || !result.success || typeof result.data?.html !== 'string') throw new Error();
+				report.innerHTML = result.data.html;
+				message.textContent = gtPerformanceAdmin.cssRefreshed;
+			} catch {
+				message.textContent = gtPerformanceAdmin.cssRefreshFailed;
+			} finally {
+				button.disabled = false;
+				report.removeAttribute('aria-busy');
+			}
+		});
+	};
+	setupCssReport();
+
 	setupCachePresets();
 	setupWordPressPresets();
 	setupIntegrationDefaults();

@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.8
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,13 +109,25 @@ GT Performance stores a list of script hostname patterns such as `connect.facebo
 
 == Upgrade Notice ==
 
+= 1.0.10 =
+Adds unused CSS status, statistics, and regeneration controls, and repairs background generation. Existing CSS settings are preserved. Use Optimization to review results and regenerate CSS after updating.
+
 = 1.0.8 =
-Breaking. The WordPress revision limit control is removed (it pruned revisions on every site that activated the plugin), the "Remove unused CSS" toggle is removed, the Cloudflare edge cache lifetime now defaults to respecting your origin, and the plugin no longer activates on multisite. Review the Optimization and Cloudflare tabs after updating.
+Removes the automatic revision limit and multisite activation. Cloudflare edge caching now respects origin headers by default. Unused CSS remains opt-in. Review Optimization and Cloudflare settings after updating.
 
 = 1.0.4 =
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.0.10 =
+* Added unused CSS status counts, size savings, build timings, failure details, and manual report refresh on the Optimization tab.
+* Added per-URL, per-result, and full CSS regeneration using bounded background jobs. Active jobs are not duplicated by repeated manual actions.
+* Fixed page-cache and commerce rules blocking authenticated CSS generator requests. Other request protections remain intact, and build responses are never cached.
+* Fixed generator tokens leaking into report URLs and reuse keys. HTTP errors and missing build reports now trigger queue retries instead of false success.
+* Fixed CSS reuse across differing IDs, attributes, and DOM relationships. Forced regeneration invalidates reusable results and purges affected page caches.
+* Statistics now cover all stored reports and exclude stale results and missing files from current savings.
+* Aligned panel padding, report spacing, and regeneration controls, and clarified settings help text.
 
 = 1.0.8 =
 * Adds Safe Mode. Define `GTPERF_SAFE_MODE` in wp-config.php and every HTML transformation stops and no page is served from or written to the cache, without changing a single setting or touching the drop-in. It is the answer to "something looks wrong and I cannot tell which option did it".

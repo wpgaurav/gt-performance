@@ -70,6 +70,7 @@ individually.
 | `src/Licensing/` | excluded | included |
 | Update path | WordPress.org, once listed | FluentCart `get_license_version` |
 | `Plugin URI` | `/gt-performance/` | `/product/gt-performance/` |
+| `Update URI` | omitted for directory update authority | `false`; FluentCart updater supplies updates |
 
 The WordPress.org artifact is the one a reviewer reads, so the build proves rather
 than assumes that it is clean: it fails if `src/Licensing` survived, if any shared
@@ -91,7 +92,7 @@ which is why the self-hosted package needs the licenser at all.
 
 ## Deploy to WordPress.org
 
-GT Performance is **not yet listed** in the WordPress.org plugin directory: there is no SVN target and no directory update authority. Verify with `https://plugins.svn.wordpress.org/gt-performance/` before promising a deploy. GitHub releases are the source-of-truth archive, and the plugin ships `Update URI: false` so nothing on the directory can push to existing installs while the slug is unclaimed.
+GT Performance is **not yet listed** in the WordPress.org plugin directory: there is no SVN target and no directory update authority. Verify with `https://plugins.svn.wordpress.org/gt-performance/` before promising a deploy. GitHub releases are the source-of-truth archive, and the self-hosted source and FluentCart package ship `Update URI: false` so the directory cannot push updates to those installs. The WordPress.org submission package omits that header, as required by Plugin Check.
 
 `bin/build-package.sh` fails the build if the staged tree contains a file type
 the directory does not permit, so the packaging step itself is the first gate.

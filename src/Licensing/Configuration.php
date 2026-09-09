@@ -45,7 +45,7 @@ final class Configuration {
 	}
 
 	public static function portSafeSiteUrl( string $url ): string {
-		$parts = parse_url( $url );
+		$parts = wp_parse_url( $url );
 		if ( ! is_array( $parts ) || ! isset( $parts['host'], $parts['port'] ) ) {
 			return $url;
 		}

@@ -123,7 +123,8 @@ final class CommerceModule implements Module {
 
 	public function protectDynamicResponse(): void {
 		$config   = $this->mergePolicy( (array) Settings::get( 'cache', array() ) );
-		$decision = ( new Eligibility() )->decide( RequestContext::fromGlobals(), array_merge( $config, array( 'enabled' => true ) ) );
+		$request  = \GTPerformance\Optimization\Css\UnusedCssOptimizer::publicRequest( RequestContext::fromGlobals() );
+		$decision = ( new Eligibility() )->decide( $request, array_merge( $config, array( 'enabled' => true ) ) );
 
 		if ( $decision->cacheable ) {
 			return;

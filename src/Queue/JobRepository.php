@@ -42,6 +42,18 @@ final class JobRepository {
 		return (int) $wpdb->insert_id;
 	}
 
+	/** @param array<string, mixed>|null $payload Match a URL job, or any job of this type. */
+	public function hasActive( string $type, ?array $payload = null ): bool {
+		global $wpdb;
+		$table = $wpdb->prefix . 'gtperf_jobs';
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$query = null === $payload
+			? $wpdb->prepare( "SELECT id FROM {$table} WHERE type = %s AND status IN ('pending', 'running') LIMIT 1", $type )
+			: $wpdb->prepare( "SELECT id FROM {$table} WHERE type = %s AND payload = %s AND status IN ('pending', 'running') LIMIT 1", $type, wp_json_encode( $payload ) );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (bool) $wpdb->get_var( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+	}
+
 	/**
 	 * @return array<string, mixed>|null
 	 */

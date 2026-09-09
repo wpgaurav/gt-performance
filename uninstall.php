@@ -28,6 +28,7 @@ delete_option( 'gt_performance_wp_cache_constant_ownership' );
 delete_option( 'gt_performance_commerce_policy_hash' );
 delete_option( 'gt_performance_commerce_safety_runs' );
 delete_option( 'gt_performance_purge_receipts' );
+delete_option( 'gtperf_css_revision' );
 delete_option( 'gt_performance_css_training' );
 delete_option( 'gt_performance_css_training_previous' );
 delete_option( 'gt_performance_xcloud_last_purge' );

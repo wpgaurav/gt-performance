@@ -556,3 +556,28 @@ if ( ! function_exists( 'wp_salt' ) ) {
 		return 'gt-performance-test-salt-' . $scheme;
 	}
 }
+
+if ( ! defined( 'ARRAY_A' ) ) {
+	define( 'ARRAY_A', 'ARRAY_A' );
+}
+
+if ( ! function_exists( 'add_query_arg' ) ) {
+	function add_query_arg( string $key, string $value, string $url ): string {
+		return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . rawurlencode( $key ) . '=' . rawurlencode( $value );
+	}
+}
+
+if ( ! function_exists( 'remove_query_arg' ) ) {
+	/** @param list<string>|string $keys Query keys. */
+	function remove_query_arg( array|string $keys, string $url ): string {
+		$parts = explode( '?', $url, 2 );
+		if ( 1 === count( $parts ) ) {
+			return $url;
+		}
+		parse_str( $parts[1], $query );
+		foreach ( (array) $keys as $key ) {
+			unset( $query[ $key ] );
+		}
+		return $parts[0] . ( $query ? '?' . http_build_query( $query ) : '' );
+	}
+}

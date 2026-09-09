@@ -2,7 +2,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.8`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.10`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -39,6 +39,10 @@ The current release is `1.0.8`. It is free GPL software; it is not yet listed in
 The full product architecture and 1.0 roadmap are in [PRODUCT-PLAN.md](PRODUCT-PLAN.md).
 
 ## How unused CSS works
+
+The **Optimization → Unused CSS status** panel shows queued, processing, ready, stale, failed, and skipped results; original and generated sizes; build duration; and failure details. Totals cover all stored URL/mode reports, while the table shows the latest 50. Use **Refresh status** to update the report without losing unsaved settings. Savings describe analyzed CSS bytes, not measured visitor bandwidth.
+
+Use **Force regenerate URL** or a row’s **Regenerate** button to invalidate that URL’s reusable CSS and queue a fresh build. **Force regenerate all CSS** invalidates all results, purges page caches, and rebuilds known eligible URLs in batches; other URLs rebuild on their next eligible visit. Builds respect saved rollout, exclusions, safe mode, and optimization ownership. WordPress cron must run to drain the queue. Existing generated files are retained for cached pages.
 
 GT Performance processes the final anonymous HTML response on the WordPress server. It collects eligible same-origin stylesheets and inline style blocks, parses them into a CSS syntax tree, matches selectors against the rendered document, and keeps configured safelist and dynamic-state selectors conservatively. Safelist lines use partial matching by default and accept validated delimited regular expressions such as `/^\.modal(?:--|\b)/i`. Excluded or cross-origin stylesheets remain untouched.
 

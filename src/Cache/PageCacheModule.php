@@ -83,6 +83,15 @@ final class PageCacheModule implements Module {
 			return;
 		}
 
+		if ( \GTPerformance\Optimization\Css\UnusedCssOptimizer::isGeneratorRequest() ) {
+			$this->request = \GTPerformance\Optimization\Css\UnusedCssOptimizer::publicRequest( $this->request );
+			$this->decision = $this->eligibility->decide( $this->request, $this->cacheConfig() );
+			if ( $this->decision->cacheable ) {
+				OutputBuffer::start( array( $this, 'captureGenerator' ) );
+			}
+			return;
+		}
+
 		$config         = $this->cacheConfig();
 		$this->decision = $this->eligibility->decide( $this->request, $config );
 
@@ -199,6 +208,18 @@ final class PageCacheModule implements Module {
 		$optimized = apply_filters( 'gt_performance_html', $html, $this->request );
 
 		return is_string( $optimized ) && '' !== trim( $optimized ) ? $optimized : $html;
+	}
+
+	/** Generate from eligible public HTML without storing the signed request. */
+	public function captureGenerator( string $html ): string {
+		$decision = $this->validator->validate( $html, http_response_code(), headers_list() );
+		if ( $decision->cacheable && ! ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) ) {
+			$html = $this->capturePreview( $html );
+		}
+		if ( ! headers_sent() ) {
+			SharedCacheHeaders::noStore();
+		}
+		return $html;
 	}
 
 	public function sendCacheHeaders(): void {

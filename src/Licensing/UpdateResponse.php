@@ -74,7 +74,7 @@ final class UpdateResponse {
 			return '';
 		}
 
-		$scheme = strtolower( (string) parse_url( $url, PHP_URL_SCHEME ) );
+		$scheme = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
 
 		return in_array( $scheme, array( 'http', 'https' ), true ) ? $url : '';
 	}

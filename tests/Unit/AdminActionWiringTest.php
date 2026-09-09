@@ -118,11 +118,7 @@ final class AdminActionWiringTest extends TestCase {
 			}
 		}
 
-		// 1.1.0 removed the only admin-ajax caller (the CSS report poller), so zero is
-		// the correct count. The assertion that matters is the one inside the loop:
-		// anything the JS does post must have a registered handler. Guard the parser
-		// instead by pinning the count, so a new caller cannot appear unnoticed.
-		self::assertSame( 0, $found, 'A new admin-ajax caller appeared; confirm it is registered and intended.' );
+		self::assertSame( 1, $found, 'The CSS status refresh must have a registered AJAX handler.' );
 	}
 
 	/**

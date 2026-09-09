@@ -21,17 +21,25 @@ use GTPerformance\Core\Settings;
 final class ReportRepository {
 	private const TYPE = 'unused_css';
 
+	/** @var array<string, array{generation:int,revision:string}> */
+	private array $buildVersions = array();
+
 	public function begin( string $url, string $mode ): string {
 		global $wpdb;
 
 		$fingerprint = hash( 'sha256', $url . '|' . $mode );
 		$table       = $wpdb->prefix . 'gtperf_artifacts';
 		$now         = current_time( 'mysql', true );
+		$this->buildVersions[ $fingerprint ] = array(
+			'generation' => (int) Settings::get( 'generation', 1 ),
+			'revision' => (string) get_option( 'gtperf_css_revision', 1 ),
+		);
 		$metadata    = wp_json_encode(
 			array(
 				'url'        => $url,
 				'generation' => (int) Settings::get( 'generation', 1 ),
 				'started_at' => $now,
+				'revision'   => (string) get_option( 'gtperf_css_revision', 1 ),
 			)
 		);
 
@@ -88,7 +96,8 @@ final class ReportRepository {
 	public function complete( string $fingerprint, string $mode, string $status, string $path, array $metadata ): void {
 		global $wpdb;
 
-		$metadata['generation'] = (int) Settings::get( 'generation', 1 );
+		$metadata['generation'] = $this->buildVersions[ $fingerprint ]['generation'] ?? (int) Settings::get( 'generation', 1 );
+		$metadata['revision']   = $this->buildVersions[ $fingerprint ]['revision'] ?? (string) get_option( 'gtperf_css_revision', 1 );
 		$metadata['ended_at']   = current_time( 'mysql', true );
 
 		$wpdb->update(
@@ -125,6 +134,17 @@ final class ReportRepository {
 	public function invalidateUrl( string $url ): int {
 		global $wpdb;
 
+		// Outlive reusable markup so older variants cannot reappear after a forced build.
+		set_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $url ), wp_generate_uuid4(), 2 * DAY_IN_SECONDS );
+
+		foreach ( array( 'file', 'inline', 'hybrid' ) as $mode ) {
+			$report = $this->find( $url, $mode );
+			$key = (string) ( $report['metadata']['reuse_key'] ?? '' );
+			if ( '' !== $key ) {
+				delete_transient( 'gtperf_css_reuse_' . $key );
+			}
+		}
+
 		$table        = $wpdb->prefix . 'gtperf_artifacts';
 		$fingerprints = array_map(
 			static fn( string $mode ): string => hash( 'sha256', $url . '|' . $mode ),
@@ -151,7 +171,7 @@ final class ReportRepository {
 	/**
 	 * @return list<array<string, mixed>>
 	 */
-	public function recent( int $limit = 50 ): array {
+	public function recent( int $limit = 50, int $offset = 0 ): array {
 		global $wpdb;
 
 		$table = $wpdb->prefix . 'gtperf_artifacts';
@@ -164,10 +184,11 @@ final class ReportRepository {
 				"SELECT fingerprint, mode, path, metadata, status, created_at, last_used_at
 				FROM {$table}
 				WHERE type = %s
-				ORDER BY last_used_at DESC
-				LIMIT %d",
+				ORDER BY last_used_at DESC, id DESC
+				LIMIT %d OFFSET %d",
 				self::TYPE,
-				$limit
+				$limit,
+				max( 0, $offset )
 			),
 			ARRAY_A
 		);
@@ -183,10 +204,17 @@ final class ReportRepository {
 			$metadata = json_decode( (string) ( $row['metadata'] ?? '' ), true );
 			$metadata = is_array( $metadata ) ? $metadata : array();
 			$status   = (string) ( $row['status'] ?? 'failed' );
-			if ( in_array( $status, array( 'ready', 'skipped' ), true ) && (int) ( $metadata['generation'] ?? 0 ) < $currentGeneration ) {
+			if ( in_array( $status, array( 'ready', 'skipped' ), true ) && ( (int) ( $metadata['generation'] ?? 0 ) < $currentGeneration || (string) ( $metadata['revision'] ?? 1 ) !== (string) get_option( 'gtperf_css_revision', 1 ) ) ) {
 				$status = 'stale';
 			}
 
+			if ( 'ready' === $status ) {
+				foreach ( (array) ( $metadata['outputs'] ?? array() ) as $output ) {
+					if ( ! empty( $output['path'] ) && ! is_file( (string) $output['path'] ) ) {
+						$status = 'stale';
+					}
+				}
+			}
 			$row['metadata'] = $metadata;
 			$row['status']   = $status;
 			$reports[]       = $row;
@@ -195,12 +223,72 @@ final class ReportRepository {
 		return $reports;
 	}
 
+	/** @return array<string, mixed>|null */
+	public function find( string $url, string $mode ): ?array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'gtperf_artifacts';
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE type = %s AND fingerprint = %s AND mode = %s", self::TYPE, hash( 'sha256', $url . '|' . $mode ), $mode ), ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( ! is_array( $row ) ) {
+			return null;
+		}
+		$metadata = json_decode( (string) $row['metadata'], true );
+		$row['metadata'] = is_array( $metadata ) ? $metadata : array();
+		return $row;
+	}
+
+	/**
+	 * All report totals; byte savings include current ready reports only.
+	 *
+	 * @return array<string, int>
+	 */
+	public function statistics(): array {
+		$totals = $this->summary( array() ) + array(
+			'total' => 0,
+			'original_bytes' => 0,
+			'generated_bytes' => 0,
+		);
+		$offset = 0;
+		do {
+			$rows = $this->recent( 200, $offset );
+			foreach ( $this->summary( $rows ) as $status => $count ) {
+				$totals[ $status ] += $count;
+			}
+			foreach ( $rows as $row ) {
+				if ( 'ready' === $row['status'] ) {
+					$totals['original_bytes'] += max( 0, (int) ( $row['metadata']['original_bytes'] ?? 0 ) );
+					$totals['generated_bytes'] += max( 0, (int) ( $row['metadata']['generated_bytes'] ?? 0 ) );
+				}
+			}
+			$count = count( $rows );
+			$totals['total'] += $count;
+			$offset += 200;
+		} while ( 200 === $count );
+		return $totals;
+	}
+
+	/**
+	 * Stable cursor for background rebuilding, independent of report timestamps.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function batch( int $afterId ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'gtperf_artifacts';
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, metadata FROM {$table} WHERE type = %s AND id > %d ORDER BY id ASC LIMIT 100", self::TYPE, $afterId ), ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return is_array( $rows ) ? $rows : array();
+	}
+
 	/**
 	 * @param list<array<string, mixed>> $reports Reports.
 	 * @return array<string, int>
 	 */
 	public function summary( array $reports ): array {
 		$summary = array(
+			'queued'     => 0,
 			'processing' => 0,
 			'ready'      => 0,
 			'stale'      => 0,

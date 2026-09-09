@@ -29,6 +29,7 @@ final class QueueModule implements Module {
 	}
 
 	public function register(): void {
+		add_action( 'gt_performance_job_' . \GTPerformance\Optimization\Css\Maintenance::BATCH_JOB, array( new \GTPerformance\Optimization\Css\Maintenance(), 'runBatch' ) );
 		add_action( 'init', array( $this, 'ensureScheduled' ) );
 		add_action( 'gt_performance_run_queue', array( $this, 'runScheduled' ) );
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
@@ -194,7 +195,7 @@ final class QueueModule implements Module {
 			return;
 		}
 
-		$this->jobs->enqueue( \GTPerformance\Optimization\Css\UnusedCssOptimizer::JOB_TYPE, array( 'url' => $url ), 70, 0 );
+		( new \GTPerformance\Optimization\Css\Maintenance() )->enqueue( $url );
 	}
 
 	public function collectGarbage(): void {

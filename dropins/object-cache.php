@@ -394,7 +394,7 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 				return true;
 			}
 
-			@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@unlink( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink, WordPress.PHP.NoSilencedErrors.Discouraged -- Drop-ins load before wp_delete_file() is available.
 
 			return false;
 		}

@@ -29,6 +29,7 @@ use GTPerformance\Diagnostics\PurgeReceiptRepository;
 use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Integrations\RecommendedDefaults;
 use GTPerformance\Optimization\Css\ReportRepository;
+use GTPerformance\Optimization\Css\Maintenance;
 use GTPerformance\Optimization\Css\SelectorSafelist;
 use GTPerformance\Optimization\Css\UnusedCssOptimizer;
 use GTPerformance\Redis\ConnectionTester;
@@ -77,6 +78,8 @@ final class AdminModule implements Module {
 	}
 
 	public function register(): void {
+		add_action( 'admin_post_gtperf_css_regenerate', array( $this, 'regenerateCss' ) );
+		add_action( 'wp_ajax_gtperf_css_report', array( $this, 'cssReport' ) );
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_init', array( $this, 'settings' ) );
 		add_action( 'admin_init', array( $this, 'legacyRedirect' ) );
@@ -182,6 +185,8 @@ final class AdminModule implements Module {
 			'gt-performance-admin',
 			'gtPerformanceAdmin',
 			array(
+				'cssRefreshed' => __( 'CSS status refreshed.', 'gt-performance' ),
+				'cssRefreshFailed' => __( 'Status could not be refreshed. Reload this page and try again.', 'gt-performance' ),
 				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
 				'nonce'               => wp_create_nonce( 'gtperf_css_report' ),
 				'integrationProfiles' => RecommendedDefaults::profiles( home_url( '/' ) ),
@@ -515,6 +520,7 @@ final class AdminModule implements Module {
 		$this->guard( 'gtperf_purge_verify' );
 		// Capability and nonce checks above authorize this explicit URL field.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- guard() verifies the action nonce above.
 		$url = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$result = ( new PurgeVerifier() )->verify( $url );
@@ -642,8 +648,8 @@ final class AdminModule implements Module {
 		$dropin     = ( new DropinInstaller() )->status();
 		$wpCache    = ( new WpCacheConstant() )->status();
 		$redis      = ( new ObjectCacheInstaller() )->status();
-		$reports    = ( new ReportRepository() )->recent();
-		$cssReady   = count( array_filter( $reports, static fn( array $report ): bool => 'ready' === $report['status'] ) );
+		$cssStats   = ( new ReportRepository() )->statistics();
+		$cssReady   = $cssStats['ready'];
 		$cacheReady = 'owned' === $dropin && 'enabled' === $wpCache && ! empty( $settings['cache']['enabled'] );
 		?>
 		<div class="gtp-page-heading">
@@ -656,7 +662,7 @@ final class AdminModule implements Module {
 			<?php $this->stat( __( 'Page cache', 'gt-performance' ), $cacheReady ? __( 'Active', 'gt-performance' ) : __( 'Needs setup', 'gt-performance' ), $cacheReady ? 'success' : 'warning' ); ?>
 			<?php $this->stat( __( 'Cloudflare', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? __( 'Connected', 'gt-performance' ) : __( 'Not connected', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? 'success' : 'neutral' ); ?>
 			<?php $this->stat( __( 'Unused CSS', 'gt-performance' ), UnusedCssOptimizer::available() ? __( 'Enabled', 'gt-performance' ) : __( 'Off', 'gt-performance' ), UnusedCssOptimizer::available() ? 'warning' : 'neutral' ); ?>
-			<?php $this->stat( __( 'CSS files ready', 'gt-performance' ), number_format_i18n( $cssReady ), $cssReady > 0 ? 'success' : 'neutral' ); ?>
+			<?php $this->stat( __( 'CSS results ready', 'gt-performance' ), number_format_i18n( $cssReady ), $cssReady > 0 ? 'success' : 'neutral' ); ?>
 		</section>
 		<div class="gtp-dashboard-grid">
 			<section class="gtp-panel">
@@ -703,27 +709,27 @@ final class AdminModule implements Module {
 	 * @param array<string, mixed> $settings Settings.
 	 */
 	private function renderCache( array $settings ): void {
-		$this->pageIntro( __( 'Page cache', 'gt-performance' ), __( 'Control origin HTML caching, browser behavior, and cache variants. Commerce and account pages remain protected by integrations and exceptions.', 'gt-performance' ) );
+		$this->pageIntro( __( 'Page cache', 'gt-performance' ), __( 'How pages are stored and served. Cart, checkout, and account pages are never cached.', 'gt-performance' ) );
 		$this->settingsFormOpen();
 		$this->panelOpen( __( 'Origin cache', 'gt-performance' ), __( 'Keep safe public HTML ready on disk so WordPress does less work.', 'gt-performance' ) );
 		$this->checkbox( 'cache', 'enabled', __( 'Enable origin page cache', 'gt-performance' ), __( 'Cache eligible public GET requests after WordPress renders them once.', 'gt-performance' ), $settings );
-		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Create a second cache variant only when the server sends different HTML to mobile devices.', 'gt-performance' ), $settings, __( 'Leave this off for responsive sites. Turning it on doubles the HTML variants that must be stored, purged, and warmed.', 'gt-performance' ) );
+		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Store a separate copy for phones. Only needed if your site sends different HTML to them.', 'gt-performance' ), $settings, __( 'Leave this off for a normal responsive theme. It doubles everything that has to be stored and cleared.', 'gt-performance' ) );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Cache lifetime', 'gt-performance' ), __( 'Use shorter fresh lifetimes for frequently changing sites and longer stale retention for resilience.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Cache lifetime', 'gt-performance' ), __( 'Shorter times suit sites that change often.', 'gt-performance' ) );
 		$this->renderCachePresets();
-		$this->number( 'cache', 'fresh_ttl', __( 'Fresh cache lifetime', 'gt-performance' ), __( 'Seconds before a cached page needs regeneration.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'During this period, shared caches may serve the stored page without asking WordPress to rebuild it.', 'gt-performance' ) );
-		$this->number( 'cache', 'stale_ttl', __( 'Stale cache retention', 'gt-performance' ), __( 'How long an expired page remains available for background refresh.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ), '1', __( 'The stale copy is retained after freshness expires so one request can refresh it while other visitors still receive a response.', 'gt-performance' ) );
-		$this->number( 'cache', 'stale_if_error', __( 'Stale-on-error window', 'gt-performance' ), __( 'How long stale HTML may be used when regeneration fails.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ), '1', __( 'This protects visitors during temporary PHP, database, or origin failures. Set to 0 to disable it.', 'gt-performance' ) );
-		$this->number( 'cache', 'browser_ttl', __( 'Browser cache lifetime', 'gt-performance' ), __( 'How long a visitor browser may reuse HTML without checking again.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'Keep this shorter than the shared-cache lifetime so browsers receive page updates promptly.', 'gt-performance' ) );
+		$this->number( 'cache', 'fresh_ttl', __( 'Fresh cache lifetime', 'gt-performance' ), __( 'Seconds before a cached page needs regeneration.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'How long a stored page is served before WordPress builds it again.', 'gt-performance' ) );
+		$this->number( 'cache', 'stale_ttl', __( 'Stale cache retention', 'gt-performance' ), __( 'How long an expired page remains available for background refresh.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ), '1', __( 'After that, the old copy is kept a little longer so one visit can refresh it while everyone else still gets a page instantly.', 'gt-performance' ) );
+		$this->number( 'cache', 'stale_if_error', __( 'Stale-on-error window', 'gt-performance' ), __( 'How long stale HTML may be used when regeneration fails.', 'gt-performance' ), $settings, 0, 2592000, __( 'seconds', 'gt-performance' ), '1', __( 'If your site errors, visitors keep getting the last good page instead of an error. Set to 0 to turn this off.', 'gt-performance' ) );
+		$this->number( 'cache', 'browser_ttl', __( 'Browser cache lifetime', 'gt-performance' ), __( 'How long a visitor browser may reuse HTML without checking again.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'Keep this short so visitors see your changes soon after you publish.', 'gt-performance' ) );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Automatic cache clearing', 'gt-performance' ), __( 'Keep published content current without clearing more cached pages than necessary.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Automatic cache clearing', 'gt-performance' ), __( 'Clear what changed, without throwing away the rest.', 'gt-performance' ) );
 		$this->select(
 			'cache',
 			'post_publish_purge',
 			__( 'Cache clearing after publishing', 'gt-performance' ),
-			__( 'Choose what GT Performance clears when a public post, page, product, or custom post type is published or updated.', 'gt-performance' ),
+			__( 'What to clear when you publish or update something.', 'gt-performance' ),
 			$settings,
 			array(
 				'related' => __( 'Post and related pages (recommended)', 'gt-performance' ),
@@ -731,13 +737,13 @@ final class AdminModule implements Module {
 				'all'     => __( 'Entire page and edge cache', 'gt-performance' ),
 				'none'    => __( 'Do not clear automatically', 'gt-performance' ),
 			),
-			__( 'Related pages include the post URL, homepage, post type archive, author archive, and public category, tag, or custom taxonomy archives. Entire-cache clearing also triggers configured cache warming.', 'gt-performance' )
+			__( 'Related pages means the post itself, your homepage, and the archives it appears in. Clearing everything also rebuilds pages in the background.', 'gt-performance' )
 		);
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Cache warming', 'gt-performance' ), __( 'Rebuild the cache in the background after a full purge so visitors keep hitting warm pages.', 'gt-performance' ) );
-		$this->checkbox( 'cache', 'preload', __( 'Warm cache after a full purge', 'gt-performance' ), __( 'Discover URLs from the WordPress sitemap and queue them for background preloading whenever the whole cache is cleared.', 'gt-performance' ), $settings );
-		$this->number( 'cache', 'preload_max_urls', __( 'Maximum URLs per warm run', 'gt-performance' ), __( 'Upper bound on sitemap URLs queued after a full purge.', 'gt-performance' ), $settings, 0, 2000, __( 'URLs', 'gt-performance' ), '1', __( 'Use 0 to disable warm jobs without turning off the page cache. Large sites should increase this gradually to avoid traffic spikes.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Cache warming', 'gt-performance' ), __( 'After clearing everything, rebuild pages in the background so visitors do not wait.', 'gt-performance' ) );
+		$this->checkbox( 'cache', 'preload', __( 'Warm cache after a full purge', 'gt-performance' ), __( 'Uses your sitemap to find pages worth rebuilding first.', 'gt-performance' ), $settings );
+		$this->number( 'cache', 'preload_max_urls', __( 'Maximum URLs per warm run', 'gt-performance' ), __( 'Upper bound on sitemap URLs queued after a full purge.', 'gt-performance' ), $settings, 0, 2000, __( 'URLs', 'gt-performance' ), '1', __( 'Set to 0 to stop rebuilding without turning caching off. On a big site, raise this slowly.', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
 	}
@@ -746,19 +752,20 @@ final class AdminModule implements Module {
 	 * @param array<string, mixed> $settings Settings.
 	 */
 	private function renderOptimization( array $settings ): void {
-		$this->pageIntro( __( 'Optimization', 'gt-performance' ), __( 'Server-side CSS processing plus conservative JavaScript, media, font, database, and WordPress cleanup controls.', 'gt-performance' ) );
+		$this->pageIntro( __( 'Optimization', 'gt-performance' ), __( 'Make pages smaller and faster: CSS, JavaScript, images, fonts, and WordPress cleanup.', 'gt-performance' ) );
+		$this->renderCssStatus();
 		$this->settingsFormOpen();
 
-		$this->panelOpen( __( 'Unused CSS', 'gt-performance' ), __( 'Analyze rendered HTML on this server and deliver only matching selectors.', 'gt-performance' ) );
-		$this->checkbox( 'css', 'enabled', __( 'Remove unused CSS', 'gt-performance' ), __( 'Analyze each rendered page on this server and serve only the CSS it actually uses.', 'gt-performance' ), $settings, __( 'Rewrites the stylesheets your theme and plugins load. Verify a few pages after enabling, and after any theme or plugin update. Stylesheets using constructs the analyzer cannot model are passed through untouched rather than pruned.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Unused CSS', 'gt-performance' ), __( 'Send only the CSS each page actually needs.', 'gt-performance' ) );
+		$this->checkbox( 'css', 'enabled', __( 'Remove unused CSS', 'gt-performance' ), __( 'Send only the CSS each page actually needs.', 'gt-performance' ), $settings, __( 'This changes the CSS your site sends to visitors. Check a few pages after you turn it on, and again after you update a theme or plugin. Any stylesheet it cannot read safely is left exactly as it is.', 'gt-performance' ) );
 		$this->cssDeliveryOptions( $settings );
-		$this->number( 'css', 'critical_budget', __( 'Hybrid inline CSS limit', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ), '1', __( 'If the critical segment exceeds this limit, the plugin delivers all used CSS as a generated file instead of enlarging the HTML.', 'gt-performance' ) );
-		$this->checkbox( 'css', 'keep_dynamic_states', __( 'Preserve dynamic states', 'gt-performance' ), __( 'Keep selectors used for hover, focus, open, checked, and other interactive states.', 'gt-performance' ), $settings );
+		$this->number( 'css', 'critical_budget', __( 'Hybrid inline CSS limit', 'gt-performance' ), __( 'Maximum early-page CSS to inline in Hybrid mode.', 'gt-performance' ), $settings, 2048, 51200, __( 'bytes', 'gt-performance' ), '1', __( 'If the inlined part would be bigger than this, everything is put in a file instead so the page stays small.', 'gt-performance' ) );
+		$this->checkbox( 'css', 'keep_dynamic_states', __( 'Preserve dynamic states', 'gt-performance' ), __( 'Keep styles for hover, focus, and other states a visitor triggers.', 'gt-performance' ), $settings );
 		$this->select(
 			'css',
 			'rollout_percent',
 			__( 'Staged rollout', 'gt-performance' ),
-			__( 'Apply generated CSS to a deterministic percentage of public URLs. Zero is an instant rollback to original stylesheets.', 'gt-performance' ),
+			__( 'Try the new CSS on a share of your pages first. Set it to 0% to go back to your original stylesheets straight away.', 'gt-performance' ),
 			$settings,
 			array(
 				'0'   => __( '0% - original CSS only', 'gt-performance' ),
@@ -767,22 +774,22 @@ final class AdminModule implements Module {
 				'50'  => '50%',
 				'100' => __( '100% - all eligible URLs', 'gt-performance' ),
 			),
-			__( 'The same URL always stays in the same rollout group. Choose 0% to stop serving generated CSS immediately without deleting reports.', 'gt-performance' )
+			__( 'A page always stays in the same group, so what you check is what visitors see.', 'gt-performance' )
 		);
 		$this->panelClose();
 
-		$this->panelOpen( __( 'JavaScript', 'gt-performance' ), __( 'Apply transformations only to scripts that are not excluded and do not appear transactional.', 'gt-performance' ) );
+		$this->panelOpen( __( 'JavaScript', 'gt-performance' ), __( 'Cart, checkout, and payment scripts are never touched.', 'gt-performance' ) );
 		$this->checkbox( 'javascript', 'minify', __( 'Minify local JavaScript', 'gt-performance' ), __( 'Create immutable minified copies of eligible local scripts.', 'gt-performance' ), $settings );
 		$this->checkbox( 'javascript', 'defer', __( 'Defer safe JavaScript', 'gt-performance' ), __( 'Add defer to eligible external scripts.', 'gt-performance' ), $settings );
-		$this->checkbox( 'javascript', 'delay', __( 'Delay selected third-party scripts', 'gt-performance' ), __( 'Wait for interaction or five seconds before loading scripts listed under Exceptions.', 'gt-performance' ), $settings, __( 'Use this for analytics and marketing scripts, not consent, checkout, forms, or other code required before interaction.', 'gt-performance' ) );
+		$this->checkbox( 'javascript', 'delay', __( 'Delay selected third-party scripts', 'gt-performance' ), __( 'Hold listed scripts until someone interacts, or for five seconds.', 'gt-performance' ), $settings, __( 'Good for analytics and marketing scripts. Do not use it for consent banners, forms, or checkout.', 'gt-performance' ) );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Images and embeds', 'gt-performance' ), __( 'Reduce offscreen work and generate modern image variants on this server.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Images and embeds', 'gt-performance' ), __( 'Load images later when they are off screen, and make smaller modern versions.', 'gt-performance' ) );
 		$this->checkbox( 'media', 'lazy_load', __( 'Lazy-load non-critical images', 'gt-performance' ), __( 'Keep the first critical images eager and lazy-load later images.', 'gt-performance' ), $settings );
 		$this->checkbox( 'media', 'add_dimensions', __( 'Add missing image dimensions', 'gt-performance' ), __( 'Reduce layout shifts when attachment dimensions are known.', 'gt-performance' ), $settings );
-		$this->number( 'media', 'critical_images', __( 'Images to load immediately', 'gt-performance' ), __( 'Number of early images excluded from lazy loading.', 'gt-performance' ), $settings, 0, 10, __( 'images', 'gt-performance' ), '1', __( 'Count from the start of the page. Include the likely above-the-fold or Largest Contentful Paint image.', 'gt-performance' ) );
+		$this->number( 'media', 'critical_images', __( 'Images to load immediately', 'gt-performance' ), __( 'Number of early images excluded from lazy loading.', 'gt-performance' ), $settings, 0, 10, __( 'images', 'gt-performance' ), '1', __( 'Counted from the top of the page. Include your main hero image.', 'gt-performance' ) );
 		$this->checkbox( 'media', 'optimize_uploads', __( 'Generate optimized variants', 'gt-performance' ), __( 'Create the selected modern format when attachments are generated.', 'gt-performance' ), $settings );
-		$this->checkbox( 'media', 'rewrite_variants', __( 'Serve optimized image variants', 'gt-performance' ), __( 'Rewrite eligible attachment URLs to the generated WebP or AVIF files.', 'gt-performance' ), $settings, __( 'Enable variant generation first. Existing attachments need regenerated metadata before a modern variant can be served.', 'gt-performance' ) );
+		$this->checkbox( 'media', 'rewrite_variants', __( 'Serve optimized image variants', 'gt-performance' ), __( 'Rewrite eligible attachment URLs to the generated WebP or AVIF files.', 'gt-performance' ), $settings, __( 'Turn on variant generation first. Images you already uploaded need regenerating before this can use them.', 'gt-performance' ) );
 		$this->select(
 			'media',
 			'format',
@@ -799,7 +806,7 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Fonts', 'gt-performance' ), __( 'Keep font requests predictable and reduce render blocking.', 'gt-performance' ) );
-		$this->checkbox( 'fonts', 'self_host_google', __( 'Self-host Google Fonts', 'gt-performance' ), __( 'Download eligible Google Fonts stylesheets and font files to this site.', 'gt-performance' ), $settings );
+		$this->checkbox( 'fonts', 'self_host_google', __( 'Self-host Google Fonts', 'gt-performance' ), __( 'Copy Google Fonts to your own site so visitors never load them from Google.', 'gt-performance' ), $settings );
 		$this->select(
 			'fonts',
 			'font_display',
@@ -812,40 +819,40 @@ final class AdminModule implements Module {
 				'optional' => 'optional',
 				'block'    => 'block',
 			),
-			__( 'Swap shows fallback text immediately; optional may skip the web font on slow connections; block can briefly hide text.', 'gt-performance' )
+			__( 'Swap shows your fallback font straight away. Optional may skip the web font on a slow connection. Block can leave text invisible for a moment.', 'gt-performance' )
 		);
 		$this->panelClose();
 
-		$this->panelOpen( __( 'WordPress quick toggles', 'gt-performance' ), __( 'Remove front-end requests and metadata WordPress loads globally. Apply the active gauravtiwari.org baseline or choose controls individually.', 'gt-performance' ) );
+		$this->panelOpen( __( 'WordPress quick toggles', 'gt-performance' ), __( 'Turn off things WordPress loads on every page that most sites never use.', 'gt-performance' ) );
 		$this->renderWordPressPresets();
 		$this->checkbox( 'bloat', 'disable_emojis', __( 'Disable WordPress emoji assets', 'gt-performance' ), __( 'Remove the legacy emoji detection script and styles.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_dashicons', __( 'Disable Dashicons for visitors', 'gt-performance' ), __( 'Keep Dashicons for logged-in users and remove them from public pages.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_embeds', __( 'Disable WordPress embeds', 'gt-performance' ), __( 'Remove oEmbed discovery and the frontend embed script.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_xmlrpc', __( 'Disable XML-RPC', 'gt-performance' ), __( 'Disable legacy XML-RPC requests while leaving the REST API available.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_rsd_link', __( 'Remove RSD link', 'gt-performance' ), __( 'Remove the Really Simple Discovery link from the document head.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_jquery_migrate', __( 'Remove jQuery Migrate for visitors', 'gt-performance' ), __( 'Reduce a legacy dependency on public pages.', 'gt-performance' ), $settings, __( 'Older themes and plugins may still use removed jQuery APIs. Test menus, forms, sliders, and checkout after enabling.', 'gt-performance' ) );
-		$this->checkbox( 'bloat', 'hide_wp_version', __( 'Remove WordPress version', 'gt-performance' ), __( 'Remove the generator value and mask WordPress core version query strings.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_jquery_migrate', __( 'Remove jQuery Migrate for visitors', 'gt-performance' ), __( 'Reduce a legacy dependency on public pages.', 'gt-performance' ), $settings, __( 'Some older themes and plugins still need this. Check menus, forms, sliders, and checkout after turning it on.', 'gt-performance' ) );
+		$this->checkbox( 'bloat', 'hide_wp_version', __( 'Remove WordPress version', 'gt-performance' ), __( 'Stop pages from advertising which WordPress version you run.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_shortlink', __( 'Remove shortlink', 'gt-performance' ), __( 'Remove shortlink output from the document head and response headers.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'disable_rss_feeds', __( 'Disable every RSS feed', 'gt-performance' ), __( 'Return a 404 for all feed requests, including the main feed. Leave disabled when readers or syndication services use feeds.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'disable_secondary_feeds', __( 'Disable secondary feeds only', 'gt-performance' ), __( 'Keep the main feed at /feed/ live and indexable, and return a 404 for comment, category, tag, taxonomy, author, date, search, and post type feeds.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_feed_links', __( 'Remove every RSS feed link', 'gt-performance' ), __( 'Keep feeds working but remove all automatic discovery links from the document head.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_secondary_feed_links', __( 'Remove secondary RSS feed links', 'gt-performance' ), __( 'Keep the main feed discovery link and remove the comment, term, author, and post type discovery links.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_rss_feeds', __( 'Disable every RSS feed', 'gt-performance' ), __( 'Turn off every feed, including your main one. Leave this off if anyone subscribes to your site.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_secondary_feeds', __( 'Disable secondary feeds only', 'gt-performance' ), __( 'Keep your main feed at /feed/ and turn off the rest.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_feed_links', __( 'Remove every RSS feed link', 'gt-performance' ), __( 'Feeds keep working, but browsers and readers stop finding them automatically.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_secondary_feed_links', __( 'Remove secondary RSS feed links', 'gt-performance' ), __( 'Keep the link to your main feed and remove the others.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_self_pingbacks', __( 'Disable self pingbacks', 'gt-performance' ), __( 'Prevent WordPress from pinging links that point back to this site.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_rest_api_links', __( 'Remove REST API links', 'gt-performance' ), __( 'Keep the REST API working while removing discovery links from public responses.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_rest_api_links', __( 'Remove REST API links', 'gt-performance' ), __( 'The REST API keeps working; pages just stop pointing at it.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'disable_google_maps', __( 'Disable Google Maps', 'gt-performance' ), __( 'Remove Google Maps scripts except on paths listed in Exceptions.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'disable_password_strength_meter', __( 'Disable password strength meter', 'gt-performance' ), __( 'Remove the front-end password meter. Test registration and account forms after enabling.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'disable_password_strength_meter', __( 'Disable password strength meter', 'gt-performance' ), __( 'Removes the password strength meter. Check your sign-up and account forms after turning it on.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'remove_comment_urls', __( 'Remove comment author URLs', 'gt-performance' ), __( 'Discard author website links to reduce comment backlink spam.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'blank_favicon', __( 'Add a blank fallback favicon', 'gt-performance' ), __( 'Prevent a missing favicon request when the site has no Site Icon.', 'gt-performance' ), $settings );
-		$this->checkbox( 'bloat', 'remove_global_styles', __( 'Remove global styles', 'gt-performance' ), __( 'Remove WordPress global and classic theme styles. Use only when the theme does not need them.', 'gt-performance' ), $settings );
+		$this->checkbox( 'bloat', 'remove_global_styles', __( 'Remove global styles', 'gt-performance' ), __( 'Only use this if your theme does not rely on the WordPress default styles.', 'gt-performance' ), $settings );
 		$this->checkbox( 'bloat', 'separate_block_styles', __( 'Load separate core block styles', 'gt-performance' ), __( 'Load core block CSS only when the corresponding block is rendered.', 'gt-performance' ), $settings );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Editor, comments, and APIs', 'gt-performance' ), __( 'Control revision growth, autosaves, Heartbeat, comments, and REST API access.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Editor, comments, and APIs', 'gt-performance' ), __( 'Revisions, autosaves, comments, and background admin requests.', 'gt-performance' ) );
 		$this->select(
 			'bloat',
 			'heartbeat_mode',
 			__( 'Heartbeat behavior', 'gt-performance' ),
-			__( 'Reduced frequency preserves post locks and autosaves with fewer requests.', 'gt-performance' ),
+			__( 'Fewer background requests, while editing still works normally.', 'gt-performance' ),
 			$settings,
 			array(
 				'default'           => __( 'WordPress default', 'gt-performance' ),
@@ -853,7 +860,7 @@ final class AdminModule implements Module {
 				'disable_dashboard' => __( 'Disable outside the editor', 'gt-performance' ),
 				'disabled'          => __( 'Disable everywhere', 'gt-performance' ),
 			),
-			__( 'Disabling Heartbeat everywhere can break post locks, autosaves, and plugins that depend on periodic admin requests.', 'gt-performance' )
+			__( 'Turning this off everywhere can break autosave, post locking, and some plugins.', 'gt-performance' )
 		);
 		$this->number( 'bloat', 'heartbeat_seconds', __( 'Heartbeat interval', 'gt-performance' ), __( 'Slow the admin Heartbeat API without disabling autosave locks.', 'gt-performance' ), $settings, 15, 120, __( 'seconds', 'gt-performance' ) );
 		$this->number( 'bloat', 'autosave_interval', __( 'Autosave interval', 'gt-performance' ), __( 'Increase the editor autosave interval to reduce background requests.', 'gt-performance' ), $settings, 15, 3600, __( 'seconds', 'gt-performance' ) );
@@ -861,14 +868,14 @@ final class AdminModule implements Module {
 			'bloat',
 			'disable_rest_api',
 			__( 'REST API access', 'gt-performance' ),
-			__( 'Disabling REST can break the block editor and integrations. The default keeps it available.', 'gt-performance' ),
+			__( 'Turning the REST API off can break the block editor and other plugins.', 'gt-performance' ),
 			$settings,
 			array(
 				'default'   => __( 'Keep enabled', 'gt-performance' ),
 				'non_admin' => __( 'Administrators only', 'gt-performance' ),
 				'disabled'  => __( 'Disable all requests', 'gt-performance' ),
 			),
-			__( 'Restricted modes can break the block editor, mobile apps, headless clients, and plugin integrations.', 'gt-performance' )
+			__( 'Restricting it can break the block editor, the mobile app, and other plugins.', 'gt-performance' )
 		);
 		$this->checkbox( 'bloat', 'disable_comments', __( 'Disable comments', 'gt-performance' ), __( 'Close comments and pingbacks across all public post types.', 'gt-performance' ), $settings );
 		$this->panelClose();
@@ -887,13 +894,13 @@ final class AdminModule implements Module {
 				'monthly' => __( 'Monthly', 'gt-performance' ),
 			)
 		);
-		$this->number( 'database', 'retain_revisions', __( 'Scheduled revisions to retain', 'gt-performance' ), __( 'Scheduled cleanup keeps this many recent revisions per post. Manual cleanup removes every selected revision.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
+		$this->number( 'database', 'retain_revisions', __( 'Scheduled revisions to retain', 'gt-performance' ), __( 'How many recent revisions to keep per post when cleanup runs.', 'gt-performance' ), $settings, 0, 100, __( 'revisions', 'gt-performance' ) );
 		$this->databaseTaskSettings( $settings );
 		$this->panelClose();
 
-		$this->panelOpen( __( 'Diagnostics', 'gt-performance' ), __( 'Keep troubleshooting data local, bounded, and disabled unless it is needed.', 'gt-performance' ) );
+		$this->panelOpen( __( 'Diagnostics', 'gt-performance' ), __( 'Only turn these on while you are troubleshooting.', 'gt-performance' ) );
 		$this->checkboxRoot( 'debug', __( 'Diagnostic logging', 'gt-performance' ), __( 'Write redacted plugin errors to the GT Performance log directory.', 'gt-performance' ), $settings );
-		$this->checkboxRoot( 'remove_data_on_uninstall', __( 'Remove all data when the plugin is deleted', 'gt-performance' ), __( 'Delete settings, database tables, drop-ins, and the cache directory on uninstall.', 'gt-performance' ), $settings, __( 'Leave this off to keep your configuration if you reinstall. With it off, deleting the plugin leaves its options, tables, and the Redis credentials file on disk.', 'gt-performance' ) );
+		$this->checkboxRoot( 'remove_data_on_uninstall', __( 'Remove all data when the plugin is deleted', 'gt-performance' ), __( 'Delete everything this plugin created when you delete the plugin.', 'gt-performance' ), $settings, __( 'Leave this off to keep your settings if you reinstall. With it off, deleting the plugin leaves its data behind, including saved Redis credentials.', 'gt-performance' ) );
 		$this->panelClose();
 
 		$this->settingsFormClose();
@@ -1554,6 +1561,128 @@ PHP;
 		<?php
 	}
 
+	public function regenerateCss(): never {
+		$this->guard( 'gtperf_css_regenerate' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- guard() verifies the action nonce above.
+		$scope = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( (string) $_POST['scope'] ) ) : 'url';
+		$maintenance = new Maintenance();
+		if ( 'all' === $scope ) {
+			$this->redirect( $maintenance->regenerateAll() ? 'css-regenerated-all' : 'css-unavailable', 'optimization' );
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- guard() verifies the action nonce above.
+		$url = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( (string) $_POST['url'] ) ) : '';
+		if ( ! Maintenance::eligible( $url ) ) {
+			$this->redirect( 'css-regenerate-invalid', 'optimization' );
+		}
+		$this->redirect( $maintenance->enqueue( $url, true ) ? 'css-regenerated-url' : 'css-unavailable', 'optimization' );
+	}
+
+	public function cssReport(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( null, 403 );
+		}
+		check_ajax_referer( 'gtperf_css_report', 'nonce' );
+		ob_start();
+		$this->renderCssReport();
+		wp_send_json_success( array( 'html' => (string) ob_get_clean() ) );
+	}
+
+	private function renderCssStatus(): void {
+		$this->panelOpen( __( 'Unused CSS status', 'gt-performance' ), __( 'Save settings before running a build. Background jobs use WordPress cron and the saved rollout and exclusions.', 'gt-performance' ) );
+		?>
+		<div class="gtp-css-status">
+		<div class="gtp-css-report" data-gtp-css-report><?php $this->renderCssReport(); ?></div>
+		<div class="gtp-css-refresh">
+			<button type="button" class="button" data-gtp-css-refresh><?php esc_html_e( 'Refresh status', 'gt-performance' ); ?></button>
+			<p data-gtp-css-message role="status" aria-live="polite"></p>
+		</div>
+		<div class="gtp-css-operations">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="gtperf_css_regenerate">
+				<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'gtperf_css_regenerate' ) ); ?>">
+				<label for="gtp-css-url"><?php esc_html_e( 'Public page URL', 'gt-performance' ); ?></label>
+				<div class="gtp-css-url-controls">
+				<input type="url" id="gtp-css-url" name="url" required placeholder="<?php echo esc_attr( home_url( '/' ) ); ?>">
+				<button class="button" <?php disabled( ! Maintenance::enabled() ); ?>><?php esc_html_e( 'Force regenerate URL', 'gt-performance' ); ?></button>
+				</div>
+			</form>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="gtperf_css_regenerate">
+				<input type="hidden" name="scope" value="all">
+				<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'gtperf_css_regenerate' ) ); ?>">
+				<button class="button" <?php disabled( ! Maintenance::enabled() ); ?>><?php esc_html_e( 'Force regenerate all CSS', 'gt-performance' ); ?></button>
+				<p><?php esc_html_e( 'Invalidates every CSS result and clears page caches. Rebuilds known eligible URLs in batches, starting with the homepage. Existing files stay available for cached pages.', 'gt-performance' ); ?></p>
+			</form>
+		</div>
+		</div>
+		<?php
+		$this->panelClose();
+	}
+
+	private function renderCssReport(): void {
+		$repository = new ReportRepository();
+		$stats = $repository->statistics();
+		$reports = $repository->recent();
+		$removed = $stats['original_bytes'] - $stats['generated_bytes'];
+		$percent = $stats['original_bytes'] > 0 ? 100 * $removed / $stats['original_bytes'] : 0;
+		$next = wp_next_scheduled( 'gt_performance_run_queue' );
+		$cacheReady = defined( 'WP_CACHE' ) && WP_CACHE && 'owned' === ( new DropinInstaller() )->status();
+		?>
+		<div class="gtp-stat-grid">
+			<?php $this->stat( __( 'Generation', 'gt-performance' ), ! $cacheReady ? __( 'Needs cache setup', 'gt-performance' ) : ( Maintenance::enabled() ? __( 'Enabled', 'gt-performance' ) : __( 'Paused / disabled', 'gt-performance' ) ), $cacheReady && Maintenance::enabled() ? 'success' : 'neutral' ); ?>
+			<?php
+			foreach ( array(
+				'total' => __( 'Total results', 'gt-performance' ),
+				'queued' => __( 'Queued', 'gt-performance' ),
+				'processing' => __( 'Processing', 'gt-performance' ),
+				'ready' => __( 'Ready', 'gt-performance' ),
+				'stale' => __( 'Stale', 'gt-performance' ),
+				'failed' => __( 'Failed', 'gt-performance' ),
+				'skipped' => __( 'Skipped', 'gt-performance' ),
+			) as $key => $label ) :
+				?>
+				<?php $this->stat( $label, number_format_i18n( $stats[ $key ] ), 'failed' === $key && $stats[ $key ] > 0 ? 'warning' : 'neutral' ); ?>
+			<?php endforeach; ?>
+		</div>
+		<div class="gtp-css-summary">
+		<?php if ( ! $cacheReady ) : ?>
+			<p><?php esc_html_e( 'Generation needs the GT Performance page-cache drop-in and WP_CACHE. Open Tools to install or repair the drop-in.', 'gt-performance' ); ?></p>
+		<?php endif; ?>
+		<p><?php echo esc_html( sprintf( /* translators: 1: original CSS size, 2: generated CSS size, 3: reduction percentage. */ __( 'Current ready results: %1$s original → %2$s generated (%3$s%% reduction). Totals count URL/mode results, not unique files or measured visitor bandwidth.', 'gt-performance' ), size_format( $stats['original_bytes'] ), size_format( $stats['generated_bytes'] ), number_format_i18n( $percent, 1 ) ) ); ?></p>
+		<p><?php echo esc_html( sprintf( /* translators: 1: CSS mode, 2: rollout percentage. */ __( 'Saved delivery mode: %1$s. Rollout: %2$s%%.', 'gt-performance' ), (string) Settings::get( 'css.mode', 'file' ), (string) Settings::get( 'css.rollout_percent', 100 ) ) ); ?></p>
+		<p><?php echo esc_html( $next ? sprintf( /* translators: %s: UTC cron timestamp. */ __( 'Next queue event: %s UTC. WP-Cron needs site traffic or a server cron runner.', 'gt-performance' ), gmdate( 'Y-m-d H:i:s', $next ) ) : __( 'Queue cron is missing. Reload after WordPress initializes the queue schedule.', 'gt-performance' ) ); ?></p>
+		</div>
+		<?php if ( ! $reports ) : ?>
+			<p><?php esc_html_e( 'No CSS results yet. Queue a public URL below. Generation needs an active page-cache drop-in and an eligible public HTML response.', 'gt-performance' ); ?></p>
+		<?php else : ?>
+			<div class="gtp-css-results">
+			<p><?php esc_html_e( 'Latest 50 results. Counts above include all stored reports. Times are UTC.', 'gt-performance' ); ?></p>
+			<div class="gtp-table-wrap"><table class="widefat gtp-report-table">
+				<thead><tr><th><?php esc_html_e( 'URL / mode', 'gt-performance' ); ?></th><th><?php esc_html_e( 'Status', 'gt-performance' ); ?></th><th><?php esc_html_e( 'Original / generated', 'gt-performance' ); ?></th><th><?php esc_html_e( 'Last activity / duration', 'gt-performance' ); ?></th><th><?php esc_html_e( 'Details', 'gt-performance' ); ?></th></tr></thead>
+				<tbody><?php foreach ( $reports as $report ) : ?>
+					<?php $meta = (array) $report['metadata']; ?>
+					<tr>
+						<td><?php echo esc_html( (string) ( $meta['url'] ?? '' ) ); ?><br><small><?php echo esc_html( (string) $report['mode'] ); ?></small></td>
+						<td><?php echo esc_html( (string) $report['status'] ); ?></td>
+						<td><?php echo esc_html( isset( $meta['original_bytes'] ) ? size_format( (int) $meta['original_bytes'] ) . ' / ' . size_format( (int) ( $meta['generated_bytes'] ?? 0 ) ) : '—' ); ?></td>
+						<td><?php echo esc_html( (string) $report['last_used_at'] ); ?><br><?php echo esc_html( isset( $meta['duration_ms'] ) ? (string) $meta['duration_ms'] . ' ms' : '—' ); ?></td>
+						<td>
+							<?php echo esc_html( (string) ( $meta['error'] ?? $meta['reason'] ?? $meta['fallback'] ?? '' ) ); ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<input type="hidden" name="action" value="gtperf_css_regenerate">
+								<input type="hidden" name="url" value="<?php echo esc_attr( (string) ( $meta['url'] ?? '' ) ); ?>">
+								<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'gtperf_css_regenerate' ) ); ?>">
+								<button class="button button-small" <?php disabled( ! Maintenance::enabled() || in_array( $report['status'], array( 'queued', 'processing' ), true ) ); ?>><?php esc_html_e( 'Regenerate', 'gt-performance' ); ?></button>
+							</form>
+						</td>
+					</tr>
+				<?php endforeach; ?></tbody>
+			</table></div>
+			</div>
+		<?php endif; ?>
+		<?php
+	}
+
 	private function renderCachePresets(): void {
 		$presets = array(
 			'maximum' => array(
@@ -1618,15 +1747,15 @@ PHP;
 		$options  = array(
 			'file'   => array(
 				'label'       => __( 'Generated file', 'gt-performance' ),
-				'description' => __( 'Keeps HTML smaller and lets browsers cache the page-specific stylesheet.', 'gt-performance' ),
+				'description' => __( 'Smallest pages. Browsers can reuse the CSS file between visits.', 'gt-performance' ),
 			),
 			'inline' => array(
 				'label'       => __( 'Inline all used CSS', 'gt-performance' ),
-				'description' => __( 'Removes the stylesheet request, but repeats the complete used CSS inside each HTML response.', 'gt-performance' ),
+				'description' => __( 'Saves a request, but puts the CSS in every page, so pages are bigger.', 'gt-performance' ),
 			),
 			'hybrid' => array(
 				'label'       => __( 'Critical inline + remaining file', 'gt-performance' ),
-				'description' => __( 'Inlines conservatively detected early-page CSS and loads the remaining used CSS from a cacheable file.', 'gt-performance' ),
+				'description' => __( 'Puts the CSS needed for the top of the page in the page itself, and the rest in a file.', 'gt-performance' ),
 			),
 		);
 		?>
@@ -2223,8 +2352,9 @@ PHP;
 			'purge-warning'             => array( __( 'The purge completed, but one or more verification signals need review.', 'gt-performance' ), 'warning' ),
 			'commerce-safety-pass'      => array( __( 'Every active commerce cache-policy check and live protection check passed.', 'gt-performance' ), 'success' ),
 			'commerce-safety-review'    => array( __( 'The commerce run completed with warnings or policy failures. Review the Safety Lab history.', 'gt-performance' ), 'warning' ),
-			'css-regenerated-url'       => array( __( 'Used CSS for the selected URL was invalidated, purged, and regenerated.', 'gt-performance' ), 'success' ),
-			'css-regenerated-all'       => array( __( 'All used CSS was invalidated and the page cache was purged for regeneration.', 'gt-performance' ), 'success' ),
+			'css-regenerated-url'       => array( __( 'CSS regeneration queued. The report will update when the build finishes.', 'gt-performance' ), 'success' ),
+			'css-regenerated-all'       => array( __( 'CSS results invalidated and page caches purged. Known eligible URLs will rebuild in the background; other pages rebuild when visited.', 'gt-performance' ), 'success' ),
+			'css-unavailable' => array( __( 'CSS could not be queued. Check that page caching and unused CSS are enabled, rollout includes the URL, and no build is already active.', 'gt-performance' ), 'warning' ),
 			'css-regenerate-invalid'    => array( __( 'Enter a valid public URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'fleet-policy-applied'      => array( __( 'The signed fleet policy was verified and applied.', 'gt-performance' ), 'success' ),
 			'gtperf_cloudflare_token'      => array( __( 'Enter a Cloudflare API token, save the settings, then connect again.', 'gt-performance' ), 'error' ),
