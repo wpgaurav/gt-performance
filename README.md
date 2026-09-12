@@ -1,5 +1,7 @@
 # GT Performance
 
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=flat&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/gauravtiwari)
+
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
 The current release is `1.0.10`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
@@ -207,3 +209,13 @@ composer check
 Cloudflare and xCloud mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, image-optimizer, and host-cache combinations continue to grow their compatibility matrix.
 
 GT Performance is an independent implementation. It does not include or copy FlyingPress code, branding, or private protocols.
+
+## Support This Project
+
+GT Performance is free GPL software with no license key, and it handles page caching, unused CSS, Cloudflare Free setup and cache bypass for FluentCart, EDD and WooCommerce. I develop it in the open here, and keeping private commerce pages out of the cache takes priority over hit rate.
+
+If it kept your checkout out of the page cache or got Cloudflare Free caching your HTML without APO, you can buy me a coffee.
+
+<a href="https://buymeacoffee.com/gauravtiwari"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="50"></a>
+
+A star on the repo helps too, and so does a bug report with your WordPress and PHP versions, the cache or commerce plugins you run and the steps that broke a page.
