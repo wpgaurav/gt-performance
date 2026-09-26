@@ -20,6 +20,11 @@ jobs:
       attestations: write
       contents: write
       id-token: write
+    outputs:
+      prerelease: ${{ steps.metadata.outputs.prerelease }}
+      tag: ${{ steps.metadata.outputs.tag }}
+      version: ${{ steps.metadata.outputs.version }}
+      zip_name: ${{ steps.metadata.outputs.zip_name }}
 
     steps:
       - name: Check out the tagged source
@@ -118,3 +123,85 @@ jobs:
           fi
 
           gh release create "${args[@]}"
+
+  wordpress-org:
+    name: Deploy to WordPress.org
+    needs: release
+    # Stable versions only. release-metadata.php marks any version with a
+    # pre-release suffix (1.2.0-rc.1, 1.2.0-beta.2) as a GitHub prerelease.
+    if: needs.release.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment:
+      name: wordpress.org
+      url: https://wordpress.org/plugins/gt-performance/
+    concurrency:
+      group: wordpress-org-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out the directory assets
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Confirm the GitHub release is stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          state="$(gh release view "${TAG}" --json isDraft,isPrerelease --jq '"\(.isDraft) \(.isPrerelease)"')"
+          if [[ "${state}" != "false false" ]]; then
+            echo "::error::${TAG} is a draft or prerelease (isDraft isPrerelease = ${state}). Not deploying."
+            exit 1
+          fi
+
+      - name: Download the verified release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-${{ needs.release.outputs.version }}
+          path: ${{ runner.temp }}/release
+
+      - name: Unpack and verify the WordPress.org package
+        id: package
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          ZIP_NAME: ${{ needs.release.outputs.zip_name }}
+        run: |
+          set -euo pipefail
+          cd "${RUNNER_TEMP}/release"
+          sha256sum --check "${ZIP_NAME}.sha256"
+          unzip -q "${ZIP_NAME}" -d "${RUNNER_TEMP}/wporg"
+          plugin="${RUNNER_TEMP}/wporg/gt-performance"
+          grep -F "Version: ${VERSION}" "${plugin}/gt-performance.php"
+          grep -F "Stable tag: ${VERSION}" "${plugin}/readme.txt"
+          if grep -q "^Update URI:" "${plugin}/gt-performance.php"; then
+            echo "::error::The WordPress.org package must not carry an Update URI header."
+            exit 1
+          fi
+          if [[ -e "${plugin}/src/Licensing" ]]; then
+            echo "::error::The WordPress.org package must not contain src/Licensing."
+            exit 1
+          fi
+          echo "build_dir=${plugin}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Subversion is installed
+        run: command -v svn || { sudo apt-get update -qq && sudo apt-get install -y -qq subversion; }
+
+      - name: Commit trunk, tag and assets to SVN
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: gt-performance
+          VERSION: ${{ needs.release.outputs.version }}
+          BUILD_DIR: ${{ steps.package.outputs.build_dir }}
+          ASSETS_DIR: distribution-assets/wordpress-org
+
+      - name: Confirm the SVN tag exists
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          svn ls "https://plugins.svn.wordpress.org/gt-performance/tags/${VERSION}/gt-performance.php"
+          echo "Deployed GT Performance ${VERSION} to https://plugins.svn.wordpress.org/gt-performance/tags/${VERSION}/" >> "$GITHUB_STEP_SUMMARY"
