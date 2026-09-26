@@ -16,6 +16,16 @@ final class Paths {
 		return rtrim( $content, '/\\' ) . '/cache/gt-performance';
 	}
 
+	/** Reject cache-root aliases into unrelated directories before writing/removing. */
+	public static function cacheRootIsSafe(): bool {
+		$content = realpath( WP_CONTENT_DIR );
+		if ( false === $content || is_link( $content . '/cache' ) || is_link( $content . '/cache/gt-performance' ) ) {
+			return false;
+		}
+		$root = realpath( self::cacheRoot() );
+		return false === $root || $root === $content . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'gt-performance';
+	}
+
 	public static function pages(): string {
 		return self::cacheRoot() . '/pages';
 	}
@@ -31,18 +41,14 @@ final class Paths {
 	/**
 	 * Compiled cache configuration.
 	 *
-	 * The `.json.php` suffix is literal: the payload is JSON, and the `.php`
-	 * extension exists so a direct web request hits the guard line instead of
-	 * the data. The name deliberately differs from the `config.php` used up to
-	 * 1.0.0, so a drop-in left over from that release finds nothing and returns
-	 * rather than executing a file it would expect to `return` an array.
+	 * Authenticated encrypted JSON, distinct from all legacy PHP filenames.
 	 */
 	public static function config(): string {
-		return self::cacheRoot() . '/config.json.php';
+		return self::cacheRoot() . '/config.json';
 	}
 
 	public static function redisConfig(): string {
-		return self::cacheRoot() . '/redis-config.json.php';
+		return self::cacheRoot() . '/redis-config.json';
 	}
 
 	public static function logs(): string {
@@ -58,7 +64,6 @@ final class Paths {
 			self::pages(),
 			self::assets(),
 			self::locks(),
-			self::logs(),
 		);
 	}
 
@@ -69,6 +74,9 @@ final class Paths {
 	 * reachable because generated CSS/JS/font files are linked into the page.
 	 */
 	public static function harden(): void {
+		if ( ! self::cacheRootIsSafe() ) {
+			return;
+		}
 		foreach ( self::writableDirectories() as $directory ) {
 			if ( ! is_dir( $directory ) ) {
 				continue;
@@ -95,14 +103,14 @@ final class Paths {
 
 		// The cache root itself cannot be denied wholesale: assets/ under it is linked
 		// into the page and must stay reachable. But the two config files directly in it
-		// are not assets, and redis-config.json.php holds a host, username and password
-		// in clear text. Deny those by name.
+		// are not assets, and redis-config.json holds runtime settings
+		// as encrypted data. Deny configuration files by suffix as defense in depth.
 		$root = self::cacheRoot();
 		if ( is_dir( $root ) ) {
 			$file = $root . '/.htaccess';
 			if ( ! is_file( $file ) ) {
 				$rule = "# GT Performance: deny direct access to configuration payloads.\n"
-					. "<FilesMatch \"\\.json\\.php$\">\n"
+					. "<FilesMatch \"\\.json(?:\\.php)?$\">\n"
 					. "\t<IfModule mod_authz_core.c>\n\t\tRequire all denied\n\t</IfModule>\n"
 					. "\t<IfModule !mod_authz_core.c>\n\t\tDeny from all\n\t</IfModule>\n"
 					. "</FilesMatch>\n";

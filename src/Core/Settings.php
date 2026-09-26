@@ -13,6 +13,16 @@ use GTPerformance\Cache\ConfigFile;
 
 final class Settings {
 	public const OPTION = 'gt_performance_settings';
+	public const CONFIG_ERROR = 'gt_performance_runtime_config_error';
+	private static bool $saving = false;
+
+	public static function isSaving(): bool {
+		return self::$saving;
+	}
+
+	public static function configurationError(): string {
+		return __( 'Settings could not be applied to the runtime cache. Previous settings were retained and may still be active. Check cache directory permissions and PHP OpenSSL, then save again.', 'gt-performance' );
+	}
 
 	/**
 	 * @return array<string, mixed>
@@ -50,6 +60,7 @@ final class Settings {
 					'gtperf_safe_mode',
 					'gtperf_css_preview',
 					'gtperf_css_build',
+					'gtperf_js',
 				),
 				'bypass_paths'         => array(
 					'/wp-admin/',
@@ -446,16 +457,51 @@ final class Settings {
 	 */
 	public static function save( array $settings ): bool {
 		$clean = self::sanitize( $settings );
-		$saved = update_option( self::OPTION, $clean, false );
-		self::compile( $clean );
-
-		return $saved;
+		if ( ! self::compile( $clean ) ) {
+			return false;
+		}
+		self::$saving = true;
+		try {
+			$saved = update_option( self::OPTION, $clean, false );
+		} finally {
+			self::$saving = false;
+		}
+		if ( $saved || get_option( self::OPTION ) === $clean ) {
+			return true;
+		}
+		// A database failure must not leave the runtime on uncommitted settings.
+		self::compile();
+		update_option( self::CONFIG_ERROR, true, false );
+		return false;
 	}
 
 	/**
 	 * @param array<string, mixed>|null $settings Settings to compile.
 	 */
 	public static function compile( ?array $settings = null ): bool {
+		if ( self::publishConfiguration( $settings ) ) {
+			delete_option( self::CONFIG_ERROR );
+			return true;
+		}
+		// Missing configuration makes both early readers fall back to WordPress.
+		// If a read-only directory also prevents invalidation, callers retain the
+		// old database settings and explicitly report that they may remain active.
+		if ( Paths::cacheRootIsSafe() ) {
+			foreach ( array( Paths::config(), Paths::redisConfig() ) as $file ) {
+				if ( is_file( $file ) || is_link( $file ) ) {
+					wp_delete_file( $file );
+				}
+			}
+		}
+		update_option( self::CONFIG_ERROR, true, false );
+		return false;
+	}
+
+	/** @param array<string, mixed>|null $settings Settings to compile. */
+	private static function publishConfiguration( ?array $settings ): bool {
+		if ( ! Paths::cacheRootIsSafe() ) {
+			return false;
+		}
 		$settings = $settings ?? self::all();
 		$config   = array(
 			'generation' => (int) $settings['generation'],
@@ -485,7 +531,17 @@ final class Settings {
 
 		$redis = ( new \GTPerformance\Redis\Configuration() )->runtime( (array) ( $settings['redis'] ?? array() ) );
 
-		return self::writeConfig( Paths::redisConfig(), $redis );
+		if ( ! self::writeConfig( Paths::redisConfig(), $redis ) ) {
+			return false;
+		}
+		// Retire only known legacy configuration files after both replacements exist.
+		foreach ( array( 'config.php', 'config.json.php', 'redis-config.json.php' ) as $legacy ) {
+			$file = Paths::cacheRoot() . '/' . $legacy;
+			if ( is_file( $file ) ) {
+				wp_delete_file( $file );
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -654,7 +710,7 @@ final class Settings {
 	/**
 	 * Publish a runtime configuration file atomically.
 	 *
-	 * The file is inert JSON behind a fixed guard, read by the drop-ins on every
+	 * The file is authenticated encrypted JSON, read by the drop-ins on every
 	 * request and never executed. See ConfigFile for the format.
 	 *
 	 * @param array<string, mixed> $config Configuration values.

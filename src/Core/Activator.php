@@ -36,6 +36,7 @@ final class Activator {
 		}
 
 		Paths::harden();
+		Logger::removeLegacyFiles();
 
 		if ( false === get_option( Settings::OPTION, false ) ) {
 			add_option( Settings::OPTION, Settings::defaults(), '', false );

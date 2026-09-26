@@ -17,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 
 final class UnusedCssEngineTest extends TestCase {
 	protected function setUp(): void {
+		unset( $GLOBALS['wp_styles'] );
 		if ( ! class_exists( '\WP_HTML_Tag_Processor' ) ) {
 			self::markTestSkipped( 'The WordPress HTML API is required.' );
 		}
@@ -187,5 +188,41 @@ final class UnusedCssEngineTest extends TestCase {
 		$html = $this->page( '<style>.unused-xyz{color:#000}</style>', '<div class="card">y</div>' );
 
 		self::assertSame( $html, $this->optimize( $html ) );
+	}
+
+	/** @dataProvider deliveryModes */
+	public function test_core_delivery_and_reuse_in_each_mode( string $mode, int $budget, bool $inline, bool $file ): void {
+		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['mode'] = $mode;
+		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['critical_budget'] = $budget;
+		$html = $this->page( '<style>.early{color:red}.late{color:blue}.unused-delivery{color:black}</style>', '<div class="early">top</div>' . str_repeat( '<p>filler</p>', 170 ) . '<div class="late">bottom</div>' );
+		$output = $this->optimize( $html );
+		self::assertNotSame( $html, $output );
+		self::assertSame( $inline, str_contains( $output, '<style ' ) );
+		self::assertSame( $file, str_contains( $output, '<link ' ) );
+		self::assertStringNotContainsString( 'unused-delivery', $output );
+		self::assertSame( $output, $this->optimizeAsVisitor( $html ) );
+		if ( $inline ) {
+			self::assertStringContainsString( '.early', $output );
+		}
+		if ( $file ) {
+			$processor = new \WP_HTML_Tag_Processor( $output );
+			self::assertTrue( $processor->next_tag( 'LINK' ) );
+			$path = WP_CONTENT_DIR . str_replace( '/wp-content', '', (string) wp_parse_url( (string) $processor->get_attribute( 'href' ), PHP_URL_PATH ) );
+			$css = file_get_contents( $path );
+			self::assertStringContainsString( '.late', $css );
+			self::assertStringNotContainsString( 'unused-delivery', $css );
+			unlink( $path );
+			self::assertSame( $html, $this->optimizeAsVisitor( $html ), 'Missing artifacts must preserve original styles.' );
+		}
+	}
+
+	/** @return array<string, array{string, int, bool, bool}> */
+	public static function deliveryModes(): array {
+		return array(
+			'inline' => array( 'inline', 14336, true, false ),
+			'file' => array( 'file', 14336, false, true ),
+			'hybrid' => array( 'hybrid', 14336, true, true ),
+			'hybrid budget fallback' => array( 'hybrid', 1, false, true ),
+		);
 	}
 }

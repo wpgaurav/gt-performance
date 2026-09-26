@@ -66,6 +66,16 @@ final class Purger {
 		return $count;
 	}
 
+	/**
+	 * Finish deferred edge work before an interactive caller reports completion.
+	 * Normal post-save invalidation remains batched until shutdown.
+	 *
+	 * @return bool|\WP_Error
+	 */
+	public function flushEdge(): bool|\WP_Error {
+		return apply_filters( 'gt_performance_flush_edge_purges', true );
+	}
+
 	private function fromUrl( string $url ): ?RequestContext {
 		return RequestContext::fromUrl( $url );
 	}

@@ -99,7 +99,7 @@ final class EmbedOptimizer {
 	}
 
 	private function playerScript(): string {
-		return "<script data-gt-performance=\"youtube\">document.addEventListener('click',function(e){var b=e.target.closest('.gtp-youtube button');if(!b)return;var w=b.parentNode,q=w.dataset.videoQuery||'',i=document.createElement('iframe');i.src='https://www.youtube-nocookie.com/embed/'+w.dataset.videoId+'?'+(q?q+'&':'')+'autoplay=1';i.allow='autoplay; encrypted-media; picture-in-picture';i.allowFullscreen=true;i.title=b.getAttribute('aria-label')||'';i.style='width:100%;height:100%;border:0';w.replaceChildren(i);i.focus();});</script>";
+		return BufferedAssets::script( 'youtube' );
 	}
 
 	/**
@@ -114,9 +114,10 @@ final class EmbedOptimizer {
 			return $html;
 		}
 
-		$style = '<style data-gt-performance="lazy-render">'
-			. implode( ',', $valid )
-			. '{content-visibility:auto;contain-intrinsic-size:auto 800px}</style>';
+		$style = BufferedAssets::style(
+			'lazy-render',
+			implode( ',', $valid ) . '{content-visibility:auto;contain-intrinsic-size:auto 800px}'
+		);
 
 		return $this->injectBeforeLast( $html, '</head>', $style );
 	}

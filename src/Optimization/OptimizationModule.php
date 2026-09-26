@@ -31,6 +31,7 @@ final class OptimizationModule implements Module {
 	}
 
 	public function register(): void {
+		add_action( 'init', array( new JavaScriptMinifier(), 'serve' ), -100 );
 		add_filter( 'gt_performance_html', array( $this, 'optimize' ), 10 );
 		add_filter( 'wp_generate_attachment_metadata', array( $this->images, 'enqueue' ), 20, 2 );
 		add_action( ImageVariantGenerator::JOB_HOOK, array( $this->images, 'generateQueued' ) );

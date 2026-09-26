@@ -378,31 +378,51 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		 */
 		private const BREAKER_SECONDS = 30;
 
-		private function breakerFile(): string {
-			return sys_get_temp_dir() . '/gtperf-redis-down-' . md5( $this->basePrefix() );
+		// phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.NoSilencedErrors -- Before WordPress filesystem functions load.
+		private function breakerFile(): ?string {
+			$content = realpath( WP_CONTENT_DIR );
+			if ( false === $content ) {
+				return null;
+			}
+			$directory = $content . '/cache/gt-performance/locks';
+			foreach ( array( $content . '/cache', $content . '/cache/gt-performance', $directory ) as $parent ) {
+				if ( is_link( $parent ) || ! is_dir( $parent ) ) {
+					return null;
+				}
+			}
+			return $directory . '/redis-down-' . md5( $this->basePrefix() );
 		}
 
 		private function breakerOpen(): bool {
 			$file = $this->breakerFile();
-			$time = @filemtime( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-
-			if ( false === $time ) {
+			if ( null === $file || is_link( $file ) || ! is_file( $file ) ) {
 				return false;
 			}
-
-			if ( ( time() - $time ) < self::BREAKER_SECONDS ) {
+			$time = @filemtime( $file );
+			if ( false !== $time && ( time() - $time ) < self::BREAKER_SECONDS ) {
 				return true;
 			}
-
-			@unlink( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink, WordPress.PHP.NoSilencedErrors.Discouraged -- Drop-ins load before wp_delete_file() is available.
-
+			@unlink( $file );
 			return false;
 		}
 
 		private function tripBreaker(): void {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.PHP.NoSilencedErrors.Discouraged
-			@file_put_contents( $this->breakerFile(), '1', LOCK_EX );
+			$file = $this->breakerFile();
+			if ( null === $file ) {
+				return;
+			}
+			// Exclusive creation never follows an existing link or overwrites a file.
+			$stream = @fopen( $file, 'xb' );
+			if ( false === $stream ) {
+				return;
+			}
+			$written = chmod( $file, 0600 ) && 1 === fwrite( $stream, '1' );
+			$closed = fclose( $stream );
+			if ( ! $written || ! $closed ) {
+				@unlink( $file );
+			}
 		}
+		// phpcs:enable WordPress.WP.AlternativeFunctions, WordPress.PHP.NoSilencedErrors
 
 		private function connect(): void {
 			if ( ! class_exists( '\\Redis' ) ) {
@@ -477,13 +497,29 @@ if ( ! class_exists( 'WP_Object_Cache' ) ) {
 		 * @return array<string, mixed>
 		 */
 		private function configuration(): array {
-			// The configuration file is inert data, never executed. Its first
-			// line is a fixed guard that terminates direct web requests; the
-			// remainder is JSON.
-			$file   = WP_CONTENT_DIR . '/cache/gt-performance/redis-config.json.php';
-			$raw    = is_readable( $file ) ? @file_get_contents( $file ) : false;
-			$break  = is_string( $raw ) ? strpos( $raw, "\n" ) : false;
-			$config = false === $break ? array() : json_decode( substr( (string) $raw, $break + 1 ), true );
+			// Authenticated encrypted JSON; never executable configuration.
+			$root   = realpath( WP_CONTENT_DIR . '/cache/gt-performance' );
+			$file   = false === $root ? false : realpath( $root . '/redis-config.json' );
+			// Local encrypted JSON only, before WordPress loads; never a remote fetch.
+			$local  = false !== $file && str_starts_with( $file, $root . DIRECTORY_SEPARATOR ) && is_file( $file ) && is_readable( $file );
+			$raw    = $local ? @file_get_contents( $file ) : false;
+			$config = is_string( $raw ) ? ( static function ( string $raw ): ?array {
+				if ( ! function_exists( 'openssl_decrypt' ) || ! defined( 'AUTH_KEY' ) || strlen( AUTH_KEY ) < 16 || 'put your unique phrase here' === AUTH_KEY ) {
+					return null;
+				}
+				$envelope = json_decode( $raw, true );
+				if ( ! is_array( $envelope ) || 1 !== ( $envelope['version'] ?? null ) || ! is_string( $envelope['data'] ?? null ) ) {
+					return null;
+				}
+				$bytes = base64_decode( $envelope['data'], true );
+				if ( false === $bytes || strlen( $bytes ) <= 28 ) {
+					return null;
+				}
+				$key = hash( 'sha256', 'gt-performance-runtime-v1|' . AUTH_KEY, true );
+				$json = openssl_decrypt( substr( $bytes, 28 ), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr( $bytes, 0, 12 ), substr( $bytes, 12, 16 ), 'gt-performance-runtime-v1' );
+				$decoded = is_string( $json ) ? json_decode( $json, true ) : null;
+				return is_array( $decoded ) ? $decoded : null;
+			} )( $raw ) : null;
 			$config = is_array( $config ) ? $config : array();
 			$config = array_replace( $config, $this->compatibleConstantOverrides() );
 

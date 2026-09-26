@@ -11,11 +11,17 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
+wp_unschedule_hook( 'gt_performance_cloudflare_retry' );
+
 if ( ! (bool) get_option( 'gt_performance_remove_data_on_uninstall', false ) ) {
 	return;
 }
 
 delete_option( 'gt_performance_settings' );
+delete_option( 'gt_performance_diagnostic_log' );
+delete_option( 'gt_performance_private_logs_version' );
+delete_option( 'gt_performance_legacy_logs_error' );
+delete_option( 'gt_performance_runtime_config_error' );
 delete_option( 'gt_performance_schema_version' );
 delete_option( 'gt_performance_dropin_version' );
 delete_option( 'gt_performance_object_cache_dropin_version' );
@@ -24,6 +30,7 @@ delete_option( 'gt_performance_cloudflare_state' );
 delete_option( 'gt_performance_cloudflare_plan' );
 delete_option( 'gt_performance_cloudflare_query_key_fallback' );
 delete_option( 'gt_performance_cloudflare_diagnostics' );
+delete_option( 'gt_performance_cloudflare_last_purge' );
 delete_option( 'gt_performance_wp_cache_constant_ownership' );
 delete_option( 'gt_performance_commerce_policy_hash' );
 delete_option( 'gt_performance_commerce_safety_runs' );
@@ -75,7 +82,9 @@ if (
 	false !== $gt_performance_cache_root
 	&& false !== $gt_performance_content
 	&& is_dir( $gt_performance_cache_root )
-	&& str_starts_with( $gt_performance_cache_root, $gt_performance_content . DIRECTORY_SEPARATOR )
+	&& $gt_performance_cache_root === $gt_performance_content . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'gt-performance'
+	&& ! is_link( $gt_performance_content . '/cache' )
+	&& ! is_link( $gt_performance_content . '/cache/gt-performance' )
 ) {
 	$gt_performance_entries = new RecursiveIteratorIterator(
 		new RecursiveDirectoryIterator( $gt_performance_cache_root, FilesystemIterator::SKIP_DOTS ),

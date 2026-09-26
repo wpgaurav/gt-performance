@@ -32,9 +32,7 @@ final class ArtifactStore {
 		}
 
 		if ( ! is_file( $path ) ) {
-			$temp = $path . '.' . wp_generate_uuid4() . '.tmp';
-			if ( false === file_put_contents( $temp, $css, LOCK_EX ) || ! rename( $temp, $path ) ) {
-				@unlink( $temp );
+			if ( ! \GTPerformance\Core\AtomicFile::write( $path, $css ) ) {
 				throw new \RuntimeException( 'Unable to publish generated CSS atomically.' );
 			}
 		}

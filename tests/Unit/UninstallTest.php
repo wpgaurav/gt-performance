@@ -36,7 +36,7 @@ final class UninstallTest extends TestCase {
 			\RecursiveIteratorIterator::CHILD_FIRST
 		);
 		foreach ( $entries as $entry ) {
-			$entry->isDir() ? @rmdir( $entry->getPathname() ) : @unlink( $entry->getPathname() );
+			( $entry->isLink() || ! $entry->isDir() ) ? @unlink( $entry->getPathname() ) : @rmdir( $entry->getPathname() );
 		}
 		@rmdir( $this->root );
 	}
@@ -63,6 +63,7 @@ final class UninstallTest extends TestCase {
 			. 'function get_option( $name, $default = false ) { return \'gt_performance_remove_data_on_uninstall\' === $name ? $GLOBALS[\'gtperf_remove_data\'] : $default; }' . "\n"
 			. 'function delete_option( $name ) { return true; }' . "\n"
 			. 'function delete_transient( $name ) { return true; }' . "\n"
+			. 'function wp_unschedule_hook( $name ) { return 0; }' . "\n"
 			. 'function wp_delete_file( $file ) { @unlink( $file ); }' . "\n"
 			. 'class gtperf_Fake_Wpdb { public $prefix = \'wp_\'; public function query( $q ) { return 1; } }' . "\n"
 			. '$GLOBALS[\'wpdb\'] = new gtperf_Fake_Wpdb();' . "\n"
@@ -107,6 +108,31 @@ final class UninstallTest extends TestCase {
 		self::assertStringNotContainsString( 'Fatal error', $output );
 		self::assertStringNotContainsString( 'Warning', $output );
 		self::assertStringEndsWith( 'OK', trim( $output ) );
+	}
+
+	/** @dataProvider aliases */
+	public function test_root_and_ancestor_symlinks_never_delete_foreign_files( string $part ): void {
+		$foreign = $this->root . '/wp-content/plugins/foreign';
+		mkdir( $foreign . '/gt-performance', 0777, true );
+		file_put_contents( $foreign . '/keep.txt', 'keep' );
+		file_put_contents( $foreign . '/gt-performance/keep.txt', 'keep' );
+		$alias = $this->root . '/wp-content/' . $part;
+		rename( $alias, $this->root . '/original-cache' );
+		symlink( $foreign, $alias );
+		self::assertStringEndsWith( 'OK', trim( $this->runUninstall( true ) ) );
+		self::assertFileExists( $foreign . '/keep.txt' );
+		self::assertFileExists( $foreign . '/gt-performance/keep.txt' );
+	}
+	public static function aliases(): array { return array( array( 'cache/gt-performance' ), array( 'cache' ) ); }
+
+	public function test_descendant_links_are_removed_without_traversing_their_targets(): void {
+		$foreign = $this->root . '/foreign';
+		mkdir( $foreign );
+		file_put_contents( $foreign . '/keep.txt', 'keep' );
+		symlink( $foreign, $this->root . '/wp-content/cache/gt-performance/foreign' );
+		self::assertStringEndsWith( 'OK', trim( $this->runUninstall( true ) ) );
+		self::assertFileExists( $foreign . '/keep.txt' );
+		self::assertDirectoryDoesNotExist( $this->root . '/wp-content/cache/gt-performance' );
 	}
 
 	/**

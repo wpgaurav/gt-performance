@@ -4,7 +4,7 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.10`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.0.14`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -23,22 +23,18 @@ The current release is `1.0.10`. It is free GPL software; it is not yet listed i
   - immutable external file;
   - fully inline;
   - critical CSS inline with the remaining CSS in an immutable file.
-- Unused CSS Training Mode that records bounded structural selectors during an administrator browsing session, then supports review, publication, rollback, and deterministic 0/10/25/50/100 percent rollout cohorts.
 - Conservative JavaScript minification, defer, and interaction-delay controls.
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
 - Manual database scanning and selectable cleanup in Tools, scheduled database maintenance in Optimization, and Perfmatters-style WordPress request and bloat controls.
 - Explain This Page diagnostics with cache-decision reasons, deterministic key, local artifact state, and the expected Cloudflare result.
 - Verified Purge receipts that compare bounded response fingerprints and cache headers after origin and edge invalidation without storing page bodies.
-- Commerce Safety Lab policy simulation and safe read-only route checks for active FluentCart, EDD, and WooCommerce adapters.
-- Opt-in Private Islands for signed, explicitly registered cart-count, account-link, and developer fragments whose responses are always private and `no-store`.
-- A Fleet Console foundation for short-lived, one-use configuration bundles signed with a shared secret that exclude credentials and cannot execute code.
-- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, Integrations, Safety Lab, CSS Reports, Fleet, and Tools sections.
-- Administrator-bar actions for explaining, purging, or purge-verifying the current page, warming it, regenerating its CSS, controlling CSS Training Mode, purging page and edge caches, flushing object cache, testing Redis, and opening safety reports.
+- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, CDN, Integrations, and Tools sections.
+- Administrator-bar actions for purging or purge-verifying the current page, warming it, purging page and edge caches, flushing object cache, and testing Redis.
 - Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
 - Redacted logs, WP-CLI doctor/cache/queue/Cloudflare/database commands, durable jobs, retries, and dead-letter state.
 
-The full product architecture and 1.0 roadmap are in [PRODUCT-PLAN.md](PRODUCT-PLAN.md).
+This list describes the current plugin. The original product plan is historical design context, not a list of available features.
 
 ## How unused CSS works
 
@@ -48,6 +44,10 @@ Use **Force regenerate URL** or a row’s **Regenerate** button to invalidate th
 
 GT Performance processes the final anonymous HTML response on the WordPress server. It collects eligible same-origin stylesheets and inline style blocks, parses them into a CSS syntax tree, matches selectors against the rendered document, and keeps configured safelist and dynamic-state selectors conservatively. Safelist lines use partial matching by default and accept validated delimited regular expressions such as `/^\.modal(?:--|\b)/i`. Excluded or cross-origin stylesheets remain untouched.
 
+Generated styles and bundled frontend loaders use WordPress registration, enqueue, and printing APIs. Inline CSS uses CSS escapes for less-than characters so stylesheet text cannot close its HTML style element. The completed response is transformed after its capture buffer closes, so core asset filters can run safely. Opt-in JavaScript minification processes eligible local classic scripts in memory and caches smaller results through WordPress transients, which use the database or an installed object cache. A signed same-origin endpoint serves the result with a versioned URL, browser caching, and ETag revalidation; it never writes JavaScript files or executes JavaScript on the server. Scripts remain external so defer and delay keep their normal execution timing. If the transient is evicted or minification is disabled, the signed URL falls back to the original script.
+
+The first uncached request for a minified script boots WordPress, so this delivery method trades a PHP request for smaller transferred code and avoids generated executable files. Browser caches can reuse the response. Already minified scripts, modules, scripts with integrity attributes, scripts that depend on their own URL, cross-origin or query-driven scripts, unsafe paths, and files over 2 MB are left unchanged. Existing exclusions and commerce-script protection remain in force.
+
 After a non-empty used-CSS result is verified, the original collected style nodes are replaced according to the selected delivery mode:
 
 - **Generated file:** all used CSS is written to an immutable, content-hashed file.
@@ -56,25 +56,13 @@ After a non-empty used-CSS result is verified, the original collected style node
 
 If collection, parsing, pruning, artifact writing, or HTML serialization fails, GT Performance returns the original HTML and stylesheets.
 
-Training Mode is administrator-only and expires after one hour. It observes element IDs and classes while an administrator exercises menus, dialogs, validation states, carts, and other interactive UI. It never records text, form values, cookies, or customer data. Candidates remain separate until reviewed and published. The staged rollout control assigns each URL to a stable cohort, and setting it to zero restores original stylesheets immediately.
+The staged rollout control assigns each URL to a stable cohort. Setting it to zero restores original stylesheets immediately. Safelists and dynamic-state preservation protect selectors that are absent from the initial HTML.
 
 ## Diagnostics and safety
 
-Open **GT Performance → Safety Lab** to explain a public URL, run a purge with readback, or test active commerce adapters. Explain This Page reuses the production eligibility policy instead of approximating it. Verified Purge stores a bounded receipt containing timestamps, hashes, status, `Age`, Cloudflare cache state, and public/private response signals; it does not retain HTML bodies.
+Run `wp gt-performance cache explain --page-url=https://example.com/page/` to inspect a URL's cache decision using the production eligibility policy. Use **Purge and verify this URL** in the administrator bar, then review the recorded receipts in **Tools**. Verified Purge stores bounded timestamps, hashes, status, `Age`, Cloudflare cache state, and public/private response signals; it does not retain HTML bodies.
 
-Commerce Safety Lab first simulates every registered dynamic path, cookie prefix, and query parameter in memory. It then sends safe `GET` requests to configured cart, checkout, account, and receipt routes. It never creates an order, changes a cart, follows a payment action, or writes customer data.
-
-## Private Islands
-
-Private Islands is disabled by default. When enabled in **Integrations**, the shortcode `[gtperf_private_island id="commerce_cart_count"]` renders a public fallback that is replaced through a signed private request. `commerce_account_link` is also registered by default. Developers can add explicit fragments through `gt_performance_private_fragments`; arbitrary callbacks or markup requested by a visitor are never executed.
-
-Every fragment response sends `Cache-Control: no-store, private, max-age=0`. If JavaScript, signature validation, or the endpoint fails, the public fallback remains in place.
-
-## Fleet Console
-
-Fleet Console moves reviewed settings between your sites. Save the same fleet signing secret on every site (or define `GTPERF_FLEET_SIGNING_SECRET` in `wp-config.php`); bundles are signed with a key derived from it. Exports expire after five minutes and imports are accepted only once. Cloudflare credentials, Redis credentials, the signing secret itself, and other secret fields are stripped recursively even when their parent module is selected.
-
-The receiver applies only sanitized GT Performance settings. It does not install plugins, upload files, evaluate PHP, or expose a remote command channel. Sites can disable importing and remain export-only.
+Active FluentCart, EDD, and WooCommerce adapters supply bypass rules for dynamic paths, session cookies, and transactional query parameters.
 
 ## Requirements
 
@@ -89,7 +77,7 @@ The receiver applies only sanitized GT Performance settings. It does not install
 
 ## Redis object cache
 
-Open **GT Performance → Integrations** to configure a Redis host or Unix socket, port, database, ACL username, password, TLS, persistent connections, key prefix, and bounded connection/read timeouts. Passwords are encrypted in the WordPress option. The early object-cache drop-in receives a guarded runtime configuration and fails back to request-local caching if Redis is unavailable.
+Open **GT Performance → Integrations** to configure a Redis host or Unix socket, port, database, ACL username, password, TLS, persistent connections, key prefix, and bounded connection/read timeouts. Passwords are encrypted in the WordPress option. The early object-cache drop-in receives an authenticated encrypted JSON runtime configuration and fails back to request-local caching if Redis is unavailable.
 
 GT Performance reads the standard constants used by [Till Krüss Redis Object Cache](https://github.com/rhubarbgroup/redis-cache), so an existing configuration does not need to be duplicated. The Integrations screen includes this copy-ready `wp-config.php` example:
 
@@ -109,7 +97,7 @@ define( 'WP_REDIS_READ_TIMEOUT', 0.5 );
 
 The origin cache setting defaults on with one hour of freshness, 24 hours of shared retention and stale-if-error protection, and five minutes of browser caching. It remains inactive until the owned page-cache drop-in and `WP_CACHE` are installed. Logged-in caching stays off, and commerce adapters continue to bypass personalized state.
 
-Cloudflare changes, unused CSS, CSS Training Mode, Private Islands, Fleet Console, JavaScript transformations, database automation, Redis, image rewriting, and font hosting remain disabled until enabled by an administrator. Image dimensions and non-critical lazy loading are the only low-risk frontend transformation defaults.
+Cloudflare changes, unused CSS, JavaScript transformations, database automation, Redis, image rewriting, and font hosting remain disabled until enabled by an administrator. Image dimensions and non-critical lazy loading are the only low-risk frontend transformation defaults.
 
 When unused CSS parsing, stylesheet fetching, artifact writing, or HTML serialization fails, the original HTML and stylesheets are returned.
 
@@ -180,7 +168,6 @@ When an integration is switched on in the WordPress admin, GT Performance fills 
 - CDN rewriting defaults to static styles, scripts, images, and font formats only.
 - Redis defaults to local PhpRedis with short half-second timeouts; existing remote host, database, and credential values are preserved.
 - Compatibility protection defaults to automatic Perfmatters ownership plus dormant Akismet and Jetpack safeguards that activate only when those plugins are active.
-- Private Islands enables both registered commerce fragments, while Fleet enables signed imports and the full safe configuration-module set.
 
 ## Custom asset CDN
 
@@ -209,6 +196,16 @@ composer check
 Cloudflare and xCloud mutations require real credentials and are not exercised by the offline test suite. FluentCart, EDD, WooCommerce, multisite, image-optimizer, and host-cache combinations continue to grow their compatibility matrix.
 
 GT Performance is an independent implementation. It does not include or copy FlyingPress code, branding, or private protocols.
+
+Runtime configuration copies require PHP OpenSSL and an existing non-placeholder WordPress `AUTH_KEY`. If unavailable, configuration installation fails without writing plaintext. After rotating `AUTH_KEY`, save the plugin settings to regenerate the runtime copies.
+
+Debug diagnostics are stored as a bounded, non-autoloaded WordPress option, with secret fields redacted. Older plaintext diagnostic files are removed automatically. Cache configuration and drop-ins are published only after complete writes; failed settings publication is reported and the previous settings are retained.
+
+### Updating the Cloudflare integration
+
+After installing 1.0.14, open **GT Performance → Cloudflare → Connect/sync Cloudflare** once to update the managed rule with internal PURGE support. The sync preserves unrelated rules and applies the current checkout, session, and query protections. Installing the ZIP alone does not rewrite remote rules.
+
+Manual page-cache purges and verification wait for the Cloudflare response. The Cloudflare panel records the latest accepted or failed request independently of debug logging. Temporary connection errors, HTTP 429 and server errors receive up to three WordPress cron retries; each retry contains only unfinished cache-key batches. Full-zone purges clear queued retries after Cloudflare confirms success. Desktop, mobile and tablet entries are included when separate device caching is enabled. API acceptance and public-response verification are reported separately.
 
 ## Support This Project
 

@@ -169,12 +169,20 @@ final class FontOptimizer {
 				}
 
 				$body = (string) wp_remote_retrieve_body( $font );
-				$ext  = pathinfo( (string) wp_parse_url( $fontUrl, PHP_URL_PATH ), PATHINFO_EXTENSION );
-				$ext  = '' === $ext ? 'woff2' : $ext;
-				$file = hash( 'sha256', $body ) . '.' . sanitize_key( $ext );
+				// Never use an extension supplied by a remote response URL as a write
+				// target. Only recognized binary font signatures can become local files.
+				$ext = $this->fontExtension( $body );
+				if ( null === $ext ) {
+					return $matches[0];
+				}
+				$file = hash( 'sha256', $body ) . '.' . $ext;
 				if ( ! is_file( $directory . '/' . $file ) ) {
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Atomic asset write; WP_Filesystem offers no LOCK_EX equivalent.
-					file_put_contents( $directory . '/' . $file, $body, LOCK_EX );
+					$temp = $directory . '/' . $file . '.' . wp_generate_uuid4() . '.tmp';
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.WP.AlternativeFunctions.rename_rename -- Atomic publication of a bounded binary font; WP_Filesystem::move() may fall back to a non-atomic copy.
+					if ( strlen( $body ) !== file_put_contents( $temp, $body, LOCK_EX ) || ! rename( $temp, $directory . '/' . $file ) ) {
+						wp_delete_file( $temp );
+						return $matches[0];
+					}
 				}
 
 				return 'url("' . content_url( '/cache/gt-performance/assets/fonts/' . $file ) . '")';
@@ -188,8 +196,22 @@ final class FontOptimizer {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Atomic asset write; WP_Filesystem offers no LOCK_EX equivalent.
-		if ( false === file_put_contents( $target, $css, LOCK_EX ) ) {
+		if ( ! \GTPerformance\Core\AtomicFile::write( $target, $css ) ) {
 			$this->logger->log( 'warning', 'Unable to write self-hosted font CSS', array( 'url' => $url ) );
 		}
+	}
+
+	/** Infer an allowed font extension from its binary header, never a URL. */
+	private function fontExtension( string $body ): ?string {
+		if ( strlen( $body ) < 12 ) {
+			return null;
+		}
+		return match ( substr( $body, 0, 4 ) ) {
+			'wOF2' => 'woff2',
+			'wOFF' => 'woff',
+			'OTTO' => 'otf',
+			"\x00\x01\x00\x00", 'true' => 'ttf',
+			default => null,
+		};
 	}
 }

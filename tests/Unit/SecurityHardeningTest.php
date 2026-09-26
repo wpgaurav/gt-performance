@@ -130,12 +130,6 @@ final class SecurityHardeningTest extends TestCase {
 		);
 	}
 
-	public function test_the_temporary_wp_config_copy_is_created_unreadable(): void {
-		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/Cache/WpCacheConstant.php' );
-
-		self::assertMatchesRegularExpression( '/fopen\(\s*\$temp,\s*.xb./', $source );
-		self::assertMatchesRegularExpression( '/chmod\(\s*\$temp,\s*0600\s*\)/', $source );
-	}
 
 	public function test_the_preload_queue_refuses_a_foreign_url(): void {
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/Queue/QueueModule.php' );

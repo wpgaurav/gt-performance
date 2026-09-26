@@ -165,7 +165,9 @@ final class TokenProvisioner {
 		$settings['cloudflare']['api_token'] = ( new TokenCipher() )->encrypt( $token );
 		$settings['cloudflare']['auth_mode'] = 'token';
 		$settings['cloudflare']['zone_id']   = $zoneId;
-		Settings::save( $settings );
+		if ( ! Settings::save( $settings ) ) {
+			return new \WP_Error( 'gtperf_config_write', __( 'Cloudflare created the token, but local settings could not be applied. Revoke the unused token in Cloudflare and retry after correcting the cache configuration error.', 'gt-performance' ) );
+		}
 
 		return array(
 			'name' => $this->tokenName( $domain ),

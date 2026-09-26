@@ -79,6 +79,7 @@ final class ApiClient {
 					'status' => $code,
 					'method' => $method,
 					'path'   => $path,
+					'retry_after' => $this->retryAfter( $response ),
 				)
 			);
 		}
@@ -92,6 +93,7 @@ final class ApiClient {
 					'method'  => $method,
 					'path'    => $path,
 					'errors'  => $this->errorList( $data ),
+					'retry_after' => $this->retryAfter( $response ),
 				)
 			);
 		}
@@ -202,23 +204,66 @@ final class ApiClient {
 	 * @param list<string> $urls URLs to purge.
 	 * @return bool|\WP_Error
 	 */
-	public function purgeUrls( string $zoneId, array $urls ): bool|\WP_Error {
+	public function purgeUrls( string $zoneId, array $urls, bool $separateDevices = false ): bool|\WP_Error {
+		return $this->purgeFiles( $zoneId, self::purgeEntries( $urls, $separateDevices ) );
+	}
+
+	/**
+	 * Include the ordinary key and every device key, including tablet visitors.
+	 *
+	 * @param list<string> $urls URLs.
+	 * @return list<string|array{url:string,headers:array<string,string>}>
+	 */
+	public static function purgeEntries( array $urls, bool $separateDevices ): array {
 		$urls = array_values( array_unique( array_filter( array_map( 'trim', $urls ) ) ) );
+		$entries = array();
+		foreach ( $urls as $url ) {
+			$entries[] = $url;
+			if ( $separateDevices ) {
+				foreach ( array( 'desktop', 'mobile', 'tablet' ) as $device ) {
+					$entries[] = array(
+						'url' => $url,
+						'headers' => array( 'CF-Device-Type' => $device ),
+					);
+				}
+			}
+		}
+		return $entries;
+	}
+
+	/**
+	 * Preserve exact unprocessed entries on failure so retries never replay a
+	 * successful batch or lose its device headers.
+	 *
+	 * @param list<string|array{url:string,headers:array<string,string>}> $files Cache keys.
+	 * @return bool|\WP_Error
+	 */
+	public function purgeFiles( string $zoneId, array $files ): bool|\WP_Error {
 		// Cloudflare accepts 100 files per purge request on every plan. Chunking at 30
 		// tripled the number of blocking round trips and burned the Free plan's purge
 		// rate limit three times faster than necessary.
-		foreach ( array_chunk( $urls, 100 ) as $chunk ) {
+		foreach ( array_chunk( $files, 100 ) as $index => $chunk ) {
 			$result = $this->request(
 				'POST',
 				'zones/' . rawurlencode( $zoneId ) . '/purge_cache',
 				array( 'files' => $chunk )
 			);
 			if ( is_wp_error( $result ) ) {
+				$data = (array) $result->get_error_data();
+				$data['remaining_files'] = array_slice( $files, $index * 100 );
+				$result->add_data( $data );
 				return $result;
 			}
 		}
 
 		return true;
+	}
+
+	/** @param array<string,mixed> $response HTTP response. */
+	private function retryAfter( array $response ): int {
+		$value = wp_remote_retrieve_header( $response, 'retry-after' );
+		$delay = ctype_digit( (string) $value ) ? (int) $value : max( 0, (int) strtotime( (string) $value ) - time() );
+		return min( DAY_IN_SECONDS, $delay );
 	}
 
 	/**

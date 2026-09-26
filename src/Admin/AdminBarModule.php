@@ -124,6 +124,12 @@ final class AdminBarModule implements Module {
 				$this->redirect( 'quick-action-invalid', 'dashboard' );
 		}
 
+		if ( in_array( $command, array( 'purge-url', 'purge-all' ), true ) ) {
+			$edgeResult = ( new Purger() )->flushEdge();
+			if ( is_wp_error( $edgeResult ) ) {
+				$this->redirect( 'cache-purge-partial', 'cloudflare' );
+			}
+		}
 		$referer = wp_get_referer();
 		wp_safe_redirect( is_string( $referer ) && '' !== $referer ? $referer : admin_url( 'admin.php?page=gt-performance' ) );
 		exit;
