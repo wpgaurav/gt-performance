@@ -19,7 +19,7 @@ final class ConfigFileTest extends TestCase {
 	protected function setUp(): void {
 		$directory = Paths::cacheRoot();
 		is_dir( $directory ) || mkdir( $directory, 0o777, true );
-		$this->path = $directory . '/config-file-test.php';
+		$this->path = $directory . '/config-file-test.json';
 	}
 
 	protected function tearDown(): void {
@@ -39,56 +39,75 @@ final class ConfigFileTest extends TestCase {
 		self::assertSame( $config, ConfigFile::read( $this->path ) );
 	}
 
-	/**
-	 * The stored file must never be executable configuration. Requesting it over
-	 * the web has to hit a PHP exit, and reading it has to yield plain JSON.
-	 */
-	public function test_file_is_guarded_json_and_not_executable_configuration(): void {
-		ConfigFile::write( $this->path, array( 'secret' => 'redis-password' ) );
+	public function test_file_contains_only_encrypted_json(): void {
+		ConfigFile::write( $this->path, array( 'secret' => 'redis-password', 'php' => '<?php exit;' ) );
 		$raw = (string) file_get_contents( $this->path );
-
-		self::assertStringStartsWith( '<?php exit;', $raw );
-		self::assertStringNotContainsString( 'return ', $raw );
-		self::assertStringNotContainsString( 'array (', $raw );
-
-		$payload = substr( $raw, (int) strpos( $raw, "\n" ) + 1 );
-		self::assertSame( array( 'secret' => 'redis-password' ), json_decode( $payload, true ) );
-
-		// A direct web request lands on the guard. Run the file the way a server
-		// would — in its own process, since the guard calls exit — and confirm it
-		// terminates cleanly without disclosing the payload.
-		$command = escapeshellarg( PHP_BINARY ) . ' -d display_errors=1 ' . escapeshellarg( $this->path ) . ' 2>&1';
-		$output  = shell_exec( $command );
-
-		self::assertSame( '', trim( (string) $output ), 'A direct request must disclose nothing.' );
-		self::assertStringNotContainsString( 'redis-password', (string) $output );
+		self::assertIsArray( json_decode( $raw, true ) );
+		self::assertStringNotContainsString( '<?', $raw );
+		self::assertStringNotContainsString( 'redis-password', $raw );
+		$envelope = json_decode( $raw, true );
+		$bytes = base64_decode( $envelope['data'] );
+		$bytes[28] = chr( ord( $bytes[28] ) ^ 1 );
+		$envelope['data'] = base64_encode( $bytes );
+		self::assertNull( ConfigFile::decode( json_encode( $envelope ) ) );
+		$envelope['data'] = base64_encode( substr( $bytes, 0, 20 ) );
+		self::assertNull( ConfigFile::decode( json_encode( $envelope ) ) );
 	}
 
 	public function test_missing_and_malformed_files_read_as_null(): void {
 		self::assertNull( ConfigFile::read( $this->path . '.absent' ) );
 
-		file_put_contents( $this->path, ConfigFile::GUARD . 'not json at all' );
+		file_put_contents( $this->path, 'not json at all' );
 		self::assertNull( ConfigFile::read( $this->path ) );
 
-		file_put_contents( $this->path, ConfigFile::GUARD . '"a scalar"' );
+		file_put_contents( $this->path, '"a scalar"' );
 		self::assertNull( ConfigFile::read( $this->path ) );
 
 		file_put_contents( $this->path, 'no newline so no payload' );
 		self::assertNull( ConfigFile::read( $this->path ) );
 	}
 
-	/**
-	 * The bundled drop-in parses the file itself rather than loading this class,
-	 * so its inline reader has to agree with ConfigFile::read().
-	 */
-	public function test_bundled_dropin_parses_the_same_payload(): void {
-		$config = array( 'plugin_dir' => '/plugins/gt-performance', 'cache' => array( 'enabled' => true ) );
-		ConfigFile::write( $this->path, $config );
-
-		$raw   = (string) file_get_contents( $this->path );
-		$break = strpos( $raw, "\n" );
-
-		self::assertNotFalse( $break );
-		self::assertSame( $config, json_decode( substr( $raw, $break + 1 ), true ) );
+	public function test_temporary_files_are_protected_before_credentials_are_written(): void {
+		$report = $this->writeScenario( 'success' );
+		self::assertTrue( $report['result'] );
+		$before = $report['events']['before_write'];
+		self::assertStringEndsWith( '.json', $before['name'] );
+		self::assertSame( 0600, $before['permissions'] );
+		self::assertSame( 0, $before['bytes'] );
+		self::assertStringNotContainsString( '<?', $report['events']['before_rename']['payload'] );
+		self::assertStringNotContainsString( 'fixture-secret', $report['events']['before_rename']['payload'] );
+		self::assertSame( array( 'password' => 'fixture-secret' ), ConfigFile::read( $this->path ) );
+		self::assertSame( array(), glob( dirname( $this->path ) . '/gtperf-config-*.json' ) );
 	}
+
+	public function test_failed_writes_preserve_the_previous_configuration_and_clean_up(): void {
+		$original = '{"password":"original"}';
+		foreach ( array( 'permissions-fail', 'short-write', 'rename-fail' ) as $mode ) {
+			file_put_contents( $this->path, $original );
+			$report = $this->writeScenario( $mode );
+			self::assertFalse( $report['result'], $mode );
+			self::assertSame( $original, file_get_contents( $this->path ), $mode );
+			self::assertSame( array(), glob( dirname( $this->path ) . '/gtperf-config-*.json' ), $mode );
+			if ( 'permissions-fail' === $mode ) {
+				self::assertArrayNotHasKey( 'before_write', $report['events'] );
+			}
+		}
+	}
+
+	public function test_compilation_removes_legacy_php_files(): void {
+		$legacy = Paths::cacheRoot() . '/config.json.php';
+		file_put_contents( $legacy, '<?php exit; ?>' );
+		self::assertTrue( \GTPerformance\Core\Settings::compile() );
+		self::assertFileDoesNotExist( $legacy );
+		self::assertNotNull( ConfigFile::read( Paths::config() ) );
+		self::assertNotNull( ConfigFile::read( Paths::redisConfig() ) );
+	}
+
+	private function writeScenario( string $mode ): array {
+		$command = escapeshellarg( PHP_BINARY ) . ' '
+			. escapeshellarg( dirname( __DIR__ ) . '/Fixtures/config-file-write.php' ) . ' '
+			. escapeshellarg( $mode ) . ' ' . escapeshellarg( $this->path );
+		return json_decode( (string) shell_exec( $command ), true, 512, JSON_THROW_ON_ERROR );
+	}
+
 }

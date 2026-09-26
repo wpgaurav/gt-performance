@@ -2,12 +2,9 @@
 /**
  * Inert configuration data files.
  *
- * Compiled configuration is stored as JSON and is never included or executed.
- * The files keep a `.php` extension so that a direct web request is terminated
- * by the PHP interpreter itself on servers that do not honour `.htaccess`,
- * which matters because the Redis configuration carries credentials. Only the
- * fixed guard line below is PHP; it never varies with the data, and the payload
- * that follows is read with file_get_contents() and json_decode().
+ * Runtime copies are authenticated encrypted JSON, never PHP. The key is
+ * derived from the site's existing AUTH_KEY and is never stored in the cache.
+ * This protects secrets even on servers that ignore directory access rules.
  *
  * phpcs:disable WordPress.WP.AlternativeFunctions
  *
@@ -20,16 +17,6 @@ namespace GTPerformance\Cache;
 
 final class ConfigFile {
 	/**
-	 * Fixed, data-independent first line. Everything after the newline is JSON.
-	 *
-	 * The PHP tag is closed so that the payload is inline text rather than PHP
-	 * source. That matters: PHP parses a whole file before running any of it, so
-	 * leaving the tag open would make the JSON a parse error instead of letting
-	 * `exit` terminate a direct web request cleanly.
-	 */
-	public const GUARD = "<?php exit; /* GT Performance data file. Not executable configuration. */ ?>\n";
-
-	/**
 	 * Publish a configuration payload through an atomic same-filesystem rename so
 	 * a drop-in can never read a half-written file.
 	 *
@@ -37,25 +24,57 @@ final class ConfigFile {
 	 */
 	public static function write( string $path, array $config ): bool {
 		$json = wp_json_encode( $config );
-		if ( ! is_string( $json ) ) {
+		if ( ! is_string( $json ) || ! function_exists( 'openssl_encrypt' ) || ! defined( 'AUTH_KEY' ) || strlen( AUTH_KEY ) < 16 || 'put your unique phrase here' === AUTH_KEY ) {
 			return false;
 		}
 
-		$temp = $path . '.' . wp_generate_uuid4() . '.tmp';
-		if ( false === file_put_contents( $temp, self::GUARD . $json, LOCK_EX ) ) {
+		try {
+			$iv = random_bytes( 12 );
+		} catch ( \Exception $exception ) {
+			return false;
+		}
+		$key = hash( 'sha256', 'gt-performance-runtime-v1|' . AUTH_KEY, true );
+		$tag = '';
+		$ciphertext = openssl_encrypt( $json, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag, 'gt-performance-runtime-v1', 16 );
+		if ( false === $ciphertext ) {
+			return false;
+		}
+		$payload = wp_json_encode(
+			array(
+				'version' => 1,
+				'data' => base64_encode( $iv . $tag . $ciphertext ),
+			)
+		);
+		if ( ! is_string( $payload ) ) {
+			return false;
+		}
+		$temp = dirname( $path ) . '/gtperf-config-' . wp_generate_uuid4() . '.json';
+		$stream = fopen( $temp, 'xb' );
+		if ( false === $stream ) {
 			return false;
 		}
 
-		if ( ! rename( $temp, $path ) ) {
-			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Best-effort cleanup after a failed atomic publish.
-			@unlink( $temp );
-			return false;
+		try {
+			// Restrict the empty file before writing credentials; rename preserves
+			// these permissions. Fail closed if the host cannot protect the file.
+			if ( ! chmod( $temp, 0600 ) ) {
+				return false;
+			}
+			if ( strlen( $payload ) !== fwrite( $stream, $payload ) ) {
+				return false;
+			}
+			$closed = fclose( $stream );
+			$stream = false;
+			return $closed && rename( $temp, $path );
+		} finally {
+			if ( is_resource( $stream ) ) {
+				fclose( $stream );
+			}
+			if ( is_file( $temp ) ) {
+				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Best-effort cleanup after a failed write or atomic publish.
+				@unlink( $temp );
+			}
 		}
-
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Some hosts disallow chmod; the guard line still protects the file.
-		@chmod( $path, 0640 );
-
-		return true;
 	}
 
 	/**
@@ -67,11 +86,14 @@ final class ConfigFile {
 	 * @return array<string, mixed>|null
 	 */
 	public static function read( string $path ): ?array {
-		if ( ! is_readable( $path ) ) {
+		// Configuration paths are local files, never remote URLs or PHP streams.
+		$path = realpath( $path );
+		if ( false === $path || ! is_file( $path ) || ! is_readable( $path ) ) {
 			return null;
 		}
 
-		$raw = file_get_contents( $path );
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent cache purge may remove this local file after validation.
+		$raw = @file_get_contents( $path );
 		if ( ! is_string( $raw ) ) {
 			return null;
 		}
@@ -80,18 +102,25 @@ final class ConfigFile {
 	}
 
 	/**
-	 * Strip the guard line and decode the JSON payload.
+	 * Authenticate and decrypt the JSON envelope.
 	 *
 	 * @return array<string, mixed>|null
 	 */
 	public static function decode( string $raw ): ?array {
-		$break = strpos( $raw, "\n" );
-		if ( false === $break ) {
+		if ( ! function_exists( 'openssl_decrypt' ) || ! defined( 'AUTH_KEY' ) || strlen( AUTH_KEY ) < 16 || 'put your unique phrase here' === AUTH_KEY ) {
 			return null;
 		}
-
-		$decoded = json_decode( substr( $raw, $break + 1 ), true );
-
+		$envelope = json_decode( $raw, true );
+		if ( ! is_array( $envelope ) || 1 !== ( $envelope['version'] ?? null ) || ! is_string( $envelope['data'] ?? null ) ) {
+			return null;
+		}
+		$bytes = base64_decode( $envelope['data'], true );
+		if ( false === $bytes || strlen( $bytes ) <= 28 ) {
+			return null;
+		}
+		$key = hash( 'sha256', 'gt-performance-runtime-v1|' . AUTH_KEY, true );
+		$json = openssl_decrypt( substr( $bytes, 28 ), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr( $bytes, 0, 12 ), substr( $bytes, 12, 16 ), 'gt-performance-runtime-v1' );
+		$decoded = is_string( $json ) ? json_decode( $json, true ) : null;
 		return is_array( $decoded ) ? $decoded : null;
 	}
 }

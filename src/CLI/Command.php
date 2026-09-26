@@ -127,6 +127,11 @@ final class Command {
 			} else {
 				( new Purger() )->purgeAll();
 			}
+			$edgeResult = ( new Purger() )->flushEdge();
+			if ( is_wp_error( $edgeResult ) ) {
+				\WP_CLI::error( 'Local page cache cleared; Cloudflare purge failed: ' . $edgeResult->get_error_message() );
+				return;
+			}
 			\WP_CLI::success( 'Cache purge completed.' );
 			return;
 		}
@@ -275,7 +280,7 @@ final class Command {
 				return;
 			}
 			$result = '' !== $url
-				? $client->purgeUrls( $zoneId, array( $url ) )
+				? $client->purgeUrls( $zoneId, array( $url ), (bool) $settings['cache']['separate_mobile'] )
 				: $client->purgeEverything( $zoneId );
 			if ( is_wp_error( $result ) ) {
 				\WP_CLI::error( $result->get_error_message() );
@@ -302,7 +307,10 @@ final class Command {
 		$settings['cloudflare']['enabled']    = true;
 		$settings['cloudflare']['zone_id']    = $zoneId;
 		$settings['cloudflare']['drift_hash'] = hash( 'sha256', (string) wp_json_encode( $cache ) );
-		Settings::save( $settings );
+		if ( ! Settings::save( $settings ) ) {
+			\WP_CLI::error( Settings::configurationError() );
+			return;
+		}
 		\WP_CLI::success( 'Cloudflare rule synchronized.' );
 	}
 
@@ -370,7 +378,10 @@ final class Command {
 				$settings['xcloud'][ $key ] = $status[ $key ];
 			}
 			$settings['xcloud']['enabled'] = true;
-			Settings::save( $settings );
+			if ( ! Settings::save( $settings ) ) {
+				\WP_CLI::error( Settings::configurationError() );
+				return;
+			}
 			\WP_CLI::line( (string) wp_json_encode( $status, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
 		}

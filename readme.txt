@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.10
+Stable tag: 1.0.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ Unused CSS can be delivered as an immutable file, fully inline, or as critical C
 
 Perfmatters ownership coordination, Akismet and Jetpack safeguards, automatic analytics-plugin script protection, Redis credentials, and administrator-bar cache actions are built in.
 
-Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, Commerce Safety Lab, CSS Training Mode with staged rollout, signed Private Islands, and a Fleet policy console add deterministic diagnostics and safer deployment controls.
+Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, and staged unused-CSS rollout help administrators inspect cache behavior and control optimization changes.
 
 Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
@@ -55,17 +55,9 @@ Yes. Configure its HTTPS origin-pull URL on the CDN tab and select the static-fi
 
 Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining file. Hybrid mode falls back to a generated file if the critical segment exceeds its inline budget.
 
-= What does CSS Training Mode collect? =
-
-Only bounded element IDs and classes observed while an administrator browses the site. It does not collect text, field values, cookies, or customer data. Candidates must be reviewed and published before they affect generated CSS.
-
 = Are checkout pages cached? =
 
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
-
-= Does Fleet Console provide remote access? =
-
-No. It accepts only short-lived, one-use GT Performance setting bundles signed with a secret you save on each of your sites. Secrets are stripped, settings are sanitized again on import, and no file upload, plugin installation, PHP evaluation, or remote command path exists.
 
 = Can Redis credentials be configured in wp-config.php? =
 
@@ -75,7 +67,7 @@ Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, databa
 
 GT Performance bundles three MIT-licensed PHP libraries in `vendor/`. All three are GPL-compatible and are used server-side only.
 
-* [matthiasmullie/minify](https://github.com/matthiasmullie/minify) - CSS and JavaScript minification. MIT.
+* [matthiasmullie/minify](https://github.com/matthiasmullie/minify) - JavaScript minification in memory. MIT.
 * [sabberworm/php-css-parser](https://github.com/MyIntervals/PHP-CSS-Parser) - CSS parsing for the unused-CSS engine. MIT.
 * [symfony/css-selector](https://github.com/symfony/css-selector) - CSS selector to XPath translation. MIT.
 
@@ -101,13 +93,19 @@ Contacted only when you enable local Google Fonts hosting on a site whose theme 
 
 Involved only on pages where you have already embedded a YouTube video and the lightweight embed option is enabled. The visitor's browser loads the video thumbnail from i.ytimg.com, and the player loads from the privacy-enhanced youtube-nocookie.com domain only after the visitor clicks play. Your server sends nothing to YouTube; without this option the standard YouTube embed would contact YouTube earlier and more broadly. Provider: Google LLC — [Terms of Service](https://www.youtube.com/t/terms), [Privacy Policy](https://policies.google.com/privacy).
 
-GT Performance also sends requests to your own site's URLs for cache warming, purge verification, and Safety Lab checks. Those requests never leave your domain.
+GT Performance also sends requests to your own site's URLs for cache warming, CSS generation, and purge verification. Those requests never leave your domain.
 
 = Hostnames that are matched, not contacted =
 
 GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
 == Upgrade Notice ==
+
+= 1.0.12 =
+Protects temporary configuration files during writes, prevents generated inline CSS from closing its style element, and corrects descriptions of removed features.
+
+= 1.0.11 =
+Addresses WordPress.org review feedback. Opt-in JavaScript minification is preserved without generated JavaScript files; defer and delay remain available. Generated CSS and frontend loaders now use WordPress asset APIs.
 
 = 1.0.10 =
 Adds unused CSS status, statistics, and regeneration controls, and repairs background generation. Existing CSS settings are preserved. Use Optimization to review results and regenerate CSS after updating.
@@ -119,6 +117,38 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.0.14 =
+* Fixed individual Cloudflare purges by allowing internal PURGE requests in the managed cache rule while preserving checkout, session, and query exclusions.
+* Wait for Cloudflare before verifying or reporting manual cache purges; show partial failures and retain the latest purge result even with debug logging disabled.
+* Purge desktop, mobile, and tablet cache variants when separate device caching is enabled.
+* Retry temporary Cloudflare transport, rate-limit, and server failures up to three times, preserving unprocessed batches and honoring Retry-After.
+* A successful full purge supersedes queued URL purges and retries. Failed verification requests no longer appear successful, and receipt details display correctly.
+* After upgrading, use Connect/sync Cloudflare once to update the existing managed rule. Unrelated Cloudflare rules are preserved.
+
+= 1.0.13 =
+
+* Protects configuration and drop-ins against incomplete writes and unsafe temporary files.
+* Stores private diagnostics in the database and removes old log files.
+* Keeps Redis markers in the plugin cache and prevents unsafe symlink traversal during uninstall.
+* Reports failed runtime settings saves and retains previous settings instead of falsely reporting success.
+* Replaced PHP-containing runtime configuration files with authenticated encrypted JSON and migrated both cache drop-ins.
+* Removed legacy configuration files after successful migration.
+
+= 1.0.12 =
+* Protected temporary configuration files with the same PHP guard and access-rule suffix as published configurations, restricted permissions before writing, and rejected incomplete writes.
+* Escaped less-than characters as CSS escapes before adding generated inline styles, preventing HTML closing-tag injection while preserving CSS string values.
+* Returned completed page responses through an output-buffer callback, preserving scripts, forms, and SVG while keeping escaping at each transformation boundary.
+* Removed obsolete feature descriptions and interface remnants so the readme matches the current plugin.
+
+= 1.0.11 =
+* Changed generated CSS and frontend loaders to use WordPress asset registration, enqueue, and printing functions.
+* Bundled the interaction-delay and YouTube loaders as static plugin assets.
+* Fixed nested output-buffer handling so WordPress asset printers can run during final HTML optimization.
+* Restricted early cache reads to validated local files and rejected paths outside the page-cache directory.
+* Kept opt-in JavaScript minification with WordPress transient storage and signed external delivery instead of JavaScript file writes. Defer, delay, saved settings, and exclusions remain supported.
+* Added original-script fallback for expired minification results, versioned URLs, browser caching, and ETag revalidation.
+* Hardened both early drop-in configuration readers and restricted saved font files to recognized binary font types with atomic publication.
 
 = 1.0.10 =
 * Added unused CSS status counts, size savings, build timings, failure details, and manual report refresh on the Optimization tab.
@@ -134,7 +164,7 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 * Adds automatic cleanup. Cached pages past their lifetime, entries left unreachable by a settings change, generated CSS and JavaScript nothing has requested in two weeks, and the diagnostic log are now reclaimed hourly, and the cache is capped at a configurable number of entries. Nothing removed cached files before, so one settings save could leave hundreds of megabytes on disk permanently.
 * Adds a "Remove all data when the plugin is deleted" option. The uninstall routine has always been gated on a setting that nothing wrote, so deleting the plugin left its options, database tables, drop-ins, and the Redis credentials file behind whatever you chose.
 * Unused CSS removal works again and is a normal setting on the Optimization tab, off by default. It no longer corrupts inline SVG or non-Latin text, keeps escaped utility class names such as the ones Tailwind generates, passes stylesheets it cannot safely analyze through untouched instead of mangling them, and leaves `rel="alternate stylesheet"` alone. Generation now happens in the background rather than in a visitor's page load, and the result is reused across pages that share a template. Measured on a real page: 320 KB down to 101 KB.
-* Removes Fleet Console, Private Islands, Commerce Safety Lab, and CSS Training Mode. The plugin now registers no REST route and no admin-ajax action at all.
+* Removed experimental features and their unused endpoints.
 * Product pages now clear when stock or price changes through the shop's own tools rather than only when the post is saved.
 * Fixed the managed Cloudflare Cache Rule telling the edge to cache responses this plugin marks private. The edge cache lifetime now defaults to respecting your origin's Cache-Control header. If you set a positive lifetime, the rule is narrowed to requests with no query string, because overriding the origin cannot be made safe for query strings the origin refuses to cache.
 * Removed the WordPress revision limit control. It filtered `wp_revisions_to_keep` on every site that activated the plugin, whether or not the database module was enabled, so posts lost revision history that could not be recovered.
@@ -143,13 +173,10 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 * The cache capture pipeline no longer runs when the page-cache drop-in is not installed, which is the state directly after activation. It was doing the full render, optimization, and two file writes for a cache nothing could read.
 * Removed the `X-GT-Performance-Bypass` request header. It was never signed despite its internal name, so any client could force a full uncached render on every request.
 * A full cache purge no longer deletes the .htaccess and index.html files that keep the cache directory unreadable from the web.
-* The private fragments AJAX endpoint is no longer registered when the feature is disabled.
-* Removed the "Remove unused CSS" setting. The engine flattens native CSS nesting, drops @import stylesheets, prunes escaped utility class names such as those Tailwind generates, and runs during the visitor's request. Those defects were silent and were cached. The engine can still be run by defining `GTPERF_UNUSED_CSS` in wp-config.php, and returns as a supported feature once generation moves out of the request.
 * GT Performance no longer activates on WordPress multisite. Its compiled configuration and cache directory are shared across a network, so one site's settings decided another site's cache behavior.
 * Added a LICENSE file, disclosed the three bundled MIT libraries, and corrected documentation that described WordPress.org as the update authority. The plugin is not listed in the directory yet.
 
 = 1.0.7 =
-* The private island shortcode now escapes its fallback text where it is returned. The rendered output is unchanged; the escaping simply happens at the point of output.
 * The release package no longer ships the extensionless command line wrappers bundled with the minifier library. WordPress.org does not permit them, and the minifier itself is unaffected.
 
 = 1.0.6 =
@@ -163,11 +190,8 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 * Removed the upgrade compatibility code carried since 1.0.1. The plugin no longer deletes configuration files written by earlier releases, no longer drops their database tables, and no longer loads a class on behalf of a cache drop-in published before 1.0.1.
 * Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. A standalone repair script is available: https://gist.github.com/wpgaurav/03d61d313df00b4127db92393ed74681
 
-= 1.0.3 =
-* Fixes the License screen's Activate, Deactivate, and Check buttons returning a blank page in the build distributed from gauravtiwari.org. Same cause as the admin buttons fixed in 1.0.2, in a file the 1.0.2 fix did not cover.
-
 = 1.0.2 =
-* Fixes every button and background request in the GT Performance admin screens returning a blank page on 1.0.1. The 1.0.1 prefix rename renamed what the controls submit but not the handlers registered to receive it, so nothing was listening. Purge, Cloudflare connect and sync, Redis test and install, drop-in install, xCloud refresh, Safety Lab, Fleet export and import, database cleanup, CSS regeneration and training, admin-bar actions, and Private Islands were all affected.
+* Fixes every button and background request in the GT Performance admin screens returning a blank page on 1.0.1. The 1.0.1 prefix rename renamed what the controls submit but not the handlers registered to receive it, so nothing was listening. Purge, Cloudflare connect and sync, Redis test and install, drop-in install, xCloud refresh, database cleanup, CSS regeneration, and admin-bar actions were affected.
 
 = 1.0.1 =
 * Fixed a fatal error that took the front end and wp-admin down when updating from 1.0.0.
@@ -179,17 +203,16 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 * The early cache drop-in and WordPress now sanitize every request value through one shared implementation, so cache keys and bypass decisions can no longer diverge between them.
 * Fixed keyboard focus styles being pruned from generated CSS. `:focus-visible` and `:focus-within` rules were dropped as unused.
 * Every output buffer this plugin opens is now closed explicitly on shutdown.
-* Renamed the `GTP_` and `gtp_` prefixes to `GTPERF_` and `gtperf_`. Constants set in `wp-config.php`, the Private Islands shortcode, and stored transients all use the new prefix and the old names are no longer read.
+* Renamed the `GTP_` and `gtp_` prefixes to `GTPERF_` and `gtperf_`. Constants set in `wp-config.php` and stored transients all use the new prefix and the old names are no longer read.
 * Updated the bundled CSS parser to 9.4.0. The new version pulls in a required library that makes the plugin about 2.4 MB larger; pages served from the cache are unaffected.
 
 = 1.0.0 =
-* First stable release, and the first release distributed free through the WordPress.org plugin directory.
+* First stable release, distributed as free GPL software.
 * Atomic origin page caching with an owned advanced-cache.php drop-in, background stale rebuilds, sitemap-driven warming, and verified purge receipts.
-* Server-side unused-CSS optimization with file, inline, and hybrid delivery, CSS Training Mode, staged rollout, and per-URL regeneration.
+* Server-side unused-CSS optimization with file, inline, and hybrid delivery, staged rollout, and per-URL regeneration.
 * Cloudflare Free cache-rule compiler, exact-URL purging, connection diagnostics, and scoped-token provisioning.
 * Optional origin-pull static-asset CDN rewriting with exact extension controls.
-* FluentCart, Easy Digital Downloads, and WooCommerce cache-safety adapters plus Commerce Safety Lab checks.
+* FluentCart, Easy Digital Downloads, and WooCommerce cache-safety adapters.
 * JavaScript, media, font, embed, database, bloat, and Redis object-cache modules with encrypted credentials.
 * xCloud host integration with explicit edge ownership, Perfmatters ownership coordination, and automatic analytics-plugin protection.
-* Fleet Console for moving signed, credential-free setting bundles between your sites using a shared signing secret.
 * Explain This Page diagnostics, admin-bar actions, and WP-CLI commands.

@@ -1,22 +1,15 @@
-# GT Performance Differentiation Suite
+# GT Performance feature status
 
-This report records the implementation and verification status of the seven-feature roadmap delivered in `1.0.0-beta-1`.
+This inventory describes the 1.0.12 submission candidate. The original beta implementation report is available in Git history.
 
-## Implemented foundations
-
+- Origin page caching and commerce adapters protect eligible anonymous pages while bypassing private routes and session state.
 - Explain This Page uses the production eligibility policy, deterministic key, local artifact metadata, and compiled Cloudflare expectation.
-- Verified Purge records bounded, redacted receipts with local artifact removal, public response stability, Cloudflare status, Age, and response-safety signals.
-- The Cloudflare Free rule compiler previews the ten-rule budget, managed-rule drift, expected operation, overlaps, and exact expression before mutation.
-- Commerce Safety Lab audits every active adapter path, cookie, and query parameter in memory, then makes read-only requests to protected routes without creating orders.
-- CSS Training Mode is administrator-only, expires after one hour, records only bounded structural selectors, supports review, publish, rollback, and a deterministic URL rollout percentage.
-- Private Islands exposes only explicitly registered fragments through signed, no-store requests. Built-ins cover cart count and account link, with extension filters for FluentCart and other integrations.
-- Fleet Console creates and accepts short-lived, one-use configuration bundles signed from the shared valid license. Secrets and license material are excluded, and the receiver cannot execute code.
+- Verified Purge records bounded, redacted receipts with artifact removal, response stability, cache headers, and safety signals. Receipts are available in Tools.
+- The Cloudflare rule compiler previews rule capacity, drift, expected operation, overlaps, and the exact expression before synchronization.
+- Unused CSS supports file, inline, and hybrid delivery, background generation, manual safelists, deterministic URL rollout, and status/regeneration controls in Optimization.
+- JavaScript minification uses in-memory processing, transients, and signed external delivery. Defer and interaction delay remain available.
+- Media, fonts, database cleanup, Redis, xCloud, and custom CDN controls remain opt-in where appropriate.
 
-## Verification status
+Private Islands, Fleet Console, Commerce Safety Lab, and CSS Training Mode were removed in 1.0.8 and are not available in this release. Their former controls and endpoints are not part of the current feature set.
 
-- PHPUnit: 61 tests, 170 assertions passing.
-- WordPress coding standards: passing.
-- PHPStan level 6 with WordPress and WP-CLI stubs: passing.
-- Release metadata and production package integrity: passing.
-- WordPress Studio 1.15.0 package activation and targeted runtime smoke checks on WordPress 7.0.2/PHP 8.2.32: passing.
-- Desktop and 390px mobile browser checks for Optimization, Safety Lab, and Fleet: passing with no page-level overflow or console issues.
+See VALIDATION.md for version-specific test evidence.

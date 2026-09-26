@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.0.14 - 2026-09-21
+
+- Fixed individual Cloudflare purges by allowing internal PURGE requests in the managed cache rule while preserving checkout, session, and query exclusions.
+- Wait for Cloudflare before verifying or reporting manual cache purges; show partial failures and retain the latest purge result even with debug logging disabled.
+- Purge desktop, mobile, and tablet cache variants when separate device caching is enabled.
+- Retry temporary Cloudflare transport, rate-limit, and server failures up to three times, preserving unprocessed batches and honoring Retry-After.
+- A successful full purge supersedes queued URL purges and retries. Failed verification requests no longer appear successful, and receipt details display correctly.
+- After upgrading, use Connect/sync Cloudflare once to update the existing managed rule. Unrelated Cloudflare rules are preserved.
+
+## 1.0.13 - 2026-09-20
+
+- Preserved existing configuration and drop-ins when writes, permissions, or publication fail; temporary wp-config copies retain PHP handling.
+- Moved bounded, redacted diagnostics into the database and removed legacy plaintext logs.
+- Kept Redis failure markers inside the plugin cache and prevented uninstall from following cache-root aliases into other directories.
+- Rejected settings changes when runtime publication fails, invalidated available stale copies, and surfaced failures in admin and CLI.
+
+- Replaced PHP-containing runtime configuration with authenticated encrypted JSON, including temporary files.
+- Updated both early cache readers and removed legacy PHP configuration after successful compilation.
+- Fail configuration installation safely when encryption or file publication is unavailable.
+
+## 1.0.12 - 2026-09-18
+
+- Protected temporary configuration files with the same PHP guard and access-rule suffix as published configurations, restricted permissions before writing, and rejected incomplete writes.
+- Escaped less-than characters as CSS escapes before adding generated inline styles, preventing HTML closing-tag injection while preserving CSS string values.
+- Returned completed page responses through an output-buffer callback, preserving scripts, forms, and SVG while keeping escaping at each transformation boundary.
+- Removed outdated feature claims and the empty Private Islands panel. Current descriptions no longer advertise Fleet Console, Private Islands, Commerce Safety Lab, or CSS Training Mode.
+
+## 1.0.11 - 2026-09-11
+
+- Changed generated CSS and frontend loaders to use WordPress asset registration, enqueue, and printing functions.
+- Bundled the interaction-delay and YouTube loaders as static plugin assets.
+- Fixed nested output-buffer handling so WordPress asset printers can run during final HTML optimization.
+- Restricted early cache reads to validated local files and rejected paths outside the page-cache directory.
+- Kept opt-in JavaScript minification using in-memory processing, WordPress transient storage, and signed external delivery instead of generated JavaScript files. Defer, delay, saved settings, and exclusions remain supported.
+- Added safe original-script fallback when cached minified results expire, versioned URLs for source changes, browser caching, and ETag revalidation.
+- Audited similar patterns across the plugin: hardened both early drop-in configuration readers and restricted downloaded font output to recognized binary font types with atomic publication.
+
 ## 1.0.10 - 2026-09-05
 
 ### Added

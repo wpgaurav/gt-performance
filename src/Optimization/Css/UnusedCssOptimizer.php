@@ -12,6 +12,7 @@ namespace GTPerformance\Optimization\Css;
 use GTPerformance\Core\Logger;
 use GTPerformance\Cache\RequestContext;
 use GTPerformance\Core\Settings;
+use GTPerformance\Optimization\BufferedAssets;
 
 final class UnusedCssOptimizer {
 	public function __construct(
@@ -257,7 +258,7 @@ final class UnusedCssOptimizer {
 	 */
 	private function inlineTag( string $css, string $kind ): array {
 		return array(
-			'<style data-gt-performance="' . esc_attr( $kind ) . '">' . $css . '</style>',
+			BufferedAssets::style( $kind, $css ),
 			array(
 				'delivery' => 'inline',
 				'kind'     => $kind,
@@ -280,8 +281,7 @@ final class UnusedCssOptimizer {
 		$artifact = $this->artifacts->write( $css, $kind );
 
 		return array(
-			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This replaces stylesheets already in the buffered HTML; the enqueue phase is long past.
-			'<link rel="stylesheet" href="' . esc_url( (string) $artifact['url'] ) . '" data-gt-performance="' . esc_attr( $kind ) . '">',
+			BufferedAssets::style( $kind, '', (string) $artifact['url'] ),
 			array(
 				'delivery' => 'file',
 				'kind'     => $kind,
@@ -401,7 +401,7 @@ final class UnusedCssOptimizer {
 		// Keep reuse scoped to the URL and exact markup to avoid cross-page pruning.
 		return hash(
 			'sha256',
-			$this->requestUrl() . '|' . $mode . '|'
+			GTPERF_VERSION . '|' . $this->requestUrl() . '|' . $mode . '|'
 			. (int) Settings::get( 'generation', 1 ) . '|'
 			. (string) get_option( 'gtperf_css_revision', 1 ) . '|'
 			. (string) get_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $this->requestUrl() ) ) . '|' . $html

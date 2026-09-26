@@ -21,6 +21,12 @@ final class DropinRuntime {
 	);
 
 	public static function serve( string $configFile, string $pagesRoot ): void {
+		// realpath accepts filesystem paths only, never HTTP or stream-wrapper URLs.
+		$localRoot = realpath( $pagesRoot );
+		if ( false === $localRoot || ! is_dir( $localRoot ) ) {
+			return;
+		}
+		$pagesRoot = $localRoot;
 		$config = ConfigFile::read( $configFile );
 		if ( null === $config || ! isset( $config['cache'] ) || ! is_array( $config['cache'] ) ) {
 			return;
@@ -52,14 +58,14 @@ final class DropinRuntime {
 
 		// Reads are intentionally non-fatal because another worker may purge
 		// between the stat and the read. Metadata is inert JSON, never executed.
-		$rawMeta = @file_get_contents( $metaFile ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions -- Runs before WordPress loads; a concurrent purge is expected.
+		$rawMeta = self::readLocalCacheFile( $metaFile, $pagesRoot );
 		$meta    = is_string( $rawMeta ) ? json_decode( $rawMeta, true ) : null;
 		if ( ! is_array( $meta ) ) {
 			header( 'X-GT-Cache: MISS' );
 			return;
 		}
 
-		$html = @file_get_contents( $page ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions -- Runs before WordPress loads; a concurrent purge is expected.
+		$html = self::readLocalCacheFile( $page, $pagesRoot );
 		if ( ! is_string( $html ) ) {
 			header( 'X-GT-Cache: MISS' );
 			return;
@@ -116,9 +122,29 @@ final class DropinRuntime {
 		}
 
 		if ( 'HEAD' !== $request->method ) {
-			echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Previously validated cached HTML.
+			// Replay the validated complete response through an output handler.
+			// Escaping it as a fragment would strip the site's scripts/forms/SVG.
+			ob_start( static fn( string $buffer ): string => $html );
+			ob_end_flush();
 		}
 		exit;
+	}
+
+	/**
+	 * Read only a regular local file contained in the resolved page-cache root.
+	 *
+	 * These are cached HTML and JSON on disk, not remote requests. The HTTP API
+	 * cannot read them and is not loaded yet in advanced-cache.php. Network fetches
+	 * elsewhere in the plugin use the WordPress HTTP API.
+	 */
+	private static function readLocalCacheFile( string $path, string $root ): ?string {
+		$local = realpath( $path );
+		if ( false === $local || ! str_starts_with( $local, rtrim( $root, '/\\' ) . DIRECTORY_SEPARATOR ) || ! is_file( $local ) || ! is_readable( $local ) ) {
+			return null;
+		}
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Validated local cache file; before WordPress loads; concurrent purges can remove it.
+		$content = @file_get_contents( $local );
+		return is_string( $content ) ? $content : null;
 	}
 
 	/**

@@ -174,11 +174,12 @@ final class StylesheetCollector {
 	 */
 	private function fetch( string $url ): string|\WP_Error {
 		$local = $this->localPath( $url );
-		if ( null !== $local && is_readable( $local ) ) {
+		if ( null !== $local && is_file( $local ) && is_readable( $local ) ) {
 			$size = filesize( $local );
 			if ( is_int( $size ) && $size > 2 * MB_IN_BYTES ) {
 				return new \WP_Error( 'gtperf_css_size', __( 'A stylesheet exceeded the 2 MB safety limit.', 'gt-performance' ) );
 			}
+			// Validated local CSS path; only the branch below makes an HTTP request.
 			$contents = file_get_contents( $local );
 
 			return is_string( $contents ) ? $contents : new \WP_Error( 'gtperf_css_read', __( 'A local stylesheet could not be read.', 'gt-performance' ) );

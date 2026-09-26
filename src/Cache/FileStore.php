@@ -38,31 +38,12 @@ final class FileStore {
 			return false;
 		}
 
-		$token     = wp_generate_uuid4();
-		$page_temp = $this->pagePath( $hash ) . '.' . $token . '.tmp';
-		$meta_temp = $this->metaPath( $hash ) . '.' . $token . '.tmp';
-		$meta      = wp_json_encode( $metadata );
-
+		$meta = wp_json_encode( $metadata );
 		if ( ! is_string( $meta ) ) {
 			return false;
 		}
-
-		if ( false === file_put_contents( $page_temp, $html, LOCK_EX ) ) {
-			return false;
-		}
-
-		if ( false === file_put_contents( $meta_temp, $meta, LOCK_EX ) ) {
-			@unlink( $page_temp );
-			return false;
-		}
-
-		if ( ! rename( $page_temp, $this->pagePath( $hash ) ) || ! rename( $meta_temp, $this->metaPath( $hash ) ) ) {
-			@unlink( $page_temp );
-			@unlink( $meta_temp );
-			return false;
-		}
-
-		return true;
+		return \GTPerformance\Core\AtomicFile::write( $this->pagePath( $hash ), $html )
+			&& \GTPerformance\Core\AtomicFile::write( $this->metaPath( $hash ), $meta );
 	}
 
 	public function delete( string $hash ): bool {

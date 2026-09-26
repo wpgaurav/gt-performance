@@ -22,25 +22,35 @@ defined( 'ABSPATH' ) || exit;
 		return;
 	}
 
-	$cacheRoot  = rtrim( WP_CONTENT_DIR, '/\\' ) . '/cache/gt-performance';
-	$configFile = $cacheRoot . '/config.json.php';
-	if ( ! is_readable( $configFile ) ) {
+	$cacheRoot  = realpath( rtrim( WP_CONTENT_DIR, '/\\' ) . '/cache/gt-performance' );
+	$configFile = false === $cacheRoot ? false : realpath( $cacheRoot . '/config.json' );
+	if ( false === $configFile || ! str_starts_with( $configFile, $cacheRoot . DIRECTORY_SEPARATOR ) || ! is_file( $configFile ) || ! is_readable( $configFile ) ) {
 		return;
 	}
 
+	// Local encrypted JSON only; WordPress's HTTP API is not loaded at this stage.
 	$raw = @file_get_contents( $configFile );
 	if ( ! is_string( $raw ) ) {
 		return;
 	}
 
-	// The first line is a fixed guard that terminates direct web requests.
-	// Everything after it is JSON data and is never executed.
-	$break = strpos( $raw, "\n" );
-	if ( false === $break ) {
-		return;
-	}
-
-	$config = json_decode( substr( $raw, $break + 1 ), true );
+	$config = ( static function ( string $raw ): ?array {
+		if ( ! function_exists( 'openssl_decrypt' ) || ! defined( 'AUTH_KEY' ) || strlen( AUTH_KEY ) < 16 || 'put your unique phrase here' === AUTH_KEY ) {
+			return null;
+		}
+		$envelope = json_decode( $raw, true );
+		if ( ! is_array( $envelope ) || 1 !== ( $envelope['version'] ?? null ) || ! is_string( $envelope['data'] ?? null ) ) {
+			return null;
+		}
+		$bytes = base64_decode( $envelope['data'], true );
+		if ( false === $bytes || strlen( $bytes ) <= 28 ) {
+			return null;
+		}
+		$key = hash( 'sha256', 'gt-performance-runtime-v1|' . AUTH_KEY, true );
+		$json = openssl_decrypt( substr( $bytes, 28 ), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr( $bytes, 0, 12 ), substr( $bytes, 12, 16 ), 'gt-performance-runtime-v1' );
+		$decoded = is_string( $json ) ? json_decode( $json, true ) : null;
+		return is_array( $decoded ) ? $decoded : null;
+	} )( $raw );
 	if ( ! is_array( $config ) ) {
 		return;
 	}

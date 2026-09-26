@@ -112,6 +112,9 @@ final class ObjectCacheInstaller {
 	}
 
 	private function publish(): bool|\WP_Error {
+		if ( ! \GTPerformance\Core\Settings::compile() ) {
+			return new \WP_Error( 'gtperf_config_write', __( 'Unable to securely write the runtime configuration. Check OpenSSL, the WordPress authentication key, and cache directory permissions.', 'gt-performance' ) );
+		}
 		$source = GTPERF_DIR . '/dropins/object-cache.php';
 		$content = file_get_contents( $source );
 		if ( ! is_string( $content ) ) {
@@ -124,10 +127,8 @@ final class ObjectCacheInstaller {
 			$content,
 			1
 		);
-		$temp = $this->target() . '.' . wp_generate_uuid4() . '.tmp';
-		if ( false === file_put_contents( $temp, $content, LOCK_EX ) || ! rename( $temp, $this->target() ) ) {
-			@unlink( $temp );
-			return new \WP_Error( 'gtperf_redis_install', __( 'Unable to install the Redis object-cache drop-in.', 'gt-performance' ) );
+		if ( ! \GTPerformance\Core\AtomicFile::write( $this->target(), $content ) ) {
+			return new \WP_Error( 'gtperf_redis_install', __( 'Unable to publish the complete Redis object-cache drop-in. The previous file was preserved.', 'gt-performance' ) );
 		}
 
 		return true;

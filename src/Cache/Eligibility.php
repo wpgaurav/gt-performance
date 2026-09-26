@@ -14,6 +14,11 @@ final class Eligibility {
 	 * @param array<string, mixed> $config Compiled cache configuration.
 	 */
 	public function decide( RequestContext $request, array $config ): Decision {
+		// Asset delivery must never collide with a cached HTML page, even when an
+		// administrator accidentally adds this parameter to the ignored-query list.
+		if ( array_key_exists( 'gtperf_js', $request->query ) ) {
+			return Decision::deny( 'javascript_asset' );
+		}
 		if ( ! (bool) ( $config['enabled'] ?? false ) ) {
 			return Decision::deny( 'cache_disabled' );
 		}

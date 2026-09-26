@@ -21,7 +21,8 @@ final class RuleExpression {
 	public function compile( string $host, array $cache, bool $requireEmptyQuery = false ): string {
 		$parts = array(
 			'(http.host eq "' . $this->escape( $this->normalizeHost( $host ) ) . '")',
-			'(http.request.method in {"GET" "HEAD"})',
+			// Cloudflare evaluates cache rules for internal single-file PURGE requests.
+			'(http.request.method in {"GET" "HEAD" "PURGE"})',
 		);
 
 		// When the action overrides origin freshness, Cloudflare stops honouring the
@@ -89,7 +90,7 @@ final class RuleExpression {
 			return false;
 		}
 
-		if ( ! in_array( $request->method, array( 'GET', 'HEAD' ), true ) ) {
+		if ( ! in_array( $request->method, array( 'GET', 'HEAD', 'PURGE' ), true ) ) {
 			return false;
 		}
 

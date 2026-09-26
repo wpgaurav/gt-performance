@@ -29,10 +29,26 @@ final class PurgeVerifier {
 			return $before;
 		}
 
-		( new Purger() )->purgeUrl( $url );
+		$purger = new Purger();
+		$purger->purgeUrl( $url );
 		$afterPurge = $this->inspector->inspect( $url );
 		if ( is_wp_error( $afterPurge ) ) {
 			return $afterPurge;
+		}
+		$edgeResult = $purger->flushEdge();
+		if ( is_wp_error( $edgeResult ) ) {
+			$this->receipts->add(
+				array(
+					'id' => wp_generate_uuid4(),
+					'url' => esc_url_raw( $url ),
+					'status' => 'failed',
+					'created_at' => current_time( 'mysql', true ),
+					'origin_removed' => 'missing' === (string) ( $afterPurge['origin']['state'] ?? '' ),
+					'error_code' => $edgeResult->get_error_code(),
+					'error' => \GTPerformance\Core\Logger::redact( $edgeResult->get_error_message() ),
+				)
+			);
+			return $edgeResult;
 		}
 
 		$edgeOne = $this->fetch( $url );
@@ -45,7 +61,8 @@ final class PurgeVerifier {
 		$originRemoved = 'missing' === (string) ( $afterPurge['origin']['state'] ?? '' );
 		$bodyStable    = '' !== (string) $edgeOne['body_fingerprint']
 			&& hash_equals( (string) $edgeOne['body_fingerprint'], (string) $edgeTwo['body_fingerprint'] );
-		$safeResponse  = ! (bool) $edgeOne['private'] && ! (bool) $edgeTwo['private'];
+		$safeResponse  = 200 === $edgeOne['status'] && 200 === $edgeTwo['status']
+			&& ! (bool) $edgeOne['private'] && ! (bool) $edgeTwo['private'];
 		$firstWasOldHit = (bool) Settings::get( 'cloudflare.enabled', false )
 			&& in_array( (string) $edgeOne['cf_cache_status'], array( 'HIT', 'STALE' ), true )
 			&& (int) $edgeOne['age'] > 0;

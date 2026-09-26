@@ -83,7 +83,9 @@ final class DropinInstaller {
 
 		$installer = new self();
 		if ( 'owned' === $installer->status() ) {
-			$installer->install();
+			if ( is_wp_error( $installer->install() ) ) {
+				return;
+			}
 		}
 
 		update_option( self::VERSION_OPTION, $signature, false );
@@ -101,7 +103,9 @@ final class DropinInstaller {
 
 		// The compiled configuration carries the plugin directory the drop-in
 		// loads its runtime from, so it must exist before the drop-in is live.
-		Settings::compile();
+		if ( ! Settings::compile() ) {
+			return new \WP_Error( 'gtperf_config_write', __( 'Unable to securely write the runtime configuration. Check OpenSSL, the WordPress authentication key, and cache directory permissions.', 'gt-performance' ) );
+		}
 
 		$content = file_get_contents( GTPERF_DIR . '/dropins/advanced-cache.php' );
 		if ( ! is_string( $content ) ) {
@@ -115,14 +119,8 @@ final class DropinInstaller {
 			1
 		);
 
-		$temp = $this->target() . '.' . wp_generate_uuid4() . '.tmp';
-		if ( false === file_put_contents( $temp, $content, LOCK_EX ) ) {
-			return new \WP_Error( 'gtperf_dropin_write', __( 'Unable to write the cache drop-in.', 'gt-performance' ) );
-		}
-
-		if ( ! rename( $temp, $this->target() ) ) {
-			@unlink( $temp );
-			return new \WP_Error( 'gtperf_dropin_move', __( 'Unable to publish the cache drop-in atomically.', 'gt-performance' ) );
+		if ( ! \GTPerformance\Core\AtomicFile::write( $this->target(), $content ) ) {
+			return new \WP_Error( 'gtperf_dropin_write', __( 'Unable to publish the complete cache drop-in. The previous file was preserved.', 'gt-performance' ) );
 		}
 
 		$constant = ( new WpCacheConstant() )->enable();

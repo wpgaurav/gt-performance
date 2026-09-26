@@ -132,6 +132,7 @@ if ( ! class_exists( 'WP_Error' ) ) {
 		public function __construct(
 			private readonly string $code = '',
 			private readonly string $message = '',
+			private mixed $data = null,
 		) {
 		}
 
@@ -142,6 +143,8 @@ if ( ! class_exists( 'WP_Error' ) ) {
 		public function get_error_message(): string {
 			return $this->message;
 		}
+		public function get_error_data(): mixed { return $this->data; }
+		public function add_data( mixed $data ): void { $this->data = $data; }
 	}
 }
 
@@ -207,6 +210,19 @@ if ( ! function_exists( 'update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( string $name ): bool {
+		unset( $GLOBALS['gtperf_test_options'][ $name ] );
+		return true;
+	}
+}
+
+if ( ! function_exists( 'add_settings_error' ) ) {
+	function add_settings_error( string $setting, string $code, string $message, string $type = 'error' ): void {
+		$GLOBALS['gtperf_test_settings_errors'][] = compact( 'setting', 'code', 'message', 'type' );
+	}
+}
+
 if ( ! function_exists( 'apply_filters' ) ) {
 	function apply_filters( string $hook, mixed $value, mixed ...$args ): mixed {
 		$callbacks = $GLOBALS['gtperf_test_filters'][ $hook ] ?? array();
@@ -224,6 +240,39 @@ if ( ! function_exists( 'do_action' ) ) {
 			'hook' => $hook,
 			'args' => $args,
 		);
+		foreach ( $GLOBALS['gtperf_test_action_handlers'][ $hook ] ?? array() as $callback ) {
+			$callback( ...$args );
+		}
+	}
+}
+
+if ( ! function_exists( 'add_action' ) ) {
+	function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+		$GLOBALS['gtperf_test_registered_actions'][ $hook ][] = $callback;
+		return true;
+	}
+}
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+		$GLOBALS['gtperf_test_filters'][ $hook ][] = $callback;
+		return true;
+	}
+}
+if ( ! function_exists( 'wp_schedule_single_event' ) ) {
+	function wp_schedule_single_event( int $when, string $hook, array $args = array(), bool $wp_error = false ): bool|WP_Error {
+		if ( ! empty( $GLOBALS['gtperf_test_cron_failure'] ) ) {
+			return new WP_Error( 'could_not_set', 'Cron storage failed' );
+		}
+		$GLOBALS['gtperf_test_cron'][ $hook ][ md5( serialize( $args ) ) ] = array( 'when' => $when, 'args' => $args );
+		return true;
+	}
+	function wp_next_scheduled( string $hook, array $args = array() ): int|false {
+		return $GLOBALS['gtperf_test_cron'][ $hook ][ md5( serialize( $args ) ) ]['when'] ?? false;
+	}
+	function wp_unschedule_hook( string $hook ): int {
+		$count = count( $GLOBALS['gtperf_test_cron'][ $hook ] ?? array() );
+		unset( $GLOBALS['gtperf_test_cron'][ $hook ] );
+		return $count;
 	}
 }
 
@@ -315,7 +364,7 @@ if ( ! function_exists( 'wp_safe_remote_get' ) ) {
 			'args' => $args,
 		);
 
-		return $GLOBALS['gtperf_test_http_response'] ?? array(
+		return $GLOBALS['gtperf_test_http_responses'][ $url ] ?? $GLOBALS['gtperf_test_http_response'] ?? array(
 			'response' => array( 'code' => 200 ),
 			'headers'  => array( 'content-type' => 'text/css' ),
 			'body'     => '.remote{}',
@@ -346,12 +395,22 @@ if ( ! function_exists( 'wp_remote_request' ) ) {
 			'url'  => $url,
 			'args' => $args,
 		);
+		if ( isset( $GLOBALS['gtperf_test_http_callback'] ) ) {
+			return $GLOBALS['gtperf_test_http_callback']( $url, $args );
+		}
 
 		return $GLOBALS['gtperf_test_http_response'] ?? array(
 			'response' => array( 'code' => 200 ),
 			'body'     => '{"success":true,"result":{}}',
 		);
 	}
+}
+
+if ( ! function_exists( 'wp_remote_get' ) ) {
+	function wp_remote_get( string $url, array $args = array() ): array|WP_Error {
+		return wp_remote_request( $url, array_merge( $args, array( 'method' => 'GET' ) ) );
+	}
+	function wp_remote_retrieve_headers( array $response ): array { return $response['headers'] ?? array(); }
 }
 
 if ( ! function_exists( 'wp_remote_retrieve_response_code' ) ) {
@@ -562,7 +621,15 @@ if ( ! defined( 'ARRAY_A' ) ) {
 }
 
 if ( ! function_exists( 'add_query_arg' ) ) {
-	function add_query_arg( string $key, string $value, string $url ): string {
+	function add_query_arg( array|string $key, string $value, string $url = '' ): string {
+		if ( is_array( $key ) ) {
+			// Like core add_query_arg(), new array values must already be encoded.
+			$pairs = array();
+			foreach ( $key as $name => $item ) {
+				$pairs[] = $name . '=' . $item;
+			}
+			return $value . ( str_contains( $value, '?' ) ? '&' : '?' ) . implode( '&', $pairs );
+		}
 		return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . rawurlencode( $key ) . '=' . rawurlencode( $value );
 	}
 }
@@ -581,3 +648,6 @@ if ( ! function_exists( 'remove_query_arg' ) ) {
 		return $parts[0] . ( $query ? '?' . http_build_query( $query ) : '' );
 	}
 }
+
+// Exercise the real core enqueue and printing behavior, including loader filters.
+require_once __DIR__ . '/wordpress-assets.php';

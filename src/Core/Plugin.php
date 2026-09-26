@@ -24,6 +24,15 @@ final class Plugin {
 			return;
 		}
 
+		// Retire plaintext diagnostics on upgrade; retry failures rather than hiding them.
+		if ( '1.0.13' !== get_option( 'gt_performance_private_logs_version', '' ) ) {
+			if ( Logger::removeLegacyFiles() ) {
+				update_option( 'gt_performance_private_logs_version', '1.0.13', false );
+				delete_option( 'gt_performance_legacy_logs_error' );
+			} else {
+				update_option( 'gt_performance_legacy_logs_error', true, false );
+			}
+		}
 		Database::maybeUpgrade();
 		\GTPerformance\Cache\DropinInstaller::syncVersion();
 		\GTPerformance\Redis\ObjectCacheInstaller::syncVersion();

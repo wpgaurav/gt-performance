@@ -1,0 +1,22 @@
+<?php
+$root=sys_get_temp_dir().'/gtperf-breaker-'.bin2hex(random_bytes(6));
+mkdir($root.'/wp-content',0700,true);define('ABSPATH',$root.'/');define('WP_CONTENT_DIR',$root.'/wp-content');
+require dirname(__DIR__,2).'/dropins/object-cache.php';
+$cache=(new ReflectionClass('WP_Object_Cache'))->newInstanceWithoutConstructor();
+$pathMethod=new ReflectionMethod('WP_Object_Cache','breakerFile');
+$trip=new ReflectionMethod('WP_Object_Cache','tripBreaker');
+$open=new ReflectionMethod('WP_Object_Cache','breakerOpen');
+$missing=$pathMethod->invoke($cache)===null;
+$trip->invoke($cache);
+$locks=WP_CONTENT_DIR.'/cache/gt-performance/locks';mkdir($locks,0700,true);
+$path=$pathMethod->invoke($cache);$trip->invoke($cache);
+$active=$open->invoke($cache);
+touch($path,time()-60);clearstatcache(true,$path);$expired=!$open->invoke($cache)&&!file_exists($path);
+$foreign=$root.'/foreign';mkdir($foreign);file_put_contents($foreign.'/keep.txt','keep');
+symlink($foreign.'/keep.txt',$path);$trip->invoke($cache);
+$leafSafe=file_get_contents($foreign.'/keep.txt')==='keep'&&!$open->invoke($cache);unlink($path);
+rmdir($locks);symlink($foreign,$locks);$trip->invoke($cache);
+$parentSafe=$pathMethod->invoke($cache)===null&&count(glob($foreign.'/*'))===1;
+echo json_encode(['missing_fallback'=>$missing,'contained'=>str_starts_with($path,realpath(WP_CONTENT_DIR).'/cache/gt-performance/locks/'),'active'=>$active,'expired'=>$expired,'leaf_safe'=>$leafSafe,'parent_safe'=>$parentSafe]);
+$files=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST);
+foreach($files as $file) ($file->isLink()||!$file->isDir())?unlink($file->getPathname()):rmdir($file->getPathname());rmdir($root);

@@ -30,6 +30,7 @@ final class Deactivator {
 		wp_clear_scheduled_hook( 'gt_performance_run_queue' );
 		wp_clear_scheduled_hook( \GTPerformance\Cache\GarbageCollector::HOOK );
 		wp_clear_scheduled_hook( 'gt_performance_database_cleanup' );
+		wp_unschedule_hook( \GTPerformance\Cloudflare\CloudflareModule::RETRY_HOOK );
 		// Scheduled by builds distributed before the WordPress.org release.
 		wp_clear_scheduled_hook( 'gt_performance_verify_license' );
 	}

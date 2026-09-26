@@ -36,7 +36,6 @@ final class GarbageCollector {
 	/** Generated CSS/JS/font artifacts are reclaimed once nothing has read them for this long. */
 	private const ARTIFACT_MAX_AGE = 14 * DAY_IN_SECONDS;
 
-	private const LOG_MAX_BYTES = 2 * MB_IN_BYTES;
 
 	public function __construct(
 		private readonly Logger $logger = new Logger(),
@@ -99,7 +98,7 @@ final class GarbageCollector {
 
 		$stats['remaining']  = count( $survivors );
 		$stats['artifacts']  = $this->collectArtifacts( $now );
-		$this->rotateLog();
+		Logger::removeLegacyFiles();
 
 		if ( $stats['expired'] || $stats['orphaned'] || $stats['evicted'] || $stats['artifacts'] ) {
 			$this->logger->log( 'debug', 'Garbage collection completed', $stats );
@@ -191,22 +190,5 @@ final class GarbageCollector {
 		}
 
 		return $removed;
-	}
-
-	/**
-	 * Keep the diagnostic log from growing without limit.
-	 *
-	 * It is append-only, was never rotated, and an administrator can neither see nor
-	 * clear it from the admin screens.
-	 */
-	private function rotateLog(): void {
-		$file = Paths::logs() . '/gt-performance.log';
-		if ( ! is_file( $file ) || (int) filesize( $file ) <= self::LOG_MAX_BYTES ) {
-			return;
-		}
-
-		$previous = $file . '.1';
-		@unlink( $previous );
-		@rename( $file, $previous );
 	}
 }
