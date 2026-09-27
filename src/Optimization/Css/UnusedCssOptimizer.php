@@ -57,6 +57,17 @@ final class UnusedCssOptimizer {
 	/** Query parameter marking the generator's own loopback request. */
 	public const GENERATOR_PARAM = 'gtperf_css_build';
 
+	/**
+	 * A fresh value on every build request. Hosts that rewrite the origin's no-store
+	 * into a cacheable response (Hostinger's Site Optimizer does) let Cloudflare keep
+	 * the build URL, and every later build of that page got the stored copy: GT never
+	 * ran, no report was written, and the job failed until the copy expired.
+	 */
+	public const GENERATOR_RUN_PARAM = 'gtperf_css_run';
+
+	/** Set once this request's build token was checked and taken off the request. */
+	private static bool $claimed = false;
+
 	public function optimize( string $html ): string {
 		if ( ! self::available() ) {
 			return $html;
@@ -150,10 +161,35 @@ final class UnusedCssOptimizer {
 			$css = implode( '', $stylesheets );
 
 			$safelist             = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
+			$scripted             = new ScriptClasses();
+			$keep                 = $scripted->selectorsForRequest();
+			$pattern              = $scripted->patternForRequest();
+			if ( '' !== $pattern ) {
+				$safelist[] = $pattern;
+			}
 			$safelist             = apply_filters( 'gt_performance_css_safelist', $safelist, $url );
 			$preserveDynamicStates = (bool) Settings::get( 'css.keep_dynamic_states', true );
-			$used                 = $this->pruner->pruneMany( $stylesheets, $document, 'used', $safelist, $preserveDynamicStates );
-			if ( '' === trim( $used ) ) {
+			// Each run of consolidated stylesheets is pruned and replaced where it stood,
+			// so stylesheets left in place keep their position in the cascade.
+			$markers = array_map( 'strval', (array) $collected['markers'] );
+			if ( count( $markers ) !== count( $stylesheets ) ) {
+				throw new \RuntimeException( 'The consolidated stylesheets could not be located in the page.' );
+			}
+			$byMarker = array_combine( $markers, $stylesheets );
+			$groups   = array();
+			foreach ( $collected['runs'] as $run ) {
+				$groups[] = array(
+					'first' => $run[0],
+					'css'   => array_map( static fn( string $marker ): string => $byMarker[ $marker ], $run ),
+				);
+			}
+			$prune = fn( string $segment ): array => array_map(
+				fn( array $group ): string => $this->pruner->pruneMany( $group['css'], $document, $segment, $safelist, $preserveDynamicStates, $keep ),
+				$groups
+			);
+
+			$used = $prune( 'used' );
+			if ( '' === trim( implode( '', $used ) ) ) {
 				throw new \RuntimeException( 'The used CSS result was empty.' );
 			}
 
@@ -173,48 +209,53 @@ final class UnusedCssOptimizer {
 				return $html;
 			}
 
-			$outputs  = array();
-			$injected = '';
-			$fallback = '';
-			if ( 'inline' === $mode ) {
-				[ $markup, $meta ] = $this->inlineTag( $used, 'used' );
-				$injected         .= $markup;
-				$outputs[]         = $meta;
-			} elseif ( 'hybrid' === $mode ) {
-				$critical  = $this->pruner->pruneMany( $stylesheets, $document, 'critical', $safelist, $preserveDynamicStates );
-				$remaining = $this->pruner->pruneMany( $stylesheets, $document, 'remaining', $safelist, $preserveDynamicStates );
+			$outputs    = array();
+			$placements = array();
+			$fallback   = '';
+			$measured   = array();
+			$critical   = array();
+			$remaining  = array();
+			if ( 'hybrid' === $mode ) {
+				$critical  = $prune( 'critical' );
+				$remaining = $prune( 'remaining' );
 				$budget    = (int) Settings::get( 'css.critical_budget', 14336 );
-
-				if ( strlen( $critical ) > $budget ) {
-					[ $markup, $meta ] = $this->fileTag( $used, 'used' );
-					$injected         .= $markup;
-					$outputs[]         = $meta;
-					$fallback          = 'critical_budget_exceeded';
-				} else {
-					if ( '' !== trim( $critical ) ) {
-						[ $markup, $meta ] = $this->inlineTag( $critical, 'critical' );
-						$injected         .= $markup;
-						$outputs[]         = $meta;
-					}
-					if ( '' !== trim( $remaining ) ) {
-						[ $markup, $meta ] = $this->fileTag( $remaining, 'remaining' );
-						$injected         .= $markup;
-						$outputs[]         = $meta;
-					}
+				// Kept so the report can say how far over the limit a page was.
+				$measured = array(
+					'critical_bytes'  => strlen( implode( '', $critical ) ),
+					'critical_budget' => $budget,
+				);
+				if ( $measured['critical_bytes'] > $budget ) {
+					$fallback = 'critical_budget_exceeded';
 				}
-			} else {
-				[ $markup, $meta ] = $this->fileTag( $used, 'used' );
-				$injected         .= $markup;
-				$outputs[]         = $meta;
 			}
 
-			$markers = array_map( 'strval', (array) $collected['markers'] );
-			$output  = $this->replaceStylesheets( $html, $markers, $injected );
+			foreach ( $groups as $index => $group ) {
+				if ( 'inline' === $mode ) {
+					$parts = array( array( 'inline', $used[ $index ], 'used' ) );
+				} elseif ( 'hybrid' === $mode && '' === $fallback ) {
+					$parts = array( array( 'inline', $critical[ $index ], 'critical' ), array( 'file', $remaining[ $index ], 'remaining' ) );
+				} else {
+					$parts = array( array( 'file', $used[ $index ], 'used' ) );
+				}
+
+				$markup = '';
+				foreach ( $parts as [ $delivery, $groupCss, $kind ] ) {
+					if ( '' === trim( $groupCss ) ) {
+						continue;
+					}
+					[ $tag, $meta ] = 'inline' === $delivery ? $this->inlineTag( $groupCss, $kind ) : $this->fileTag( $groupCss, $kind );
+					$markup        .= $tag;
+					$outputs[]      = $meta;
+				}
+				$placements[ $group['first'] ] = $markup;
+			}
+
+			$output = $this->replaceStylesheets( $html, $markers, $placements );
 			if ( '' === trim( $output ) ) {
 				throw new \RuntimeException( 'The optimized HTML result was empty.' );
 			}
 
-			$this->rememberOutput( $reuseKey, $markers, $injected, $outputs );
+			$this->rememberOutput( $reuseKey, $markers, $placements, $outputs );
 
 			$files = array_values(
 				array_filter(
@@ -236,7 +277,7 @@ final class UnusedCssOptimizer {
 					'outputs'         => $outputs,
 					'fallback'        => $fallback,
 					'duration_ms'     => $this->duration( $started ),
-				)
+				) + $measured
 			);
 
 			return $output;
@@ -296,10 +337,42 @@ final class UnusedCssOptimizer {
 	 * Whether this request is the generator building an artifact.
 	 */
 	public static function isGeneratorRequest(): bool {
+		if ( self::$claimed ) {
+			return true;
+		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Presence only; the value is a shared secret checked below.
 		$token = isset( $_GET[ self::GENERATOR_PARAM ] ) ? sanitize_text_field( wp_unslash( (string) $_GET[ self::GENERATOR_PARAM ] ) ) : '';
 
 		return '' !== $token && hash_equals( self::generatorToken(), $token );
+	}
+
+	/**
+	 * Take the build token off the request before WordPress routes it.
+	 *
+	 * Pages print their own URL: the comment form's cancel-reply link, login
+	 * redirects, pagination. With the token still in it, the HTML a build was made
+	 * from never matched what a visitor gets, so the build was never reused and no
+	 * page with a comment form was ever served its CSS. The parameter itself stays
+	 * on the wire: it is what makes the page cache and the edge bypass this request.
+	 */
+	public static function claimGeneratorRequest(): void {
+		if ( ! self::isGeneratorRequest() ) {
+			return;
+		}
+		self::$claimed = true;
+		unset( $_GET[ self::GENERATOR_PARAM ], $_REQUEST[ self::GENERATOR_PARAM ], $_GET[ self::GENERATOR_RUN_PARAM ], $_REQUEST[ self::GENERATOR_RUN_PARAM ] );
+
+		$strip = static fn( string $query ): string => trim( (string) preg_replace( '/(?:^|&)(?:' . self::GENERATOR_PARAM . '|' . self::GENERATOR_RUN_PARAM . ')=[^&]*/', '', $query ), '&' );
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput -- Rewritten in place, never output: the same value minus the build token.
+		if ( isset( $_SERVER['QUERY_STRING'] ) ) {
+			$_SERVER['QUERY_STRING'] = $strip( (string) $_SERVER['QUERY_STRING'] );
+		}
+		if ( isset( $_SERVER['REQUEST_URI'] ) ) {
+			$parts                  = explode( '?', (string) $_SERVER['REQUEST_URI'], 2 );
+			$query                  = $strip( $parts[1] ?? '' );
+			$_SERVER['REQUEST_URI'] = $parts[0] . ( '' === $query ? '' : '?' . $query );
+		}
+		// phpcs:enable WordPress.Security.ValidatedSanitizedInput
 	}
 
 	/** Remove only the authenticated build parameter; preserve all safety inputs. */
@@ -308,7 +381,7 @@ final class UnusedCssOptimizer {
 			return $request;
 		}
 		$query = $request->query;
-		unset( $query[ self::GENERATOR_PARAM ] );
+		unset( $query[ self::GENERATOR_PARAM ], $query[ self::GENERATOR_RUN_PARAM ] );
 		return new RequestContext( $request->method, $request->scheme, $request->host, $request->path, $query, $request->cookies, $request->headers, $request->userAgent );
 	}
 
@@ -366,10 +439,17 @@ final class UnusedCssOptimizer {
 			return;
 		}
 		$response = wp_safe_remote_get(
-			add_query_arg( self::GENERATOR_PARAM, self::generatorToken(), $url ),
+			add_query_arg(
+				array(
+					self::GENERATOR_PARAM     => self::generatorToken(),
+					self::GENERATOR_RUN_PARAM => wp_generate_password( 12, false ),
+				),
+				$url
+			),
 			array(
 				'timeout'     => 30,
-				'redirection' => 2,
+				'redirection' => 0,
+				'headers'     => \GTPerformance\Queue\JobLease::headers(),
 			)
 		);
 
@@ -404,7 +484,30 @@ final class UnusedCssOptimizer {
 			GTPERF_VERSION . '|' . $this->requestUrl() . '|' . $mode . '|'
 			. (int) Settings::get( 'generation', 1 ) . '|'
 			. (string) get_option( 'gtperf_css_revision', 1 ) . '|'
-			. (string) get_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $this->requestUrl() ) ) . '|' . $html
+			. (string) get_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $this->requestUrl() ) ) . '|' . self::stableMarkup( $html )
+		);
+	}
+
+	/**
+	 * The markup that decides which rules match, without what changes on every render.
+	 *
+	 * Akismet puts a random number in every comment form, and inline scripts, comments
+	 * and CSP nonces carry tokens and timestamps. None of it changes which selectors
+	 * match, but while it was part of the key a visitor's page never equalled the one
+	 * its build saw: pages with a comment form were never served their CSS, and every
+	 * uncached visit queued another build.
+	 */
+	private static function stableMarkup( string $html ): string {
+		$html = (string) preg_replace( '#<script\b[^>]*>.*?</script\s*>#is', '<script></script>', $html );
+		$html = (string) preg_replace( '#<!--.*?-->#s', '', $html );
+		$html = (string) preg_replace( '#\snonce\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $html );
+
+		return (string) preg_replace_callback(
+			'#<input\b[^>]*>#i',
+			static fn( array $input ): string => 1 === preg_match( '#\stype\s*=\s*["\']?hidden["\'\s/>]#i', $input[0] )
+				? (string) preg_replace( '#\svalue\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $input[0] )
+				: $input[0],
+			$html
 		);
 	}
 
@@ -413,7 +516,7 @@ final class UnusedCssOptimizer {
 	 */
 	private function reusableOutput( string $html, string $key ): ?string {
 		$cached = get_transient( self::REUSE_PREFIX . $key );
-		if ( ! is_array( $cached ) || ! isset( $cached['markup'], $cached['markers'] ) ) {
+		if ( ! is_array( $cached ) || ! isset( $cached['placements'], $cached['markers'] ) || ! is_array( $cached['placements'] ) ) {
 			return null;
 		}
 
@@ -426,14 +529,15 @@ final class UnusedCssOptimizer {
 			}
 		}
 
-		return $this->replaceStylesheets( $html, array_map( 'strval', (array) $cached['markers'] ), (string) $cached['markup'] );
+		return $this->replaceStylesheets( $html, array_map( 'strval', (array) $cached['markers'] ), array_map( 'strval', $cached['placements'] ) );
 	}
 
 	/**
-	 * @param list<string>               $markers Consolidated stylesheet stamps.
-	 * @param list<array<string, mixed>> $outputs Generated artifacts.
+	 * @param list<string>               $markers    Consolidated stylesheet stamps.
+	 * @param array<string, string>      $placements Generated markup keyed by the stamp it replaces.
+	 * @param list<array<string, mixed>> $outputs    Generated artifacts.
 	 */
-	private function rememberOutput( string $key, array $markers, string $markup, array $outputs ): void {
+	private function rememberOutput( string $key, array $markers, array $placements, array $outputs ): void {
 		$files = array();
 		foreach ( $outputs as $output ) {
 			if ( isset( $output['path'] ) && '' !== (string) $output['path'] ) {
@@ -444,9 +548,9 @@ final class UnusedCssOptimizer {
 		set_transient(
 			self::REUSE_PREFIX . $key,
 			array(
-				'markup'  => $markup,
-				'markers' => $markers,
-				'files'   => $files,
+				'placements' => $placements,
+				'markers'    => $markers,
+				'files'      => $files,
 			),
 			DAY_IN_SECONDS
 		);
@@ -509,36 +613,35 @@ final class UnusedCssOptimizer {
 	}
 
 	/**
-	 * Remove the stylesheets that were consolidated and insert the generated ones.
+	 * Replace the consolidated stylesheets: each run's generated markup takes the
+	 * place of its first stylesheet, and the rest of the run is removed.
 	 *
-	 * @param list<string> $markers Stamps of the tags that were consolidated.
+	 * @param list<string>          $markers    Stamps of the tags that were consolidated.
+	 * @param array<string, string> $placements Generated markup keyed by the stamp it replaces.
 	 */
-	private function replaceStylesheets( string $html, array $markers, string $injected ): string {
+	private function replaceStylesheets( string $html, array $markers, array $placements ): string {
 		$marked = $this->markCandidates( $html );
 
 		foreach ( $markers as $marker ) {
-			$attribute = preg_quote( StylesheetCollector::MARKER . '="' . $marker . '"', '#' );
+			$attribute   = preg_quote( StylesheetCollector::MARKER . '="' . $marker . '"', '#' );
+			$replacement = static fn(): string => $placements[ $marker ] ?? '';
 
 			// A <style> element carries its CSS as content; a <link> is void.
-			$marked = (string) preg_replace( '#<style\b[^>]*' . $attribute . '[^>]*>.*?</style\s*>#is', '', $marked, 1 );
-			$marked = (string) preg_replace( '#<link\b[^>]*' . $attribute . '[^>]*>#is', '', $marked, 1 );
+			$marked = (string) preg_replace_callback( '#<style\b[^>]*' . $attribute . '[^>]*>.*?</style\s*>#is', $replacement, $marked, 1, $replaced );
+			if ( 0 === $replaced ) {
+				$marked = (string) preg_replace_callback( '#<link\b[^>]*' . $attribute . '[^>]*>#is', $replacement, $marked, 1 );
+			}
 		}
 
 		// Anything still stamped was left in place, so take the stamp back off.
-		$marked = (string) preg_replace( '#\s' . preg_quote( StylesheetCollector::MARKER, '#' ) . '="\d+"#i', '', $marked );
-
-		$position = strripos( $marked, '</head>' );
-
-		return false === $position
-			? $marked . $injected
-			: substr( $marked, 0, $position ) . $injected . substr( $marked, $position );
+		return (string) preg_replace( '#\s' . preg_quote( StylesheetCollector::MARKER, '#' ) . '="\d+"#i', '', $marked );
 	}
 
 	private function requestUrl(): string {
 		$path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		$path = is_string( $path ) ? $path : '/';
 
-		return esc_url_raw( remove_query_arg( array( self::GENERATOR_PARAM, 'gtperf_css_preview' ), home_url( $path ) ) );
+		return esc_url_raw( remove_query_arg( array( self::GENERATOR_PARAM, self::GENERATOR_RUN_PARAM, 'gtperf_css_preview' ), home_url( $path ) ) );
 	}
 
 	private function duration( float $started ): int {

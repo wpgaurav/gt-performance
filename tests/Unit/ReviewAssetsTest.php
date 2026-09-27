@@ -106,7 +106,7 @@ final class ReviewAssetsTest extends TestCase {
 		$output = ( new JavaScriptOptimizer() )->optimize( $html );
 		self::assertStringContainsString( 'type="text/gtp-delayed"', $output );
 		self::assertStringContainsString( 'data-gtp-src="/widget.js"', $output );
-		self::assertStringContainsString( '<script defer="" src="/plain.js">', $output );
+		self::assertStringContainsString( '<script src="/plain.js">', $output, 'A script WordPress did not register has unknown ordering, so it is not deferred.' );
 		self::assertStringContainsString( '<script src="/protected.js">', $output );
 		self::assertStringContainsString( '<script src="/checkout.js">', $output );
 		self::assertStringContainsString( 'var html="</body>";', $output );

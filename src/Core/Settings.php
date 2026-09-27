@@ -79,6 +79,7 @@ final class Settings {
 				'entry_budget'         => 5000,
 				'preload'              => true,
 				'preload_max_urls'     => 200,
+				'preload_sitemaps'     => array(),
 			),
 			'cloudflare' => array(
 				'enabled'            => false,
@@ -165,6 +166,7 @@ final class Settings {
 				'compression'           => 82,
 				'youtube_previews'      => false,
 				'lazy_render_selectors' => array(),
+				'hero_rules'            => array(),
 			),
 			'fonts'      => array(
 				'self_host_google' => false,
@@ -236,6 +238,16 @@ final class Settings {
 				'akismet'           => true,
 				'jetpack'           => true,
 			),
+			'agents'     => array(
+				'mode' => 'off',
+			),
+			'speculation' => array(
+				'mode' => 'core',
+			),
+			'advisor'    => array(
+				'enabled'  => false,
+				'provider' => '',
+			),
 			'debug'      => false,
 			'remove_data_on_uninstall' => false,
 		);
@@ -246,8 +258,17 @@ final class Settings {
 	 */
 	public static function all(): array {
 		$saved = get_option( self::OPTION, array() );
-		$all   = self::merge( self::defaults(), is_array( $saved ) ? $saved : array() );
-		return $all;
+		return self::merged( is_array( $saved ) ? $saved : array() );
+	}
+
+	/**
+	 * A saved option value completed with current defaults.
+	 *
+	 * @param array<string, mixed> $saved Raw option value.
+	 * @return array<string, mixed>
+	 */
+	public static function merged( array $saved ): array {
+		return self::merge( self::defaults(), $saved );
 	}
 
 	public static function get( string $path, mixed $fallback = null ): mixed {
@@ -287,6 +308,11 @@ final class Settings {
 		$merged['cache']['separate_mobile']  = (bool) ( $merged['cache']['separate_mobile'] ?? false );
 		$merged['cache']['preload']          = (bool) ( $merged['cache']['preload'] ?? true );
 		$merged['cache']['preload_max_urls'] = max( 0, min( 2000, (int) ( $merged['cache']['preload_max_urls'] ?? 200 ) ) );
+		$merged['cache']['preload_sitemaps'] = self::sanitizeSitemaps( $merged['cache']['preload_sitemaps'] ?? array() );
+		$merged['advisor']['enabled']        = (bool) ( $merged['advisor']['enabled'] ?? false );
+		$merged['advisor']['provider']       = sanitize_key( (string) ( $merged['advisor']['provider'] ?? '' ) );
+		$merged['speculation']['mode']       = in_array( $merged['speculation']['mode'] ?? 'core', \GTPerformance\Optimization\SpeculationPolicy::MODES, true ) ? (string) $merged['speculation']['mode'] : 'core';
+		$merged['agents']['mode']            = in_array( $merged['agents']['mode'] ?? 'off', \GTPerformance\Abilities\Permissions::MODES, true ) ? (string) $merged['agents']['mode'] : 'off';
 		$merged['cache']['post_publish_purge'] = ( new \GTPerformance\Cache\PostPublishPurgePolicy() )->sanitize(
 			(string) ( $merged['cache']['post_publish_purge'] ?? 'related' )
 		);
@@ -423,6 +449,12 @@ final class Settings {
 
 		$merged['media']['compression']           = max( 30, min( 100, (int) ( $merged['media']['compression'] ?? 82 ) ) );
 		$merged['media']['critical_images']       = max( 0, min( 10, (int) ( $merged['media']['critical_images'] ?? 2 ) ) );
+		$merged['media']['hero_rules']            = array_values(
+			array_filter(
+				self::sanitizeList( $merged['media']['hero_rules'] ?? array() ),
+				static fn ( string $line ): bool => null !== \GTPerformance\Optimization\HeroRules::parseLine( $line )
+			)
+		);
 		$merged['database']['retain_revisions']   = max( 0, min( 100, (int) ( $merged['database']['retain_revisions'] ?? 5 ) ) );
 		$merged['bloat']['heartbeat_seconds']     = max( 15, min( 120, (int) ( $merged['bloat']['heartbeat_seconds'] ?? 60 ) ) );
 		$merged['bloat']['autosave_interval']      = max( 15, min( 3600, (int) ( $merged['bloat']['autosave_interval'] ?? 60 ) ) );
@@ -456,23 +488,63 @@ final class Settings {
 	 * @param array<string, mixed> $settings Settings to persist.
 	 */
 	public static function save( array $settings ): bool {
-		$clean = self::sanitize( $settings );
-		if ( ! self::compile( $clean ) ) {
+		if ( ! \GTPerformance\Configuration\SettingsLock::acquire() ) {
 			return false;
 		}
-		self::$saving = true;
 		try {
-			$saved = update_option( self::OPTION, $clean, false );
+			$clean = self::sanitize( $settings );
+			if ( ! self::compile( $clean ) ) {
+				return false;
+			}
+			self::$saving = true;
+			try {
+				$saved = update_option( self::OPTION, $clean, false );
+			} finally {
+				self::$saving = false;
+			}
+			if ( $saved || get_option( self::OPTION ) === $clean ) {
+				return true;
+			}
+			// A database failure must not leave the runtime on uncommitted settings.
+			self::compile();
+			update_option( self::CONFIG_ERROR, true, false );
+			return false;
 		} finally {
-			self::$saving = false;
+			\GTPerformance\Configuration\SettingsLock::release();
 		}
-		if ( $saved || get_option( self::OPTION ) === $clean ) {
-			return true;
+	}
+
+	/**
+	 * Save only what a caller changed, on top of settings read under the lock.
+	 *
+	 * Callers that read settings, make a slow remote call, and then save would
+	 * otherwise overwrite anything another administrator saved in between.
+	 *
+	 * @param array<string, mixed> $before Settings as the caller read them.
+	 * @param array<string, mixed> $after  The caller's modified copy.
+	 */
+	public static function saveChanges( array $before, array $after ): bool {
+		if ( ! \GTPerformance\Configuration\SettingsLock::acquire() ) {
+			return false;
 		}
-		// A database failure must not leave the runtime on uncommitted settings.
-		self::compile();
-		update_option( self::CONFIG_ERROR, true, false );
-		return false;
+		try {
+			$current = self::all();
+			foreach ( $after as $section => $values ) {
+				if ( is_array( $values ) && ! array_is_list( $values ) && is_array( $before[ $section ] ?? null ) ) {
+					foreach ( $values as $key => $value ) {
+						if ( ! array_key_exists( $key, $before[ $section ] ) || $before[ $section ][ $key ] !== $value ) {
+							$current[ $section ][ $key ] = $value;
+						}
+					}
+				} elseif ( ! array_key_exists( $section, $before ) || $before[ $section ] !== $values ) {
+					$current[ $section ] = $values;
+				}
+			}
+
+			return self::save( $current );
+		} finally {
+			\GTPerformance\Configuration\SettingsLock::release();
+		}
 	}
 
 	/**
@@ -627,6 +699,32 @@ final class Settings {
 		}
 
 		return array_values( array_unique( $clean ) );
+	}
+
+	/**
+	 * Sitemap sources for cache warming: this site's own http(s) URLs only.
+	 *
+	 * @return list<string>
+	 */
+	private static function sanitizeSitemaps( mixed $value ): array {
+		$home    = wp_parse_url( home_url( '/' ) );
+		$sources = array();
+		foreach ( self::sanitizeList( $value ) as $item ) {
+			$url   = esc_url_raw( $item, array( 'http', 'https' ) );
+			$parts = wp_parse_url( $url );
+			if ( ! is_array( $parts ) || ! is_array( $home ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+				continue;
+			}
+			$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+			$port   = 'https' === $scheme ? 443 : 80;
+			if ( strtolower( (string) ( $home['scheme'] ?? '' ) ) === $scheme
+				&& in_array( strtolower( (string) ( $parts['host'] ?? '' ) ), self::canonicalHosts(), true )
+				&& (int) ( $parts['port'] ?? $port ) === (int) ( $home['port'] ?? $port ) ) {
+				$sources[] = $url;
+			}
+		}
+
+		return array_slice( array_values( array_unique( $sources ) ), 0, \GTPerformance\Cache\CacheWarmer::MAX_SOURCES );
 	}
 
 	private static function sanitizeDomain( string $value ): string {

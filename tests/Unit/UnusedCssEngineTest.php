@@ -94,6 +94,71 @@ final class UnusedCssEngineTest extends TestCase {
 		self::assertStringNotContainsString( 'data-gtp-css', $out, 'Internal stamps must not reach the browser.' );
 	}
 
+	/**
+	 * A table of contents that a script fills after load is empty in the HTML the
+	 * generator reads, so its rules were pruned until a browser scan learned them.
+	 */
+	public function test_classes_scripts_add_on_that_post_type_are_kept(): void {
+		$html = $this->page(
+			'<style>.sp-toc{display:block}.sp-toc .level-3{padding-left:1em}.sp-toc .level-30{color:red}.sp-toc li{margin:0}.sp-toc a:hover{color:blue}</style>',
+			'<aside class="sp-toc"><ol id="sp-toc-list"></ol></aside>'
+		);
+		( new \GTPerformance\Optimization\Css\ScriptClasses() )->save( array( 'post' => array( 'classes' => array( 'level-3' ), 'selectors' => array( '.sp-toc li' ) ) ), array( 'post', 'page' ) );
+
+		try {
+			$GLOBALS['gtperf_test_singular'] = 'page';
+			self::assertStringNotContainsString( 'level-3', $this->optimize( $html ), 'Another post type learned nothing.' );
+
+			$GLOBALS['gtperf_test_singular'] = 'post';
+			$out = $this->optimize( $html );
+			self::assertStringContainsString( '.sp-toc .level-3', $out );
+			self::assertStringContainsString( '.sp-toc li{', $out, 'A learned selector keeps a rule that names no learned class.' );
+			self::assertStringNotContainsString( 'level-30', $out );
+			self::assertStringNotContainsString( 'a:hover', $out, 'A selector the scan did not see is still pruned.' );
+		} finally {
+			unset( $GLOBALS['gtperf_test_singular'], $GLOBALS['gtperf_test_options'][ \GTPerformance\Optimization\Css\ScriptClasses::OPTION ] );
+		}
+	}
+
+	/**
+	 * A comment form prints the current URL. With the token still in it, a build
+	 * never matched the page a visitor gets and was never served.
+	 */
+	public function test_the_build_request_renders_under_the_visitors_url(): void {
+		$claimed = new \ReflectionProperty( UnusedCssOptimizer::class, 'claimed' );
+		$token   = ( new \ReflectionMethod( UnusedCssOptimizer::class, 'generatorToken' ) )->invoke( null );
+		$server  = $_SERVER;
+
+		try {
+			$_GET                    = array( 'replytocom' => '4', UnusedCssOptimizer::GENERATOR_PARAM => 'wrong' );
+			$_SERVER['REQUEST_URI']  = '/post-1/?replytocom=4&' . UnusedCssOptimizer::GENERATOR_PARAM . '=wrong';
+			$_SERVER['QUERY_STRING'] = 'replytocom=4&' . UnusedCssOptimizer::GENERATOR_PARAM . '=wrong';
+			UnusedCssOptimizer::claimGeneratorRequest();
+			self::assertFalse( UnusedCssOptimizer::isGeneratorRequest() );
+			self::assertStringContainsString( 'wrong', $_SERVER['REQUEST_URI'], 'A wrong token changes nothing.' );
+
+			$_GET                    = array( UnusedCssOptimizer::GENERATOR_PARAM => $token, 'replytocom' => '4', UnusedCssOptimizer::GENERATOR_RUN_PARAM => 'a1b2c3' );
+			$_SERVER['REQUEST_URI']  = '/post-1/?' . UnusedCssOptimizer::GENERATOR_PARAM . '=' . $token . '&replytocom=4&' . UnusedCssOptimizer::GENERATOR_RUN_PARAM . '=a1b2c3';
+			$_SERVER['QUERY_STRING'] = UnusedCssOptimizer::GENERATOR_PARAM . '=' . $token . '&replytocom=4&' . UnusedCssOptimizer::GENERATOR_RUN_PARAM . '=a1b2c3';
+			UnusedCssOptimizer::claimGeneratorRequest();
+
+			self::assertTrue( UnusedCssOptimizer::isGeneratorRequest(), 'The request stays a build after the token is gone.' );
+			self::assertSame( '/post-1/?replytocom=4', $_SERVER['REQUEST_URI'] );
+			self::assertSame( 'replytocom=4', $_SERVER['QUERY_STRING'] );
+			self::assertSame( array( 'replytocom' => '4' ), $_GET );
+
+			$_SERVER['REQUEST_URI'] = '/post-1/?' . UnusedCssOptimizer::GENERATOR_PARAM . '=' . $token;
+			$_GET                   = array( UnusedCssOptimizer::GENERATOR_PARAM => $token );
+			$claimed->setValue( null, false );
+			UnusedCssOptimizer::claimGeneratorRequest();
+			self::assertSame( '/post-1/', $_SERVER['REQUEST_URI'] );
+		} finally {
+			$claimed->setValue( null, false );
+			$_GET    = array();
+			$_SERVER = $server;
+		}
+	}
+
 	public function test_it_keeps_used_rules_and_drops_unused_ones(): void {
 		$out = $this->optimize(
 			$this->page( '<style>.card{color:red}.unused-xyz{color:#000}</style>', '<div class="card">y</div>' )
@@ -214,6 +279,90 @@ final class UnusedCssEngineTest extends TestCase {
 			unlink( $path );
 			self::assertSame( $html, $this->optimizeAsVisitor( $html ), 'Missing artifacts must preserve original styles.' );
 		}
+	}
+
+	/**
+	 * Akismet puts a random number in every comment form. While a build was keyed on
+	 * the exact page, a visitor's copy never matched it: posts with comments were
+	 * never served their CSS, and every uncached visit queued another build.
+	 */
+	public function test_a_visitor_gets_the_build_despite_tokens_that_change_every_render(): void {
+		$page = fn( string $value ): string => $this->page(
+			'<style nonce="n' . $value . '">.card{color:red}.unused-xyz{color:#000}</style>',
+			'<div class="card">y</div><form><input type="hidden" name="ak_js" value="' . $value . '"/><input type="text" name="q" value="find"></form>'
+			. '<script nonce="n' . $value . '">var rendered = ' . $value . ';</script><!-- built in 0.' . $value . 's -->'
+		);
+		$this->optimize( $page( '28' ) );
+
+		$out = $this->optimizeAsVisitor( $page( '20' ) );
+		self::assertStringNotContainsString( 'unused-xyz', $out, 'The visitor is served the build.' );
+		self::assertStringContainsString( 'value="20"', $out, "The visitor's own markup goes out unchanged." );
+
+		$changed = $this->optimizeAsVisitor( str_replace( 'class="card"', 'class="card featured"', $page( '20' ) ) );
+		self::assertStringContainsString( 'unused-xyz', $changed, 'A page whose elements changed waits for its own build.' );
+	}
+
+	/**
+	 * gatilab.com: the theme's stylesheets are excluded and stay in place, while
+	 * WordPress's global styles before them and Additional CSS after them are
+	 * consolidated. With every generated block at the end of <head>, global styles
+	 * moved behind the theme and overrode its fonts and link colours.
+	 */
+	public function test_stylesheets_left_in_place_keep_their_position_in_the_cascade(): void {
+		$html = $this->page(
+			'<style id="global-styles-inline-css">a{color:orange}.unused-global{color:red}</style>'
+			. '<style disabled>.ignored{color:blue}</style>'
+			. '<style id="more-global-css">.card{margin:0}</style>'
+			. '<link rel="stylesheet" id="theme-css" href="https://theme.example.net/theme.css">'
+			. '<style id="wp-custom-css">.card{font-weight:700}.unused-custom{color:red}</style>',
+			'<a href="#">x</a><div class="card">y</div>'
+		);
+
+		$out   = $this->optimize( $html );
+		$theme = strpos( $out, 'theme.example.net/theme.css' );
+		self::assertIsInt( $theme );
+		self::assertLessThan( $theme, strpos( $out, 'color:orange' ), 'Global styles stay before the theme.' );
+		self::assertLessThan( $theme, strpos( $out, 'margin:0' ), 'A disabled stylesheet does not split a group.' );
+		self::assertGreaterThan( $theme, strpos( $out, 'font-weight:700' ), 'Additional CSS stays after the theme.' );
+		self::assertSame( 2, substr_count( $out, 'data-gt-performance=' ), 'One generated block per group.' );
+		self::assertStringContainsString( '<style disabled>', $out, 'A disabled stylesheet is left alone.' );
+		self::assertStringNotContainsString( 'unused-', $out );
+		self::assertSame( $out, $this->optimizeAsVisitor( $html ), 'A visitor is served the same placement.' );
+	}
+
+	public function test_a_hybrid_build_over_the_limit_records_how_far_over_it_was(): void {
+		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['mode']            = 'hybrid';
+		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['critical_budget'] = 8;
+		$saved           = $GLOBALS['wpdb'];
+		$GLOBALS['wpdb'] = new class() {
+			public string $prefix = 'wp_';
+			/** @var list<array<string, mixed>> */
+			public array $writes = array();
+			public function update( string $table, array $data ): int {
+				unset( $table );
+				$this->writes[] = $data;
+				return 1;
+			}
+			public function prepare( string $query, mixed ...$arguments ): string {
+				unset( $arguments );
+				return $query;
+			}
+			public function __call( string $name, array $arguments ): mixed {
+				unset( $name, $arguments );
+				return null;
+			}
+		};
+
+		try {
+			$this->optimize( $this->page( '<style>.early{color:red}.late{color:blue}</style>', '<div class="early">top</div>' . str_repeat( '<p>filler</p>', 170 ) . '<div class="late">bottom</div>' ) );
+			$last = json_decode( (string) end( $GLOBALS['wpdb']->writes )['metadata'], true );
+		} finally {
+			$GLOBALS['wpdb'] = $saved;
+		}
+
+		self::assertSame( 'critical_budget_exceeded', $last['fallback'] );
+		self::assertSame( 8, $last['critical_budget'] );
+		self::assertGreaterThan( 8, $last['critical_bytes'] );
 	}
 
 	/** @return array<string, array{string, int, bool, bool}> */

@@ -65,7 +65,7 @@ final class UninstallTest extends TestCase {
 			. 'function delete_transient( $name ) { return true; }' . "\n"
 			. 'function wp_unschedule_hook( $name ) { return 0; }' . "\n"
 			. 'function wp_delete_file( $file ) { @unlink( $file ); }' . "\n"
-			. 'class gtperf_Fake_Wpdb { public $prefix = \'wp_\'; public function query( $q ) { return 1; } }' . "\n"
+			. 'class gtperf_Fake_Wpdb { public $prefix = \'wp_\'; public $options = \'wp_options\'; public function query( $q ) { return 1; } public function prepare( $q, ...$a ) { return $q; } public function esc_like( $t ) { return $t; } }' . "\n"
 			. '$GLOBALS[\'wpdb\'] = new gtperf_Fake_Wpdb();' . "\n"
 			. 'require ' . var_export( GTPERF_DIR . '/uninstall.php', true ) . ";\n"
 			. "echo 'OK';\n";

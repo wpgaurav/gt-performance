@@ -11,13 +11,17 @@ namespace GTPerformance\Queue;
 
 use GTPerformance\Cache\CacheWarmer;
 use GTPerformance\Cache\FileStore;
+use GTPerformance\Cache\Preloader;
 use GTPerformance\Cache\Purger;
+use GTPerformance\Cache\WarmRunRepository;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Settings;
 use GTPerformance\Optimization\ImageVariantGenerator;
 
 final class QueueModule implements Module {
+	public const HEARTBEAT_OPTION = 'gt_performance_queue_heartbeat';
+
 	private JobRepository $jobs;
 	private CacheWarmer $warmer;
 
@@ -29,7 +33,10 @@ final class QueueModule implements Module {
 	}
 
 	public function register(): void {
+		add_action( 'init', array( JobLease::class, 'fromRequest' ), 0 );
 		add_action( 'gt_performance_job_' . \GTPerformance\Optimization\Css\Maintenance::BATCH_JOB, array( new \GTPerformance\Optimization\Css\Maintenance(), 'runBatch' ) );
+		add_action( 'gt_performance_job_' . \GTPerformance\Database\CleanupRun::JOB_TYPE, array( new \GTPerformance\Database\CleanupRun(), 'handleJob' ) );
+		add_action( 'gt_performance_job_' . \GTPerformance\Operations\OperationService::JOB_TYPE, static fn ( array $payload ) => ( new \GTPerformance\Operations\OperationService() )->execute( $payload ) );
 		add_action( 'init', array( $this, 'ensureScheduled' ) );
 		add_action( 'gt_performance_run_queue', array( $this, 'runScheduled' ) );
 		add_action( 'gt_performance_enqueue_preload', array( $this, 'enqueuePreload' ) );
@@ -80,13 +87,51 @@ final class QueueModule implements Module {
 		}
 
 		set_transient( 'gtperf_warm_pending', 1, MINUTE_IN_SECONDS );
-		$this->jobs->enqueue( 'warm_site', array(), 80, 30 );
+		$this->jobs->enqueue( CacheWarmer::START_JOB, array(), CacheWarmer::JOB_PRIORITY, 30 );
 	}
 
 	public function runScheduled(): void {
-		$this->run();
+		update_option( self::HEARTBEAT_OPTION, time(), false );
+		// The 20-second budget protects the server; five jobs a minute left a
+		// 1,200-page warm run taking four hours on a production site.
+		$this->run( 25 );
 		$this->revalidateStale();
 		$this->jobs->purgeTerminal();
+		if ( \GTPerformance\Core\Database::queueReady() ) {
+			( new WarmRunRepository() )->purgeExpired();
+			( new \GTPerformance\Cache\DependencyIndex() )->prune();
+			( new \GTPerformance\Operations\OperationRepository() )->prune();
+		}
+	}
+
+	/**
+	 * @return array{pending:int,running:int,failed:int,complete:int,cancelled:int,paused:bool,ready:bool}
+	 */
+	public function status(): array {
+		return $this->jobs->counts();
+	}
+
+	/**
+	 * @return list<array<string, mixed>>
+	 */
+	public function jobs( string $status = '', int $limit = 20 ): array {
+		return $this->jobs->list( $status, $limit );
+	}
+
+	public function pause(): void {
+		$this->jobs->pause();
+	}
+
+	public function resume(): void {
+		$this->jobs->resume();
+	}
+
+	public function retry( int $id ): bool {
+		return $this->jobs->retry( $id );
+	}
+
+	public function cancel( int $id ): bool {
+		return $this->jobs->cancel( $id );
 	}
 
 	/**
@@ -122,8 +167,7 @@ final class QueueModule implements Module {
 			return;
 		}
 
-		// run() drains a handful of jobs per tick and enqueue() does not
-		// deduplicate, so a sweep that ignores the existing backlog would add
+		// run() drains a handful of jobs per tick, so ignoring the backlog would add
 		// work faster than the queue clears it and re-add the same URLs on the
 		// next tick. Only top up once the previous batch has been worked off.
 		if ( $this->jobs->pendingCount( 'preload_url' ) >= $batch ) {
@@ -145,6 +189,7 @@ final class QueueModule implements Module {
 	 * @param list<string> $urls URLs.
 	 */
 	public function enqueuePreload( array $urls ): void {
+		// Stale revalidation only refreshes the public variant; a warm run queues mobile explicitly.
 		foreach ( array_unique( array_filter( $urls, 'is_string' ) ) as $url ) {
 			$this->jobs->enqueue( 'preload_url', array( 'url' => $url ), 50 );
 		}
@@ -203,10 +248,26 @@ final class QueueModule implements Module {
 	}
 
 	public function run( int $limit = 5 ): int {
+		if ( ! \GTPerformance\Core\Database::queueReady() ) {
+			return 0;
+		}
+		// One runner per site. A dead runner's slot is freed when its MySQL
+		// connection closes, or after one lease period on SQLite.
+		if ( ! \GTPerformance\Core\NamedLock::acquire( 'runner', JobRepository::LEASE_SECONDS ) ) {
+			return 0;
+		}
+		try {
+			return $this->runLoop( $limit );
+		} finally {
+			\GTPerformance\Core\NamedLock::release( 'runner' );
+		}
+	}
+
+	private function runLoop( int $limit ): int {
 		$processed = 0;
 		$started   = microtime( true );
 
-		while ( $processed < max( 1, $limit ) && microtime( true ) - $started < 20 ) {
+		while ( $processed < max( 1, min( 100, $limit ) ) && microtime( true ) - $started < 20 ) {
 			$job = $this->jobs->claim();
 			if ( null === $job ) {
 				break;
@@ -214,13 +275,35 @@ final class QueueModule implements Module {
 
 			$id       = (int) $job['id'];
 			$token    = (string) $job['lock_token'];
-			$attempts = (int) $job['attempts'] + 1;
+			$attempts = (int) $job['attempts'];
+			$jobStarted = microtime( true );
+			JobLease::start( $id, $token );
 
 			try {
-				$this->handle( (string) $job['type'], (array) $job['payload'] );
-				$this->jobs->complete( $id, $token );
+				JobLease::checkpoint();
+				if ( $this->jobs->cancellationRequested( $id, $token ) ) {
+					$this->jobs->finishCancelled( $id, $token );
+				} else {
+					$result = $this->handle( (string) $job['type'], (array) $job['payload'] );
+					if ( $this->jobs->cancellationRequested( $id, $token ) ) {
+						$this->jobs->finishCancelled( $id, $token );
+					} elseif ( ! $this->jobs->complete( $id, $token, (int) round( ( microtime( true ) - $jobStarted ) * 1000 ), $result ) ) {
+						$this->logger->log(
+							'warning',
+							'Queue completion was superseded',
+							array(
+								'id' => $id,
+								'type' => (string) $job['type'],
+							)
+						);
+					}
+				}
 			} catch ( \Throwable $throwable ) {
-				$this->jobs->fail( $id, $token, $throwable->getMessage(), $attempts );
+				if ( $this->jobs->cancellationRequested( $id, $token ) ) {
+					$this->jobs->finishCancelled( $id, $token );
+				} else {
+					$this->jobs->fail( $id, $token, $throwable->getMessage(), $attempts );
+				}
 				$this->logger->log(
 					'error',
 					'Queue job failed',
@@ -229,6 +312,8 @@ final class QueueModule implements Module {
 						'error' => $throwable->getMessage(),
 					)
 				);
+			} finally {
+				JobLease::end();
 			}
 
 			++$processed;
@@ -241,25 +326,35 @@ final class QueueModule implements Module {
 	 * Whether a URL belongs to this installation, host and port included.
 	 */
 	private function sameSite( string $url ): bool {
-		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$parts = wp_parse_url( $url );
+		$home = wp_parse_url( home_url( '/' ) );
+		if ( ! is_array( $parts ) || ! is_array( $home ) || isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['fragment'] ) ) {
+			return false;
+		}
+		$host = strtolower( (string) ( $parts['host'] ?? '' ) );
 		if ( '' === $host || ! in_array( $host, \GTPerformance\Core\Settings::canonicalHosts(), true ) ) {
 			return false;
 		}
 
-		return in_array( strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ), array( 'http', 'https' ), true );
+		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+		$defaultPort = 'https' === $scheme ? 443 : 80;
+		return in_array( $scheme, array( 'http', 'https' ), true ) && ( $home['scheme'] ?? '' ) === $scheme
+			&& (int) ( $parts['port'] ?? $defaultPort ) === (int) ( $home['port'] ?? $defaultPort );
 	}
 
 	/**
 	 * @param array<string, mixed> $payload Job payload.
+	 * @return array<string, scalar> Bounded result metadata for the job row.
+	 * @phpstan-impure
 	 */
-	private function handle( string $type, array $payload ): void {
+	private function handle( string $type, array $payload ): array {
 		$url = isset( $payload['url'] ) ? esc_url_raw( (string) $payload['url'] ) : '';
 
 		// Job payloads are built from cached-entry metadata, whose URL was assembled
 		// from a client-supplied Host header. Eligibility now refuses a foreign Host,
 		// but the queue is the component that actually makes the request, so it checks
 		// again rather than trusting a row written by an earlier release.
-		if ( '' !== $url && ! $this->sameSite( $url ) ) {
+		if ( '' !== $url && \GTPerformance\Optimization\FontOptimizer::JOB_TYPE !== $type && ! $this->sameSite( $url ) ) {
 			throw new \RuntimeException( 'Refusing to request a URL outside this site.' );
 		}
 
@@ -268,33 +363,33 @@ final class QueueModule implements Module {
 				if ( '' === $url ) {
 					throw new \RuntimeException( 'Missing preload URL.' );
 				}
-				$response = wp_safe_remote_get(
-					$url,
-					array(
-						'timeout'     => 15,
-						'redirection' => 3,
-						'headers'     => array( 'X-GT-Preload' => '1' ),
-						'user-agent'  => 'GT-Performance-Preloader/' . GTPERF_VERSION,
-					)
-				);
-				$status = wp_remote_retrieve_response_code( $response );
-				if ( is_wp_error( $response ) || $status >= 400 ) {
+				$variant = 'mobile' === ( $payload['variant'] ?? '' ) ? 'mobile' : 'public';
+				$outcome = ( new Preloader() )->preload( $url, $variant );
+				$this->warmer->record( $url, $variant, $outcome );
+				if ( 'failed' === $outcome['status'] ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal queue exception; never rendered.
-					throw new \RuntimeException( is_wp_error( $response ) ? $response->get_error_message() : 'Preload returned HTTP ' . $status . '.' );
+					throw new \RuntimeException( 'Preload failed: ' . $outcome['detail'] . '.' );
 				}
-				return;
+				return $outcome;
 
 			case 'purge_url':
 				if ( '' === $url ) {
 					throw new \RuntimeException( 'Missing purge URL.' );
 				}
 				( new Purger() )->purgeUrl( $url );
-				return;
+				return array();
 
-			case 'warm_site':
+			case CacheWarmer::START_JOB:
 				delete_transient( 'gtperf_warm_pending' );
-				$this->warmer->warm( (int) Settings::get( 'cache.preload_max_urls', 200 ) );
-				return;
+				return array( 'run' => $this->warmer->start() );
+
+			case CacheWarmer::DISCOVER_JOB:
+				$this->warmer->discover( (string) ( $payload['run'] ?? '' ), (int) ( $payload['step'] ?? 1 ) );
+				return array();
+
+			case CacheWarmer::DISPATCH_JOB:
+				$this->warmer->dispatch( (string) ( $payload['run'] ?? '' ), (int) ( $payload['step'] ?? 1 ) );
+				return array();
 
 			default:
 				if ( ! has_action( 'gt_performance_job_' . $type ) ) {
@@ -302,6 +397,7 @@ final class QueueModule implements Module {
 					throw new \RuntimeException( 'Unknown job type: ' . $type );
 				}
 				do_action( 'gt_performance_job_' . $type, $payload );
+				return array();
 		}
 	}
 }

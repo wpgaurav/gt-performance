@@ -1,0 +1,30 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"meta": {
+		"title": "GT Performance",
+		"description": "Page caching, unused CSS removal, Cloudflare Free orchestration, and database cleanup in a disposable WordPress site.",
+		"author": "wpgaurav",
+		"categories": [ "Performance" ]
+	},
+	"landingPage": "/wp-admin/admin.php?page=gt-performance",
+	"preferredVersions": {
+		"php": "8.3",
+		"wp": "latest"
+	},
+	"features": {
+		"networking": true
+	},
+	"login": true,
+	"steps": [
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "wordpress.org/plugins",
+				"slug": "gt-performance"
+			},
+			"options": {
+				"activate": true
+			}
+		}
+	]
+}

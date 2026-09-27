@@ -133,7 +133,15 @@ final class JavaScriptMinifierTest extends TestCase {
 		self::assertStringContainsString( 'gtperf_js=', $processor->get_attribute( 'data-gtp-src' ) );
 		self::assertStringContainsString( '/assets/delay.js', $output );
 		$GLOBALS['gtperf_test_options']['gt_performance_settings']['javascript']['delay'] = false;
-		$output = ( new JavaScriptOptimizer() )->optimize( '<script src="' . $this->url . '"></script>' );
+		// Deferral needs WordPress to know the script: registered, printed, no inline "after" code.
+		wp_register_script( 'gtp-minify-test', $this->url, array(), null );
+		wp_scripts()->done[] = 'gtp-minify-test';
+		try {
+			$output = ( new JavaScriptOptimizer() )->optimize( '<script id="gtp-minify-test-js" src="' . $this->url . '"></script>' );
+		} finally {
+			wp_scripts()->done = array_values( array_diff( wp_scripts()->done, array( 'gtp-minify-test' ) ) );
+			wp_deregister_script( 'gtp-minify-test' );
+		}
 		self::assertStringContainsString( 'gtperf_js=', $output );
 		self::assertStringContainsString( 'defer=""', $output );
 	}

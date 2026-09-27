@@ -23,6 +23,15 @@ delete_option( 'gt_performance_private_logs_version' );
 delete_option( 'gt_performance_legacy_logs_error' );
 delete_option( 'gt_performance_runtime_config_error' );
 delete_option( 'gt_performance_schema_version' );
+delete_option( 'gt_performance_queue_paused' );
+delete_option( 'gt_performance_queue_heartbeat' );
+delete_option( 'gt_performance_warm_runs' );
+delete_option( 'gt_performance_settings_history' );
+delete_option( 'gt_performance_agent_activity' );
+delete_option( 'gt_performance_advisor_history' );
+delete_option( 'gt_performance_database_run' );
+delete_option( 'gt_performance_database_run_stop' );
+delete_option( 'gt_performance_advisor_quota' );
 delete_option( 'gt_performance_dropin_version' );
 delete_option( 'gt_performance_object_cache_dropin_version' );
 delete_option( 'gt_performance_cloudflare_backup' );
@@ -36,6 +45,8 @@ delete_option( 'gt_performance_commerce_policy_hash' );
 delete_option( 'gt_performance_commerce_safety_runs' );
 delete_option( 'gt_performance_purge_receipts' );
 delete_option( 'gtperf_css_revision' );
+delete_option( 'gt_performance_css_script_classes' );
+delete_option( 'gt_performance_css_script_scan' );
 delete_option( 'gt_performance_css_training' );
 delete_option( 'gt_performance_css_training_previous' );
 delete_option( 'gt_performance_xcloud_last_purge' );
@@ -48,11 +59,15 @@ delete_transient( 'gtperf_warm_pending' );
 delete_transient( 'gtperf_revalidate_pending' );
 
 global $wpdb;
+// SQLite advisory lock rows (NamedLock); MySQL locks leave no rows.
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'gtperf_lock_' ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 $gt_performance_tables = array(
 	$wpdb->prefix . 'gtperf_jobs',
 	$wpdb->prefix . 'gtperf_dependencies',
 	$wpdb->prefix . 'gtperf_artifacts',
+	$wpdb->prefix . 'gtperf_warm_targets',
+	$wpdb->prefix . 'gtperf_operations',
 	$wpdb->prefix . 'gtperf_vitals',
 );
 

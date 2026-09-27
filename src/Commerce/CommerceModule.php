@@ -77,6 +77,16 @@ final class CommerceModule implements Module {
 			if ( is_string( $url ) && '' !== $url ) {
 				do_action( 'gt_performance_enqueue_purge', array( $url ) );
 			}
+			// Shop pages, grids, and landing pages that show the product carry the
+			// same price and stock badge. Stock can also add or remove it from a
+			// filtered listing, so this counts as a membership change.
+			$post = get_post( $id );
+			if ( $post instanceof \WP_Post ) {
+				$dependents = array_keys( ( new \GTPerformance\Cache\DependencyInvalidator() )->forPost( $post, true ) );
+				if ( array() !== $dependents ) {
+					do_action( 'gt_performance_enqueue_purge', $dependents );
+				}
+			}
 		}
 	}
 

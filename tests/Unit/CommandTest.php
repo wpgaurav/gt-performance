@@ -22,7 +22,7 @@ final class CommandTest extends TestCase {
 		$settings['cloudflare']['zone_id']  = 'zone-123';
 		$settings['cloudflare']['api_token'] = ( new TokenCipher() )->encrypt( 'test-token' );
 
-		$GLOBALS['gtperf_test_options']       = array( Settings::OPTION => $settings );
+		$GLOBALS['gtperf_test_options']       = array( Settings::OPTION => $settings, 'gt_performance_schema_version' => \GTPerformance\Core\Database::SCHEMA_VERSION );
 		$GLOBALS['gtperf_test_http_requests'] = array();
 		$GLOBALS['gtperf_test_http_response'] = array(
 			'response' => array( 'code' => 200 ),
@@ -117,6 +117,19 @@ final class CommandTest extends TestCase {
 		( new Command() )->queue( array( 'run' ), array( 'limit' => 'many' ) );
 	}
 
+	public function testQueueWithoutActionRetainsRunDefault(): void {
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Use --limit with a positive whole number.' );
+		( new Command() )->queue( array(), array( 'limit' => 'many' ) );
+	}
+
+	public function testQueueDoesNotRunBeforeMigrationFinishes(): void {
+		delete_option( 'gt_performance_schema_version' );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'queue schema upgrade is incomplete' );
+		( new Command() )->queue( array( 'run' ), array() );
+	}
+
 	/**
 	 * @dataProvider unknownActionProvider
 	 *
@@ -142,13 +155,13 @@ final class CommandTest extends TestCase {
 				static function ( Command $command ): void {
 					$command->cache( array( 'typo' ), array() );
 				},
-				'Unknown cache action. Use status, purge, warm, install-dropin, explain, or verify.',
+				'Unknown cache action. Use status, purge, warm, warm-status, preview, install-dropin, explain, or verify.',
 			),
 			'queue'      => array(
 				static function ( Command $command ): void {
 					$command->queue( array( 'typo' ), array() );
 				},
-				'Unknown queue action. Use run.',
+				'Unknown queue action. Use status, list, run, pause, resume, retry, or cancel.',
 			),
 			'cloudflare' => array(
 				static function ( Command $command ): void {

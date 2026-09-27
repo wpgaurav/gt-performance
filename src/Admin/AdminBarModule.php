@@ -71,9 +71,9 @@ final class AdminBarModule implements Module {
 		$bar->add_node(
 			array(
 				'parent' => 'gt-performance',
-				'id'     => 'gtp-integrations',
-				'title'  => __( 'Integrations and object cache', 'gt-performance' ),
-				'href'   => admin_url( 'admin.php?page=gt-performance&tab=integrations' ),
+				'id'     => 'gtp-object-cache',
+				'title'  => __( 'Object cache settings', 'gt-performance' ),
+				'href'   => admin_url( 'admin.php?page=gt-performance&tab=object-cache' ),
 			)
 		);
 	}

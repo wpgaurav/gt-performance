@@ -72,8 +72,10 @@
 	font-weight: 600;
 }
 
+/* Wrap on wide screens so every tab stays visible; phones scroll the row instead. */
 .gtp-tabs {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 4px;
 	overflow-x: auto;
 	padding: 12px 40px;
@@ -378,15 +380,14 @@ summary.gtp-notice-pill:focus-visible {
 	font-size: 12px;
 	font-weight: 400;
 	line-height: 1.45;
-	opacity: 0;
 	pointer-events: none;
-	visibility: hidden;
+	/* Out of layout while hidden: an invisible bubble near the edge still widened the page on phones. */
+	display: none;
 }
 
 .gtp-tooltip:hover .gtp-tooltip__content,
 .gtp-tooltip:focus-within .gtp-tooltip__content {
-	opacity: 1;
-	visibility: visible;
+	display: block;
 }
 
 .gtp-field p {
@@ -738,6 +739,10 @@ summary.gtp-notice-pill:focus-visible {
 	flex: 0 0 auto;
 }
 
+.gtp-database-result:empty {
+	display: none;
+}
+
 .gtp-database-result {
 	padding: 18px var(--gtp-inset) 22px;
 	border-top: 1px solid var(--gtp-border);
@@ -1008,7 +1013,38 @@ summary.gtp-notice-pill:focus-visible {
 }
 
 .gtp-table-wrap {
+	position: relative;
 	overflow-x: auto;
+}
+
+/* Cards and tables placed straight in a panel: inset the cards like the panel's
+   other content, and let the panel border frame the table instead of doubling it. */
+.gtp-panel > .gtp-stat-grid {
+	margin: 0;
+	padding: 20px var(--gtp-inset);
+}
+
+.gtp-panel > .gtp-table-wrap {
+	border-top: 1px solid var(--gtp-border);
+}
+
+.gtp-panel > .gtp-table-wrap:last-child {
+	border-radius: 0 0 var(--gtp-radius) var(--gtp-radius);
+}
+
+.gtp-panel > .gtp-table-wrap > .widefat {
+	border: 0;
+	box-shadow: none;
+}
+
+.gtp-panel > .gtp-table-wrap > .widefat th:first-child,
+.gtp-panel > .gtp-table-wrap > .widefat td:first-child {
+	padding-left: var(--gtp-inset);
+}
+
+.gtp-panel > .gtp-table-wrap > .widefat th:last-child,
+.gtp-panel > .gtp-table-wrap > .widefat td:last-child {
+	padding-right: var(--gtp-inset);
 }
 
 .gtp-report-table {
@@ -1020,6 +1056,11 @@ summary.gtp-notice-pill:focus-visible {
 .gtp-report-table td {
 	padding: 14px var(--gtp-inset);
 	vertical-align: top;
+}
+
+.gtp-report-table time,
+.gtp-report-table small {
+	white-space: nowrap;
 }
 
 .gtp-report-table td:first-child {
@@ -1259,6 +1300,16 @@ summary.gtp-notice-pill:focus-visible {
 	line-height: 1.55;
 }
 
+.gtp-callout--info {
+	color: #0a4b78;
+	background: var(--gtp-accent-soft);
+	border-color: #b8d4ea;
+}
+
+.gtp-callout--info::before {
+	content: "i";
+}
+
 .gtp-callout--warning {
 	color: #6d4c00;
 	background: var(--gtp-warning-soft);
@@ -1462,6 +1513,7 @@ summary.gtp-notice-pill:focus-visible {
 	}
 
 	.gtp-tabs {
+		flex-wrap: nowrap;
 		padding-top: 8px;
 		padding-right: 20px;
 		padding-bottom: 8px;
@@ -1670,4 +1722,70 @@ summary.gtp-notice-pill:focus-visible {
 
 .gtp-permission-list li {
 	padding: 4px 0;
+}
+
+/* Adviser controls size to their longest option; keep them inside the panel on phones. */
+#gtp-advisor form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+#gtp-advisor select,
+#gtp-advisor input[type="url"],
+#gtp-advisor input[type="number"] {
+	max-width: 100%;
+	min-width: 0;
+}
+
+.gtp-script-scan__stage {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	height: 240px;
+	margin: 16px 0 8px;
+	overflow: hidden;
+	border: 1px solid var(--gtp-border);
+	border-radius: var(--gtp-radius);
+	background: var(--gtp-bg);
+}
+
+.gtp-script-scan__stage[hidden] {
+	display: none;
+}
+
+.gtp-script-scan__slot {
+	position: relative;
+	flex: none;
+	overflow: hidden;
+}
+
+.gtp-script-scan__frame {
+	position: absolute;
+	top: 0;
+	left: 0;
+	border: 0;
+	transform-origin: 0 0;
+	pointer-events: none;
+}
+
+.gtp-script-scan__failures {
+	margin: 0 0 12px 18px;
+	list-style: disc;
+	color: var(--gtp-danger);
+	overflow-wrap: anywhere;
+}
+
+.gtp-script-scan__tokens code {
+	display: inline-block;
+	margin: 4px 4px 0 0;
+}
+
+.gtp-script-scan__next {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	align-items: center;
+	margin: 0 0 12px;
 }

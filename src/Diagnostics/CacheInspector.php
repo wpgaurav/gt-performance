@@ -25,13 +25,13 @@ final class CacheInspector {
 	/**
 	 * @return array<string, mixed>|\WP_Error
 	 */
-	public function inspect( string $url ): array|\WP_Error {
+	public function inspect( string $url, string $userAgent = '' ): array|\WP_Error {
 		$url = esc_url_raw( $url );
 		if ( ! $this->sameSite( $url ) ) {
 			return new \WP_Error( 'gtperf_diagnostic_url', __( 'Use a URL from this WordPress site.', 'gt-performance' ) );
 		}
 
-		$request = RequestContext::fromUrl( $url );
+		$request = RequestContext::fromUrl( $url, array(), array(), $userAgent );
 		if ( null === $request ) {
 			return new \WP_Error( 'gtperf_diagnostic_url', __( 'The URL could not be inspected.', 'gt-performance' ) );
 		}

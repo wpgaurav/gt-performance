@@ -20,6 +20,7 @@ use GTPerformance\Core\Settings;
 use GTPerformance\Database\Cleaner;
 use GTPerformance\Diagnostics\CacheInspector;
 use GTPerformance\Diagnostics\CronHealth;
+use GTPerformance\Diagnostics\HealthReport;
 use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Queue\QueueModule;
 use GTPerformance\Redis\ObjectCacheInstaller;
@@ -79,15 +80,295 @@ final class Command {
 	}
 
 	/**
+	 * Export, compare, import, and restore non-secret settings.
+	 *
+	 * Credentials, site identity, Cloudflare/xCloud identifiers, Redis, and agent
+	 * access are never exported, imported, or restored. Restoring changes local
+	 * settings only; run `wp gt-performance cloudflare sync` afterwards when asked.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : export, history, diff, import, or restore.
+	 *
+	 * [<target>]
+	 * : Revision ID (or unique prefix) for diff/restore, or an export file for diff/import.
+	 *
+	 * [--file=<path>]
+	 * : Where export writes JSON. Prints to stdout when omitted.
+	 *
+	 * [--expected-hash=<hash>]
+	 * : Refuse import/restore unless current settings still have this hash.
+	 *
+	 * [--dry-run]
+	 * : Show what import/restore would change without changing it.
+	 *
+	 * @param list<string>          $args Positional arguments.
+	 * @param array<string, string> $assocArgs Named arguments.
+	 */
+	public function config( array $args, array $assocArgs ): void {
+		$action = $this->action( $args, '', array( 'export', 'history', 'diff', 'import', 'restore' ), 'config' );
+		if ( null === $action ) {
+			return;
+		}
+		$service   = new \GTPerformance\Configuration\ConfigurationService();
+		$revisions = new \GTPerformance\Configuration\RevisionRepository();
+		$target    = (string) ( $args[1] ?? '' );
+
+		if ( 'export' === $action ) {
+			$json = (string) wp_json_encode( $service->export(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+			if ( empty( $assocArgs['file'] ) ) {
+				\WP_CLI::line( $json );
+				return;
+			}
+			if ( false === file_put_contents( (string) $assocArgs['file'], $json . "\n" ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Operator-chosen CLI output path.
+				\WP_CLI::error( 'Could not write ' . $assocArgs['file'] );
+				return;
+			}
+			\WP_CLI::success( 'Settings exported to ' . $assocArgs['file'] );
+			return;
+		}
+
+		if ( 'history' === $action ) {
+			$current = \GTPerformance\Configuration\ConfigurationService::portable( \GTPerformance\Core\PublicSettings::view() );
+			$rows    = array();
+			foreach ( $revisions->all() as $revision ) {
+				$rows[] = array(
+					'id'      => $revision['id'],
+					'saved'   => gmdate( 'Y-m-d H:i:s', $revision['at'] ) . ' UTC',
+					'source'  => $revision['source'],
+					'user'    => (string) $revision['user_id'],
+					'changes' => (string) count( \GTPerformance\Configuration\Diff::between( $current, \GTPerformance\Configuration\ConfigurationService::portable( $revision['settings'] ) ) ),
+				);
+			}
+			\WP_CLI::log( 'Current settings hash: ' . $service->currentHash() );
+			array() === $rows ? \WP_CLI::log( 'No settings revisions recorded yet.' ) : \WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'saved', 'source', 'user', 'changes' ) );
+			return;
+		}
+
+		$portable = $this->configTarget( $action, $target, $service, $revisions );
+		if ( null === $portable ) {
+			return;
+		}
+		$expected = (string) ( $assocArgs['expected-hash'] ?? '' );
+		if ( 'diff' === $action || ! empty( $assocArgs['dry-run'] ) ) {
+			$preview = $service->preview( $portable );
+			$this->printConfigChanges( $preview['changes'], $preview['external'] );
+			\WP_CLI::log( 'Current settings hash: ' . $preview['settings_hash'] );
+			return;
+		}
+
+		$result = $service->apply( $portable, $expected, $action );
+		if ( is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+			return;
+		}
+		$this->printConfigChanges( $result['changes'], $result['external'] );
+		\WP_CLI::success( $result['applied'] ? 'Settings ' . ( 'import' === $action ? 'imported' : 'restored' ) . '. New settings hash: ' . $result['settings_hash'] : 'Nothing to change.' );
+	}
+
+	/**
+	 * @return array<string, mixed>|null Portable values, or null after reporting an error.
+	 */
+	private function configTarget( string $action, string $target, \GTPerformance\Configuration\ConfigurationService $service, \GTPerformance\Configuration\RevisionRepository $revisions ): ?array {
+		if ( '' === $target ) {
+			\WP_CLI::error( 'Name a revision ID or an export file.' );
+			return null;
+		}
+		if ( 'import' === $action || is_file( $target ) ) {
+			if ( ! is_readable( $target ) ) {
+				\WP_CLI::error( 'Cannot read ' . $target );
+				return null;
+			}
+			$parsed = $service->parseImport( json_decode( (string) file_get_contents( $target ), true ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Operator-chosen local file.
+			if ( is_wp_error( $parsed ) ) {
+				\WP_CLI::error( $parsed->get_error_message() );
+				return null;
+			}
+			return $parsed;
+		}
+		$matches = array_values( array_filter( $revisions->all(), static fn ( array $revision ): bool => str_starts_with( $revision['id'], $target ) ) );
+		if ( 1 !== count( $matches ) ) {
+			\WP_CLI::error( array() === $matches ? 'No revision matches ' . $target . '.' : 'Revision prefix ' . $target . ' is ambiguous.' );
+			return null;
+		}
+		return \GTPerformance\Configuration\ConfigurationService::portable( $matches[0]['settings'] );
+	}
+
+	/**
+	 * @param list<array{path:string,from:mixed,to:mixed}> $changes  Changes.
+	 * @param array<string, string>                        $external External follow-ups.
+	 */
+	private function printConfigChanges( array $changes, array $external ): void {
+		if ( array() === $changes ) {
+			\WP_CLI::log( 'No differences.' );
+		} else {
+			\WP_CLI\Utils\format_items(
+				'table',
+				array_map(
+					static fn ( array $change ): array => array(
+						'setting' => $change['path'],
+						'current' => (string) wp_json_encode( $change['from'] ),
+						'new'     => (string) wp_json_encode( $change['to'] ),
+					),
+					$changes
+				),
+				array( 'setting', 'current', 'new' )
+			);
+		}
+		if ( isset( $external['cloudflare'] ) ) {
+			\WP_CLI::warning( 'Only local settings change. Run `wp gt-performance cloudflare sync` to apply cache changes to the managed Cloudflare rule.' );
+		}
+	}
+
+	/**
+	 * Review assistant operations and settings proposals.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : list, proposals, apply, or reject. Defaults to list.
+	 *
+	 * [<id>]
+	 * : Proposal ID for apply or reject.
+	 *
+	 * @param list<string> $args Positional arguments.
+	 */
+	public function operations( array $args ): void {
+		$action = $this->action( $args, 'list', array( 'list', 'proposals', 'apply', 'reject' ), 'operations' );
+		if ( null === $action ) {
+			return;
+		}
+		if ( ! \GTPerformance\Core\Database::queueReady() ) {
+			\WP_CLI::error( 'The schema upgrade is incomplete. Repeat this command to continue it.' );
+			return;
+		}
+		$repo = new \GTPerformance\Operations\OperationRepository();
+		if ( in_array( $action, array( 'list', 'proposals' ), true ) ) {
+			$rows = 'proposals' === $action ? $repo->list( 'proposed', 50, \GTPerformance\Operations\ProposalService::OPERATION ) : $repo->list( '', 50 );
+			if ( array() === $rows ) {
+				\WP_CLI::log( 'proposals' === $action ? 'No open proposals.' : 'No operations recorded.' );
+				return;
+			}
+			\WP_CLI\Utils\format_items(
+				'table',
+				array_map(
+					static fn ( array $row ): array => array(
+						'id'        => $row['id'],
+						'operation' => $row['operation'],
+						'state'     => $row['status'],
+						'target'    => $row['target_summary'],
+						'user'      => $row['actor'],
+						'created'   => $row['created_at'],
+						'changes'   => 'propose_settings' === $row['operation'] ? implode( '; ', array_map( static fn ( array $c ): string => $c['path'] . ': ' . wp_json_encode( $c['from'] ) . ' -> ' . wp_json_encode( $c['to'] ), \GTPerformance\Operations\ProposalService::diff( $row ) ) ) : '',
+					),
+					$rows
+				),
+				array( 'id', 'operation', 'state', 'target', 'user', 'created', 'changes' )
+			);
+			return;
+		}
+		$id       = absint( $args[1] ?? 0 );
+		$proposal = new \GTPerformance\Operations\ProposalService();
+		if ( 'reject' === $action ) {
+			$proposal->reject( $id ) ? \WP_CLI::success( "Proposal {$id} rejected." ) : \WP_CLI::error( "Proposal {$id} is not open." );
+			return;
+		}
+		$result = $proposal->apply( $id );
+		if ( is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+			return;
+		}
+		$this->printConfigChanges( $result['changes'], $result['external'] );
+		\WP_CLI::success( "Proposal {$id} applied." );
+	}
+
+	/**
+	 * Show whether external assistants can reach GT Performance abilities.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : status. Defaults to status.
+	 *
+	 * @param list<string> $args Positional arguments.
+	 */
+	public function abilities( array $args ): void {
+		if ( null === $this->action( $args, 'status', array( 'status' ), 'abilities' ) ) {
+			return;
+		}
+		$ready = \GTPerformance\Abilities\Integration::readiness();
+		$rows  = array(
+			array(
+				'check' => 'Abilities API',
+				'value' => $ready['abilities_api'] ? 'available' : 'unavailable (WordPress 6.9+ required)',
+			),
+			array(
+				'check' => 'Agent access',
+				'value' => \GTPerformance\Abilities\Permissions::mode(),
+			),
+			array(
+				'check' => 'MCP Adapter',
+				'value' => '' === $ready['mcp_adapter'] ? 'not active' : $ready['mcp_adapter'] . ( version_compare( $ready['mcp_adapter'], \GTPerformance\Abilities\Integration::QUALIFIED_ADAPTER, '==' ) ? '' : ' (qualified: ' . \GTPerformance\Abilities\Integration::QUALIFIED_ADAPTER . ')' ),
+			),
+			array(
+				'check' => 'MCP endpoint',
+				'value' => '' === $ready['mcp_endpoint'] ? '-' : $ready['mcp_endpoint'],
+			),
+			array(
+				'check' => 'Abilities',
+				'value' => implode( ', ', \GTPerformance\Abilities\Integration::abilities() ),
+			),
+		);
+		\WP_CLI\Utils\format_items( 'table', $rows, array( 'check', 'value' ) );
+	}
+
+	/**
+	 * Report queue, cron, storage, drop-in, configuration, purge, CSS, and warming health.
+	 *
+	 * Reads saved and local evidence only; it requests no pages.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--format=<format>]
+	 * : table or json. JSON is the redacted support export.
+	 *
+	 * @param list<string>          $args Positional arguments.
+	 * @param array<string, string> $assocArgs Named arguments.
+	 */
+	public function health( array $args, array $assocArgs ): void {
+		unset( $args );
+		$format = (string) ( $assocArgs['format'] ?? 'table' );
+		if ( ! in_array( $format, array( 'table', 'json' ), true ) ) {
+			\WP_CLI::error( 'Use --format=table or --format=json.' );
+			return;
+		}
+
+		$report = ( new HealthReport() )->build();
+		if ( 'json' === $format ) {
+			\WP_CLI::line( (string) wp_json_encode( HealthReport::redact( $report ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
+			return;
+		}
+
+		\WP_CLI\Utils\format_items( 'table', $report['checks'], array( 'label', 'status', 'value', 'source' ) );
+	}
+
+	/**
 	 * Manage page cache.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [<action>]
-	 * : status, purge, warm, install-dropin, explain, or verify. Defaults to status.
+	 * : status, purge, warm, warm-status, preview, install-dropin, explain, or verify. Defaults to status.
 	 *
 	 * [--page-url=<url>]
 	 * : Target URL for purge, explain, or verify. Defaults to the home page for explain and verify.
+	 *
+	 * [--post=<id>]
+	 * : Post to preview for `cache preview`.
+	 *
+	 * [--membership]
+	 * : Preview a publication, withdrawal, or term change instead of a content edit.
 	 *
 	 * @param list<string>          $args Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.
@@ -96,7 +377,7 @@ final class Command {
 		$action = $this->action(
 			$args,
 			'status',
-			array( 'status', 'purge', 'warm', 'install-dropin', 'explain', 'verify' ),
+			array( 'status', 'purge', 'warm', 'warm-status', 'preview', 'install-dropin', 'explain', 'verify' ),
 			'cache'
 		);
 		if ( null === $action ) {
@@ -113,8 +394,71 @@ final class Command {
 			return;
 		}
 		if ( 'warm' === $action ) {
-			$queued = ( new CacheWarmer( new \GTPerformance\Core\Logger() ) )->warm( (int) Settings::get( 'cache.preload_max_urls', 200 ) );
-			\WP_CLI::success( "Queued {$queued} URL(s) for preloading." );
+			if ( ! \GTPerformance\Core\Database::queueReady() ) {
+				\WP_CLI::error( 'The queue schema upgrade is incomplete. Open GT Performance Tools or repeat this command to continue the migration.' );
+				return;
+			}
+			$job = ( new CacheWarmer( new \GTPerformance\Core\Logger() ) )->queue();
+			\WP_CLI::success( "Warm run queued as job {$job}. Discovery and preloads run through `wp gt-performance queue run` or cron; check progress with `wp gt-performance cache warm-status`." );
+			return;
+		}
+		if ( 'preview' === $action ) {
+			$postId = absint( $assocArgs['post'] ?? 0 );
+			if ( $postId <= 0 ) {
+				\WP_CLI::error( 'Use cache preview --post=<id> [--membership].' );
+				return;
+			}
+			$preview = ( new \GTPerformance\Cache\PurgePreview() )->forPost( $postId, ! empty( $assocArgs['membership'] ) );
+			if ( is_wp_error( $preview ) ) {
+				\WP_CLI::error( $preview->get_error_message() );
+				return;
+			}
+			\WP_CLI::log( sprintf( 'Policy: %s. Change: %s. %s', $preview['policy'], $preview['change'], $preview['purge_all'] ? 'Everything would be purged.' : count( $preview['urls'] ) . ' URL(s) would be purged.' ) );
+			if ( array() !== $preview['urls'] ) {
+				\WP_CLI\Utils\format_items(
+					'table',
+					array_map(
+						static fn ( array $item ): array => array(
+							'url'     => $item['url'],
+							'reasons' => implode( '; ', $item['reasons'] ),
+						),
+						$preview['urls']
+					),
+					array( 'url', 'reasons' )
+				);
+			}
+			\WP_CLI::log( sprintf( 'Indexed pages: %d. %s', $preview['completeness']['indexed_pages'], $preview['completeness']['note'] ) );
+			return;
+		}
+		if ( 'warm-status' === $action ) {
+			$run = \GTPerformance\Core\Database::queueReady() ? ( new CacheWarmer( new \GTPerformance\Core\Logger() ) )->summary() : null;
+			if ( null === $run ) {
+				\WP_CLI::log( 'No warm run has been recorded.' );
+				return;
+			}
+			$rows = array(
+				array(
+					'field' => 'state',
+					'value' => (string) $run['state'],
+				),
+				array(
+					'field' => 'sources',
+					'value' => implode( ', ', array_map( 'strval', (array) $run['sources'] ) ),
+				),
+				array(
+					'field' => 'warnings',
+					'value' => implode( ', ', array_map( 'strval', (array) $run['warnings'] ) ),
+				),
+			);
+			foreach ( array( 'sitemap', 'url' ) as $kind ) {
+				foreach ( (array) $run['targets'][ $kind ] as $status => $count ) {
+					$rows[] = array(
+						'field' => $kind . ' ' . $status,
+						'value' => (string) $count,
+					);
+				}
+			}
+			\WP_CLI\Utils\format_items( 'table', $rows, array( 'field', 'value' ) );
 			return;
 		}
 		if ( 'purge' === $action ) {
@@ -188,37 +532,119 @@ final class Command {
 	}
 
 	/**
-	 * Run queued jobs.
+	 * Inspect and control queued jobs.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [<action>]
-	 * : run. Defaults to run.
+	 * : status, list, run, pause, resume, retry, or cancel. Defaults to run.
 	 *
 	 * [--limit=<number>]
-	 * : Positive maximum number of jobs to process.
+	 * : Positive maximum number of jobs to process or list.
+	 *
+	 * [--status=<status>]
+	 * : Filter listed jobs by pending, running, failed, complete, or cancelled.
+	 *
+	 * [--id=<id>]
+	 * : Job ID for retry or cancel.
 	 *
 	 * @param list<string>          $args Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.
 	 */
 	public function queue( array $args, array $assocArgs ): void {
-		$action = $this->action( $args, 'run', array( 'run' ), 'queue' );
+		$action = $this->action(
+			$args,
+			'run',
+			array( 'status', 'list', 'run', 'pause', 'resume', 'retry', 'cancel' ),
+			'queue'
+		);
 		if ( null === $action ) {
 			return;
 		}
 
+		$queue = new QueueModule( new \GTPerformance\Core\Logger() );
+		if ( in_array( $action, array( 'run', 'retry' ), true ) && ! \GTPerformance\Core\Database::queueReady() ) {
+			\WP_CLI::error( 'The queue schema upgrade is incomplete. Open GT Performance Tools or repeat this command to continue the migration.' );
+			return;
+		}
+		if ( 'status' === $action ) {
+			$counts = $queue->status();
+			$rows   = array();
+			foreach ( $counts as $check => $value ) {
+				$rows[] = array(
+					'check' => (string) $check,
+					'value' => is_bool( $value ) ? ( $value ? 'yes' : 'no' ) : (string) $value,
+				);
+			}
+			\WP_CLI\Utils\format_items( 'table', $rows, array( 'check', 'value' ) );
+			return;
+		}
+
+		if ( 'list' === $action ) {
+			$limit  = $this->positiveLimit( $assocArgs, 20 );
+			$status = sanitize_key( (string) ( $assocArgs['status'] ?? '' ) );
+			if ( '' !== $status && ! in_array( $status, array( 'pending', 'running', 'failed', 'complete', 'cancelled' ), true ) ) {
+				\WP_CLI::error( 'Use --status with pending, running, failed, complete, or cancelled.' );
+				return;
+			}
+			$jobs = $queue->jobs( $status, null === $limit ? 20 : $limit );
+			if ( array() === $jobs ) {
+				\WP_CLI::log( 'No matching jobs.' );
+				return;
+			}
+			\WP_CLI\Utils\format_items( 'table', $jobs, array( 'id', 'type', 'status', 'attempts', 'available_at', 'last_error' ) );
+			return;
+		}
+
+		if ( 'pause' === $action ) {
+			$queue->pause();
+			\WP_CLI::success( 'Optional queue work paused. Cache invalidation continues.' );
+			return;
+		}
+		if ( 'resume' === $action ) {
+			$queue->resume();
+			\WP_CLI::success( 'Queue resumed.' );
+			return;
+		}
+		if ( 'retry' === $action || 'cancel' === $action ) {
+			$id = filter_var( $assocArgs['id'] ?? null, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ) );
+			if ( false === $id ) {
+				\WP_CLI::error( 'Use --id with the job ID.' );
+				return;
+			}
+			$done = 'retry' === $action ? $queue->retry( (int) $id ) : $queue->cancel( (int) $id );
+			$done ? \WP_CLI::success( 'retry' === $action ? "Job {$id} queued for retry." : "Job {$id} cancellation recorded." ) : \WP_CLI::error( 'That job cannot be changed.' );
+			return;
+		}
+
+		$limit = $this->positiveLimit( $assocArgs, 20 );
+		if ( null === $limit ) {
+			return;
+		}
+
+		$count = $queue->run( $limit );
+		\WP_CLI::success( "Processed {$count} job(s)." );
+	}
+
+	/**
+	 * @param array<string, string> $assocArgs Named arguments.
+	 */
+	private function positiveLimit( array $assocArgs, int $default ): ?int {
+		if ( ! array_key_exists( 'limit', $assocArgs ) ) {
+			return $default;
+		}
+
 		$limit = filter_var(
-			$assocArgs['limit'] ?? 20,
+			$assocArgs['limit'],
 			FILTER_VALIDATE_INT,
 			array( 'options' => array( 'min_range' => 1 ) )
 		);
 		if ( false === $limit ) {
 			\WP_CLI::error( 'Use --limit with a positive whole number.' );
-			return;
+			return null;
 		}
 
-		$count = ( new QueueModule( new \GTPerformance\Core\Logger() ) )->run( $limit );
-		\WP_CLI::success( "Processed {$count} job(s)." );
+		return (int) $limit;
 	}
 
 	/**
@@ -246,6 +672,7 @@ final class Command {
 		}
 
 		$settings = Settings::all();
+		$before   = $settings;
 		if ( 'status' === $action ) {
 			$domain = ( new ClientFactory() )->domain( $settings );
 			\WP_CLI::log( 'enabled=' . ( $settings['cloudflare']['enabled'] ? 'yes' : 'no' ) );
@@ -307,7 +734,7 @@ final class Command {
 		$settings['cloudflare']['enabled']    = true;
 		$settings['cloudflare']['zone_id']    = $zoneId;
 		$settings['cloudflare']['drift_hash'] = hash( 'sha256', (string) wp_json_encode( $cache ) );
-		if ( ! Settings::save( $settings ) ) {
+		if ( ! Settings::saveChanges( $before, $settings ) ) {
 			\WP_CLI::error( Settings::configurationError() );
 			return;
 		}
@@ -335,6 +762,7 @@ final class Command {
 		}
 
 		$settings = Settings::all();
+		$before   = $settings;
 		if ( 'status' === $action ) {
 			$xcloud = (array) $settings['xcloud'];
 			\WP_CLI::log( 'enabled=' . ( $xcloud['enabled'] ? 'yes' : 'no' ) );
@@ -378,7 +806,7 @@ final class Command {
 				$settings['xcloud'][ $key ] = $status[ $key ];
 			}
 			$settings['xcloud']['enabled'] = true;
-			if ( ! Settings::save( $settings ) ) {
+			if ( ! Settings::saveChanges( $before, $settings ) ) {
 				\WP_CLI::error( Settings::configurationError() );
 				return;
 			}

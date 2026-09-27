@@ -2,6 +2,8 @@
 
 Historical design proposal, not the current feature inventory. Some planned features were never shipped or were later removed. Consult README.md and FEATURE-IMPLEMENTATION.md for current behavior. This document is excluded from distribution packages.
 
+For the current implementation proposal, see the [2026-09-26 feature, MCP, and AI roadmap](docs/plans/2026-09-26-feature-mcp-ai-roadmap.md).
+
 ## 1. Product Decision
 
 GT Performance will be a modular WordPress performance plugin with four defining strengths:

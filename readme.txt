@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.14
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,9 +24,22 @@ Perfmatters ownership coordination, Akismet and Jetpack safeguards, automatic an
 
 Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, and staged unused-CSS rollout help administrators inspect cache behavior and control optimization changes.
 
+Cache warming reads your sitemaps in resumable background batches, starts with the pages that changed recently, stops at your cache size budget, and reports for each page whether it was actually stored. Purges follow what each cached page was built from, so query loops, reusable blocks, and shop listings refresh when their content changes while unrelated pages stay cached.
+
+A health report (also shown in Site Health), a background queue you can pause, retry, and cancel, and settings history with restore, export, and import cover day-to-day operations.
+
+JavaScript defer follows WordPress's own script dependencies, so inline jQuery code keeps working. Hero image rules choose the image that loads first, and speculative loading stays away from cart, checkout, and account pages.
+
+On WordPress 6.9 or later, administrators can optionally let an external AI assistant read cache and health information, and with separate permission purge or preload URLs and propose settings for approval. This works through the WordPress REST API or the official WordPress MCP Adapter plugin. On WordPress 7.0 or later, an optional adviser can explain diagnostics using the AI provider you configured in WordPress. Everything AI-related is off by default.
+
 Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
 
 Development happens in the open on [GitHub](https://github.com/wpgaurav/gt-performance), where bug reports and pull requests are welcome.
+
+= Links =
+
+* [GT Performance Community](https://gauravtiwari.org/portal/) - ask questions and get setup help from other users.
+* [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/) - other plugins by Gaurav Tiwari.
 
 == Installation ==
 
@@ -42,6 +55,10 @@ Development happens in the open on [GitHub](https://github.com/wpgaurav/gt-perfo
 = Does Cloudflare require a paid plan? =
 
 No. The baseline uses Cache Rules and targeted purge available on Cloudflare Free. No Worker or APO subscription is required.
+
+= Does unused CSS work with page builders? =
+
+Yes. When Elementor, Bricks, Divi, Beaver Builder, Oxygen, Breakdance, WPBakery, Brizy, Kadence Blocks, Spectra, GenerateBlocks, or SiteOrigin is active, the classes it adds after the page loads (open menus, active tabs, sticky headers, popups, sliders, animations) are kept. GT Page Blocks Builder and Thrive Architect styles are left untouched. Add your own selectors under Exceptions if a custom script needs more.
 
 = Is unused CSS processed by an external service? =
 
@@ -59,9 +76,17 @@ Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining 
 
 GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
 
+= Does GT Performance send my site data to an AI service? =
+
+Only when you ask it to. The optional abilities answer requests from an assistant you connect yourself, using an Application Password you create; they are off by default, require an administrator account, and never include credentials. The optional adviser (off by default) sends a redacted diagnostic report to the AI provider configured in WordPress only after you review exactly what will be sent and press Send. Nothing is sent automatically, from visitors, or from scheduled tasks.
+
+= Can I undo a settings change? =
+
+Yes. Tools → Settings history keeps the last 20 saves for up to 90 days and restores earlier values without touching saved credentials. Settings can also be exported to and imported from a JSON file.
+
 = Can Redis credentials be configured in wp-config.php? =
 
-Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence. The Integrations screen provides a copy-ready example.
+Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence. The Object Cache screen provides a copy-ready example.
 
 == Third-party libraries ==
 
@@ -101,6 +126,9 @@ GT Performance stores a list of script hostname patterns such as `connect.facebo
 
 == Upgrade Notice ==
 
+= 1.1.0 =
+Resumable warming, dependency-aware purging, settings history, a health report, queue controls, and safer, faster unused CSS. The first wp-admin visit (or WP-CLI command) after updating upgrades the plugin's tables in small batches.
+
 = 1.0.12 =
 Protects temporary configuration files during writes, prevents generated inline CSS from closing its style element, and corrects descriptions of removed features.
 
@@ -117,6 +145,28 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.1.0 =
+* Cache warming resumes across background batches instead of stopping after 20 child sitemaps, reads chosen sitemaps or the WordPress sitemap plus robots.txt, warms recent pages first, respects the cache size budget, and records whether each page was actually stored.
+* Purges now also clear pages that showed an updated post: listings it joins or leaves (including its old category and later pages), query loops, widgets, pages with an edited reusable block or menu, and shop listings after price or stock changes. Renamed terms clear their old archive URL.
+* New purge preview: `wp gt-performance cache preview --post=<id>`.
+* Related-page purges no longer include URLs on another site.
+* Settings history with restore, plus JSON export and import. Credentials are never stored or restored, and simultaneous saves can no longer overwrite each other.
+* New health report in Tools, Site Health, and `wp gt-performance health`, with a redacted support export.
+* Background queue: jobs are claimed exclusively, crashed jobs stop after three attempts, and jobs can be paused, retried, and cancelled from Tools and WP-CLI. Waiting work can no longer be starved indefinitely.
+* WordPress Studio and Playground (SQLite) are supported.
+* New: Fetch important CSS classes. After you change unused CSS settings, sample pages of each public post type are checked in your browser, and builds keep the styles that JavaScript-added parts (tables of contents, ads, sliders) need.
+* Fixed: Bricks 2 pages lost their base styles when Bricks' own stylesheets were optimized, icon-font rules written as `:before` were never pruned, pages with a comment form (including Akismet's) were never served their unused CSS, generated CSS could override a theme's excluded stylesheets, and CSS builds failed on hosts whose optimizer caches the build request.
+* Optional AI assistant access (WordPress 6.9+, off by default): read cache and health evidence, and with separate permission purge or preload up to 20 URLs, regenerate CSS, retry jobs, and propose settings for an administrator to approve. Works through the REST API or the WordPress MCP Adapter.
+* Optional AI adviser (WordPress 7.0+, off by default) that explains diagnostics using the AI provider configured in WordPress, showing exactly what will be sent first.
+* Manual database cleanup runs in the background with live progress and a stop button, so the admin screen no longer waits for it. Emptying the trash or deleting spam no longer purges pages.
+* CSS Status explains each result in plain language and suggests a Hybrid inline limit from the sizes it measured.
+* New AI & MCP, Object Cache, Database, and CSS Status tabs in settings. The Cache tab is renamed Page Cache. Admin tables and summary cards now sit cleanly inside their panels.
+* JavaScript defer now respects WordPress script dependencies and inline code, fixing inline jQuery code breaking when defer was on. Unregistered scripts are no longer deferred. Per-page script and hero options in the editor.
+* Unused CSS now keeps page builder state styles (menus, tabs, sticky headers, popups, sliders, animations) for Elementor, Bricks, Divi, Beaver Builder, Oxygen, Breakdance, WPBakery, Brizy, Kadence Blocks, Spectra, GenerateBlocks, and SiteOrigin, and leaves GT Page Blocks Builder and Thrive Architect styles untouched.
+* Hero image rules with optional responsive preload, and speculative loading kept away from cart, checkout, and account pages.
+* REST API post updates without a login cookie now purge the edge cache too.
+* Fixed admin tooltips widening pages on phones and PHP warnings when the cache directory is not writable.
 
 = 1.0.14 =
 * Fixed individual Cloudflare purges by allowing internal PURGE requests in the managed cache rule while preserving checkout, session, and query exclusions.

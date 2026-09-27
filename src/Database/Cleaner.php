@@ -56,28 +56,82 @@ final class Cleaner {
 	}
 
 	/**
+	 * Run tasks to completion in one request. WP-CLI uses this; the admin and the
+	 * schedule go through CleanupRun, which spreads the same slices over the queue.
+	 *
 	 * @param list<string>|null $tasks Tasks to run. Saved tasks are used when omitted.
 	 * @return array<string, int>
 	 */
 	public function run( ?array $tasks = null, bool $respectRevisionRetention = false ): array {
-		$tasks = $this->sanitizeTasks( $tasks ?? (array) Settings::get( 'database.tasks', array() ) );
+		$tasks  = $this->sanitizeTasks( $tasks ?? (array) Settings::get( 'database.tasks', array() ) );
 		$result = array_fill_keys( self::TASKS, 0 );
 
 		foreach ( $tasks as $task ) {
-			$result[ $task ] = match ( $task ) {
-				'revisions' => $this->deleteRevisions( $respectRevisionRetention ),
-				'auto_drafts' => $this->deletePostsByStatus( 'auto-draft' ),
-				'spam_comments' => $this->deleteCommentsByStatus( 'spam' ),
-				'trashed_posts' => $this->deletePostsByStatus( 'trash' ),
-				'trashed_comments' => $this->deleteCommentsByStatus( 'trash' ),
-				'expired_transients' => $this->deleteExpiredTransients(),
-				'all_transients' => $this->deleteAllTransients(),
-				'optimize_tables' => $this->optimizeTables(),
-				default => 0,
-			};
+			$cursor = array();
+			do {
+				$slice            = $this->slice( $task, self::BATCH_SIZE, $respectRevisionRetention, $cursor );
+				$result[ $task ] += $slice['count'];
+				$cursor           = $slice['cursor'];
+			} while ( ! $slice['done'] );
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Run one bounded piece of a task.
+	 *
+	 * A slice deletes at most $limit rows or optimizes one table. It reports done
+	 * when nothing more remains, or when it removed nothing, so a row WordPress
+	 * refuses to delete cannot keep a run going forever.
+	 *
+	 * @param array<string, mixed> $cursor State carried from the previous slice of this task.
+	 * @return array{count:int,done:bool,cursor:array<string,mixed>}
+	 */
+	public function slice( string $task, int $limit, bool $respectRevisionRetention = false, array $cursor = array() ): array {
+		$limit = max( 1, $limit );
+
+		if ( 'optimize_tables' === $task ) {
+			// OPTIMIZE often leaves InnoDB reporting free space, so the list is fixed
+			// on the first slice rather than re-read, or the task would never end.
+			$tables = array_values( array_map( 'strval', (array) ( $cursor['tables'] ?? $this->optimizableTables() ) ) );
+			$table  = array_shift( $tables );
+			$count  = null !== $table && $this->optimizeTable( $table ) ? 1 : 0;
+
+			return array(
+				'count'  => $count,
+				'done'   => array() === $tables,
+				'cursor' => array( 'tables' => $tables ),
+			);
+		}
+
+		if ( in_array( $task, array( 'expired_transients', 'all_transients' ), true ) ) {
+			return array(
+				'count'  => 'expired_transients' === $task ? $this->deleteExpiredTransients() : $this->deleteAllTransients(),
+				'done'   => true,
+				'cursor' => array(),
+			);
+		}
+
+		$retain = $respectRevisionRetention ? max( 0, (int) Settings::get( 'database.retain_revisions', 5 ) ) : 0;
+		$ids    = match ( $task ) {
+			'revisions' => $this->revisionIds( $retain, $limit ),
+			'auto_drafts' => $this->postIdsByStatus( 'auto-draft', $limit ),
+			'trashed_posts' => $this->postIdsByStatus( 'trash', $limit ),
+			'spam_comments' => $this->commentIdsByStatus( 'spam', $limit ),
+			'trashed_comments' => $this->commentIdsByStatus( 'trash', $limit ),
+			default => array(),
+		};
+		$count = str_ends_with( $task, '_comments' ) ? $this->deleteCommentIds( $ids ) : $this->deletePostIds( $ids );
+
+		// A short revision slice can still leave posts beyond its parent window.
+		$exhausted = 'revisions' === $task ? array() === $this->revisionIds( $retain, 1 ) : count( $ids ) < $limit;
+
+		return array(
+			'count'  => $count,
+			'done'   => $exhausted || 0 === $count,
+			'cursor' => array(),
+		);
 	}
 
 	/**
@@ -90,55 +144,59 @@ final class Cleaner {
 		return array_values( array_intersect( self::TASKS, array_unique( $tasks ) ) );
 	}
 
-	private function deleteRevisions( bool $respectRetention ): int {
+	/**
+	 * Revisions beyond the newest $retain of each post.
+	 *
+	 * Grouping first finds every post that has too many, wherever it sorts, so a
+	 * run with retention cannot stop early on a window of posts that are within it.
+	 *
+	 * @return list<int>
+	 */
+	private function revisionIds( int $retain, int $limit ): array {
 		global $wpdb;
 
-		$retain = $respectRetention ? max( 0, (int) Settings::get( 'database.retain_revisions', 5 ) ) : 0;
-		$rows   = $wpdb->get_results(
+		$parents = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT ID, post_parent
-				FROM {$wpdb->posts}
-				WHERE post_type = 'revision'
-				ORDER BY post_parent ASC, post_modified_gmt DESC
-				LIMIT %d",
-				max( self::BATCH_SIZE, self::BATCH_SIZE * ( $retain + 1 ) )
-			),
-			ARRAY_A
+				"SELECT post_parent FROM {$wpdb->posts} WHERE post_type = 'revision' GROUP BY post_parent HAVING COUNT(*) > %d LIMIT %d",
+				$retain,
+				$limit
+			)
 		);
-		if ( ! is_array( $rows ) ) {
-			return 0;
-		}
 
-		$seen = array();
-		$ids  = array();
-		foreach ( $rows as $row ) {
-			$parent = (int) ( $row['post_parent'] ?? 0 );
-			$seen[ $parent ] = (int) ( $seen[ $parent ] ?? 0 ) + 1;
-			if ( $seen[ $parent ] <= $retain ) {
-				continue;
-			}
-
-			$ids[] = (int) ( $row['ID'] ?? 0 );
-			if ( count( $ids ) >= self::BATCH_SIZE ) {
+		$ids = array();
+		foreach ( is_array( $parents ) ? $parents : array() as $parent ) {
+			$rows = $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'revision' AND post_parent = %d ORDER BY post_modified_gmt DESC, ID DESC LIMIT %d OFFSET %d",
+					(int) $parent,
+					$limit - count( $ids ),
+					$retain
+				)
+			);
+			$ids = array_merge( $ids, array_map( 'intval', is_array( $rows ) ? $rows : array() ) );
+			if ( count( $ids ) >= $limit ) {
 				break;
 			}
 		}
 
-		return $this->deletePostIds( $ids );
+		return $ids;
 	}
 
-	private function deletePostsByStatus( string $status ): int {
+	/**
+	 * @return list<int>
+	 */
+	private function postIdsByStatus( string $status, int $limit ): array {
 		global $wpdb;
 
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE post_status = %s ORDER BY ID ASC LIMIT %d",
 				$status,
-				self::BATCH_SIZE
+				$limit
 			)
 		);
 
-		return $this->deletePostIds( array_map( 'intval', is_array( $ids ) ? $ids : array() ) );
+		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
 	}
 
 	/**
@@ -155,19 +213,30 @@ final class Cleaner {
 		return $deleted;
 	}
 
-	private function deleteCommentsByStatus( string $status ): int {
+	/**
+	 * @return list<int>
+	 */
+	private function commentIdsByStatus( string $status, int $limit ): array {
 		global $wpdb;
 
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT comment_ID FROM {$wpdb->comments} WHERE comment_approved = %s ORDER BY comment_ID ASC LIMIT %d",
 				$status,
-				self::BATCH_SIZE
+				$limit
 			)
 		);
+
+		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
+	}
+
+	/**
+	 * @param list<int> $ids Comment IDs.
+	 */
+	private function deleteCommentIds( array $ids ): int {
 		$deleted = 0;
-		foreach ( is_array( $ids ) ? $ids : array() as $id ) {
-			if ( wp_delete_comment( (int) $id, true ) ) {
+		foreach ( $ids as $id ) {
+			if ( $id > 0 && wp_delete_comment( $id, true ) ) {
 				++$deleted;
 			}
 		}
@@ -213,23 +282,16 @@ final class Cleaner {
 		return $count;
 	}
 
-	private function optimizeTables(): int {
+	private function optimizeTable( string $table ): bool {
 		global $wpdb;
 
-		$optimized = 0;
-		foreach ( $this->optimizableTables() as $table ) {
-			if ( ! str_starts_with( $table, $wpdb->prefix ) || ! preg_match( '/^[A-Za-z0-9_]+$/', $table ) ) {
-				continue;
-			}
-
-			// The table name comes from SHOW TABLE STATUS and is restricted to the current WordPress prefix.
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( false !== $wpdb->query( "OPTIMIZE TABLE `{$table}`" ) ) {
-				++$optimized;
-			}
+		if ( ! str_starts_with( $table, $wpdb->prefix ) || ! preg_match( '/^[A-Za-z0-9_]+$/', $table ) ) {
+			return false;
 		}
 
-		return $optimized;
+		// The table name comes from SHOW TABLE STATUS and is restricted to the current WordPress prefix.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return false !== $wpdb->query( "OPTIMIZE TABLE `{$table}`" );
 	}
 
 	private function expiredTransientCount( int $now ): int {

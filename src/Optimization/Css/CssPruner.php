@@ -16,19 +16,32 @@ use Sabberworm\CSS\RuleSet\DeclarationBlock;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 
 final class CssPruner {
-	private CssSelectorConverter $converter;
+	// Created on first use: the pruner is built on every request, and creating the
+	// converter would load the bundled libraries for pages that never prune.
+	private ?CssSelectorConverter $converter = null;
 	private SelectorSafelist $safelist;
 
 	public function __construct() {
-		$this->converter = new CssSelectorConverter();
-		$this->safelist  = new SelectorSafelist();
+		$this->safelist = new SelectorSafelist();
 	}
 
 	/**
-	 * @param list<string> $safelist Selector fragments.
+	 * @param list<string>        $safelist Selector fragments.
+	 * @param array<string, true> $keep     Selectors to keep whatever the document holds, by canonical() spelling.
 	 */
-	public function prune( string $css, \DOMDocument $document, string $segment = 'used', array $safelist = array(), bool $preserveDynamicStates = true ): string {
-		$protected = $this->protectUnicodeEscapes( $css );
+	public function prune( string $css, \DOMDocument $document, string $segment = 'used', array $safelist = array(), bool $preserveDynamicStates = true, array $keep = array() ): string {
+		// A layer-order statement (`@layer reset, base;`) is mangled by the bundled
+		// parser without always changing the brace count: it drops the next rule's
+		// declarations and nests the rest of the sheet inside that rule. Bricks 2 opens
+		// its framework CSS with one, so pruned Bricks pages lost their whole base
+		// layer. Statements ahead of every rule are lifted out and put back in front;
+		// one anywhere else cannot move without changing the layer order.
+		$layers = $this->leadingLayerStatements( $css );
+		if ( null === $layers ) {
+			return 'remaining' === $segment ? '' : $css;
+		}
+
+		$protected = $this->protectUnicodeEscapes( $layers['css'] );
 
 		try {
 			$stylesheet = ( new Parser( $protected['css'] ) )->parse();
@@ -38,12 +51,11 @@ final class CssPruner {
 			return 'remaining' === $segment ? '' : $css;
 		}
 
-		// The bundled parser silently mangles constructs it does not model. Native
-		// nesting loses every nested block (`.card{color:red;&:hover{…}}` renders as
-		// `.card{color:red}`), and a `@layer a, b;` statement renders as
-		// `.x{color:red{}}`, which swallows everything after it. Neither raises an
-		// error, so the only safe test is whether a plain round trip preserves the
-		// structure. When it does not, this stylesheet is passed through untouched.
+		// The bundled parser silently mangles other constructs it does not model too.
+		// Native nesting loses every nested block (`.card{color:red;&:hover{…}}`
+		// renders as `.card{color:red}`) without raising an error, so the only safe
+		// test is whether a plain round trip preserves the structure. When it does
+		// not, this stylesheet is passed through untouched.
 		if ( ! $this->roundTripIsFaithful( $protected['css'], $stylesheet ) ) {
 			return 'remaining' === $segment ? '' : $css;
 		}
@@ -51,9 +63,52 @@ final class CssPruner {
 		$xpath    = new \DOMXPath( $document );
 		$critical = $this->criticalPaths( $document );
 
-		$this->pruneList( $stylesheet, $xpath, $segment, $critical, $safelist, $preserveDynamicStates, $protected['escapes'] );
+		$this->pruneList( $stylesheet, $xpath, $segment, $critical, $safelist, $preserveDynamicStates, $protected['escapes'], $keep );
 
-		return strtr( $stylesheet->render( OutputFormat::createCompact() ), $protected['escapes'] );
+		$pruned = strtr( $stylesheet->render( OutputFormat::createCompact() ), $protected['escapes'] );
+		if ( '' === $layers['statements'] ) {
+			return $pruned;
+		}
+
+		// The statements go back even when every rule was pruned: they may order
+		// layers whose blocks live in another stylesheet. @charset stays first.
+		$charset = preg_match( '/^@charset\s+"[^"]*"\s*;/i', $pruned, $matches ) ? $matches[0] : '';
+
+		return $charset . $layers['statements'] . substr( $pruned, strlen( $charset ) );
+	}
+
+	/**
+	 * Separate the `@layer a, b;` statements that open a stylesheet from its rules.
+	 *
+	 * @return array{css:string,statements:string}|null Null when a statement follows a rule.
+	 */
+	private function leadingLayerStatements( string $css ): ?array {
+		$pattern = '/@layer\s+[\w.-]+(?:\s*,\s*[\w.-]+)*\s*;/i';
+		if ( ! preg_match_all( $pattern, $css, $matches, PREG_OFFSET_CAPTURE ) ) {
+			return array(
+				'css'        => $css,
+				'statements' => '',
+			);
+		}
+
+		$statements = '';
+		foreach ( $matches[0] as [ $statement, $offset ] ) {
+			// Only comments, @charset, @import and other layer statements may precede it.
+			$before = preg_replace(
+				array( '#/\*.*?\*/#s', '/@charset\s+[^;]*;/i', '/@import\s+[^;]*;/i', $pattern ),
+				'',
+				substr( $css, 0, $offset )
+			);
+			if ( '' !== trim( (string) $before ) ) {
+				return null;
+			}
+			$statements .= trim( $statement );
+		}
+
+		return array(
+			'css'        => (string) preg_replace( $pattern, '', $css ),
+			'statements' => $statements,
+		);
 	}
 
 	/**
@@ -70,6 +125,19 @@ final class CssPruner {
 		}
 
 		return substr_count( $this->withoutComments( $source ), '{' ) === substr_count( $rendered, '{' );
+	}
+
+	/**
+	 * One spelling per selector, so a selector as a browser serialises it
+	 * (`a > b`, `[type="x"]`, `::before`) equals the one a stylesheet wrote
+	 * (`a>b`, `[type=x]`, `:before`).
+	 */
+	public static function canonical( string $selector ): string {
+		$selector = (string) preg_replace( '/\s+/', ' ', trim( $selector ) );
+		$selector = (string) preg_replace( '/\[\s*([\w-]+)\s*([~|^$*]?=)\s*(["\']?)([\w-]+)\3\s*\]/', '[$1$2$4]', $selector );
+		$selector = (string) preg_replace( '/\s*([>+~,])\s*/', '$1', $selector );
+
+		return (string) preg_replace( '/(?<![:\\\\]):(before|after|first-line|first-letter)(?![\w-])/i', '::$1', $selector );
 	}
 
 	private function withoutComments( string $css ): string {
@@ -114,13 +182,14 @@ final class CssPruner {
 	 * Prune independent stylesheets without allowing a parser-hostile block to
 	 * change the interpretation of any stylesheet that follows it.
 	 *
-	 * @param list<string> $stylesheets Independent stylesheet sources.
-	 * @param list<string> $safelist Selector fragments.
+	 * @param list<string>        $stylesheets Independent stylesheet sources.
+	 * @param list<string>        $safelist    Selector fragments.
+	 * @param array<string, true> $keep        Selectors to keep, by canonical() spelling.
 	 */
-	public function pruneMany( array $stylesheets, \DOMDocument $document, string $segment = 'used', array $safelist = array(), bool $preserveDynamicStates = true ): string {
+	public function pruneMany( array $stylesheets, \DOMDocument $document, string $segment = 'used', array $safelist = array(), bool $preserveDynamicStates = true, array $keep = array() ): string {
 		$output = '';
 		foreach ( $stylesheets as $stylesheet ) {
-			$output .= $this->prune( $stylesheet, $document, $segment, $safelist, $preserveDynamicStates );
+			$output .= $this->prune( $stylesheet, $document, $segment, $safelist, $preserveDynamicStates, $keep );
 		}
 
 		return $output;
@@ -130,8 +199,9 @@ final class CssPruner {
 	 * @param array<string, true>  $critical Critical DOM paths.
 	 * @param list<string>         $safelist Selector fragments.
 	 * @param array<string,string> $escapes  Tokenised CSS escapes to restore before matching.
+	 * @param array<string, true>  $keep     Selectors to keep, by canonical() spelling.
 	 */
-	private function pruneList( CSSList $cssList, \DOMXPath $xpath, string $segment, array $critical, array $safelist, bool $preserveDynamicStates, array $escapes = array() ): void {
+	private function pruneList( CSSList $cssList, \DOMXPath $xpath, string $segment, array $critical, array $safelist, bool $preserveDynamicStates, array $escapes = array(), array $keep = array() ): void {
 		foreach ( $cssList->getContents() as $item ) {
 			if ( $item instanceof DeclarationBlock ) {
 				// Custom properties are dependencies, not merely visual rules on the
@@ -147,7 +217,7 @@ final class CssPruner {
 				foreach ( $item->getSelectors() as $selectorObject ) {
 					$selector = $selectorObject->getSelector();
 
-					$match = $this->matches( $selector, $xpath, $critical, $safelist, $preserveDynamicStates, $escapes );
+					$match = $this->matches( $selector, $xpath, $critical, $safelist, $preserveDynamicStates, $escapes, $keep );
 					if ( 'used' === $segment && $match['used'] ) {
 						$kept[] = $selectorObject;
 					} elseif ( 'critical' === $segment && $match['critical'] ) {
@@ -170,7 +240,7 @@ final class CssPruner {
 				if ( str_contains( $class, 'keyframe' ) ) {
 					continue;
 				}
-				$this->pruneList( $item, $xpath, $segment, $critical, $safelist, $preserveDynamicStates, $escapes );
+				$this->pruneList( $item, $xpath, $segment, $critical, $safelist, $preserveDynamicStates, $escapes, $keep );
 				if ( array() === $item->getContents() ) {
 					$cssList->remove( $item );
 				}
@@ -192,9 +262,10 @@ final class CssPruner {
 	 * @param array<string, true>  $critical Critical DOM paths.
 	 * @param list<string>         $safelist Selector fragments.
 	 * @param array<string,string> $escapes  Tokenised CSS escapes to restore before matching.
+	 * @param array<string, true>  $keep     Selectors to keep, by canonical() spelling.
 	 * @return array{used:bool,critical:bool}
 	 */
-	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist, bool $preserveDynamicStates, array $escapes = array() ): array {
+	private function matches( string $selector, \DOMXPath $xpath, array $critical, array $safelist, bool $preserveDynamicStates, array $escapes = array(), array $keep = array() ): array {
 		// Escapes were tokenised before parsing so the parser would not decode them.
 		// Matching must see the real selector: `.\32 xl\:flex` matches its element,
 		// but `.__GTPERF_CSS_ESCAPE_…__xl\:flex` matches nothing, so every escaped
@@ -204,7 +275,7 @@ final class CssPruner {
 			$selector = strtr( $selector, $escapes );
 		}
 
-		if ( $this->safelist->matches( $selector, $safelist ) ) {
+		if ( $this->safelist->matches( $selector, $safelist ) || ( $keep && isset( $keep[ self::canonical( $selector ) ] ) ) ) {
 			return array(
 				'used'     => true,
 				'critical' => true,
@@ -218,6 +289,14 @@ final class CssPruner {
 			);
 		}
 
+		// CSS2 spelled pseudo-elements with one colon, and icon fonts and minifiers
+		// still do (`.ion-ios-add:before`). The converter rejects every pseudo-element,
+		// so the catch below kept each such rule as unmatchable: all 696 Ionicons rules
+		// survived on a Bricks page that shows one icon. Spell them the modern way so
+		// they are treated exactly like `::before`. An escaped colon is part of a class
+		// name (`.hover\:before\:block`), not a pseudo-element.
+		$selector = preg_replace( '/(?<![:\\\\]):(before|after|first-line|first-letter)(?![\w-])/i', '::$1', $selector ) ?? $selector;
+
 		$testSelector = $preserveDynamicStates ? $this->stripDynamicStates( $selector ) : trim( $selector );
 		if ( '' === $testSelector || str_contains( $testSelector, '::' ) ) {
 			return array(
@@ -227,7 +306,8 @@ final class CssPruner {
 		}
 
 		try {
-			$query = $this->converter->toXPath( $testSelector );
+			$this->converter ??= new CssSelectorConverter();
+			$query             = $this->converter->toXPath( $testSelector );
 			$nodes = $xpath->query( $query );
 		} catch ( \Throwable ) {
 			return array(

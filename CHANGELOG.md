@@ -1,5 +1,87 @@
 # Changelog
 
+## 1.1.0 - 2026-09-27
+
+The first feature release in the WordPress.org plugin directory. It contains the work prepared as 1.0.15, which was never published, and the unused CSS fixes and start-up speed-up below.
+
+Background queue
+
+- Queue claims are conditional, so two workers can never take the same job, and a worker that lost its lease cannot record completion or publish generated files and CSS reports. Attempts count at claim time; a job whose worker keeps crashing fails after three claims instead of retrying forever.
+- Duplicate requests for the same target return the existing job. Failed jobs can be retried and pending or running jobs cancelled from Tools and `wp gt-performance queue status|list|pause|resume|retry|cancel`; `queue` alone still runs jobs.
+- Optional work can be paused without stopping cache invalidation. Waiting jobs age toward higher priority, so a steady backlog can no longer starve warming (a production site had a warm run waiting 18 days); purges always run first. Scheduled runs process up to 25 jobs a minute (was 5), still within a 20-second budget.
+- The queue schema upgrades in bounded admin/CLI batches under a lock, never on visitor requests. One queue runner runs per site. WordPress Studio and Playground (SQLite) are supported.
+
+Cache warming
+
+- Warm runs resume across bounded background jobs instead of stopping after 20 child sitemaps. They read up to 10 sitemap sources you choose, or the WordPress sitemap plus sitemaps listed in robots.txt; follow nested indexes and same-site redirects five levels deep; skip foreign, private, and already-visited URLs; and cap a run at 50,000 targets.
+- The home page and recently modified pages warm first, in batches. A run stops at the cache entry budget instead of evicting pages to finish, and warms mobile copies with a phone user agent when a separate mobile cache is on.
+- Each preload records whether the origin stored a fresh page, only Cloudflare answered, or nothing was stored. HTTP 200 alone no longer counts as warm. Progress is in Tools and `wp gt-performance cache warm-status`.
+
+Smarter purging
+
+- Cached pages record the posts, listings, reusable blocks, and navigation menus they were built from. Updates purge those pages as well as the usual related pages: listings a post joins or leaves (including its old category and later pages), query loops, grids, and widgets that show it, pages embedding an edited reusable block or menu, and shop listings after price or stock changes. Renamed terms purge their old archive URL. Unrelated pages stay cached.
+- `wp gt-performance cache preview --post=<id>` lists what an update would purge and why.
+- Related-page purges no longer include URLs on another host (for example an author link to a personal site), which were also sent to the Cloudflare purge.
+
+Settings history
+
+- Every save keeps the non-secret values it replaced: the last 20 saves, up to 90 days. Tools → Settings history shows differences and restores them; settings export to and import from JSON with a preview. The same is available in `wp gt-performance config`.
+- Credentials, Cloudflare and xCloud identity, Redis, and AI agent access are never stored, exported, imported, or restored. A shared settings lock and preview checks stop one administrator, CLI command, or connection flow from overwriting another's change.
+
+Health and diagnostics
+
+- Tools → Health combines queue backlog and age, runner heartbeat, WP-Cron, storage, drop-ins, edge ownership, configuration publication, purge verification, unused-CSS failures, and warming, each with its source and time. It also appears as a Site Health test, in `wp gt-performance health [--format=json]`, and as a redacted support-report download.
+
+AI assistants (optional)
+
+- On WordPress 6.9 and later, abilities let an external AI assistant read status, URL cache explanations, health, jobs, CSS reports, non-secret settings, purge previews, and operation results, through the WordPress REST API or the official WordPress MCP Adapter. Off by default and for administrators only; see the AI & MCP tab or `wp gt-performance abilities status`.
+- "Read and operate" access also lets an assistant purge or preload up to 20 URLs, regenerate unused CSS for a URL, and retry failed preload, warming, CSS, or image jobs. Each request carries an ID, so retrying after a timeout never repeats the work. Limits: 60 requests a minute per user and 100 outstanding operations per site. Purge results report the origin, the edge provider's response, and what a public request returned afterwards. Queued work is cancelled if access is turned off or the user stops being an administrator.
+- Assistants can propose (never apply) changes to cache warming, JavaScript defer and delay, critical images, unused-CSS rollout, and the CSS safelist. Proposals wait 15 minutes on the AI & MCP tab or in `wp gt-performance operations` for an administrator to apply or reject, and are refused if settings changed in the meantime.
+- Optional in-admin AI adviser (WordPress 7.0+, off by default). It explains a page, diagnoses the queue and warming, reviews settings, or explains a purge, using the AI provider configured in WordPress. Before anything is sent it shows the exact redacted report and the recipient. Answers must cite that report; numbers not in it are flagged, and suggestions can only become a proposal. Limited to one request at a time and 20 a day per site. GT Performance stores no AI credentials.
+
+Frontend
+
+- Unused CSS keeps the state styles page builders add after the page loads: open menus, active tabs and accordions, sticky headers, popups, sliders, and entrance animations. Covered: Elementor, Bricks, Divi and Extra, Beaver Builder, Oxygen, Breakdance, WPBakery, Brizy, Kadence Blocks, Spectra, GenerateBlocks, and SiteOrigin, plus the carousel, lightbox, and animation libraries they bundle. Where the builder is freely available, the state classes were taken from its shipped front-end scripts. GT Page Blocks Builder and Thrive Architect styles are left whole. Protection applies only while the builder is active and "Automatic conflict protection" is on.
+- JavaScript defer now follows WordPress's script registry, the same rule core uses. A script stays blocking when inline code runs right after it, or when a script depending on it must. Previously, turning on defer also deferred jQuery and broke inline `jQuery(...)` code. Delay applies to a selected script together with the scripts that depend on it, or to none of them. Scripts WordPress did not register are no longer deferred, because their order is unknown; they can still be delayed by naming them. Debug mode explains every decision in an HTML comment.
+- Per-page options in the editor: turn off script delay or all script changes, and name the page's hero image.
+- Hero image rules by post type, template, or front page choose the image that gets high priority, instead of document order. Optional responsive preload is never duplicated. Background heroes can be declared and preloaded. Attributes set by the theme or WordPress still win.
+- Speculative loading (WordPress 6.8+) keeps cart, checkout, account, and every other cache-bypass path out of prefetching. Modes: WordPress default with exclusions, prefetch on press only, or off. When the Speculative Loading plugin is active, it keeps control of the mode.
+
+Database cleanup
+
+- Manual cleanup runs in the background. The button returns at once, the Database tab shows each task's count as it works, and a run can be stopped after its current batch. Deleting 1,000 items no longer holds the admin request open until the end.
+- A manual run goes ahead of cache warming and preloads in the queue, but never ahead of cache purges. At the old priority it waited behind a whole warm run on a production site.
+- Scheduled cleanup uses the same background run. `wp gt-performance database run` now finishes every task instead of stopping after 1,000 items per task.
+- Keeping recent revisions now works across all posts. A post with too many revisions was missed when earlier posts in the scan were within the limit.
+- Emptying the trash or deleting spam and trashed comments no longer purges pages. That content was never public, and each trashed post used to purge the homepage and its listings again.
+
+Fetch important CSS classes
+
+- Unused CSS reads the HTML the server sends, so parts that JavaScript adds after the page loads (a table of contents, an ad, a slider) looked unused and lost their styling. After you change unused CSS settings, CSS Status now opens two recent pages from each public post type in your browser, on desktop and mobile, and records the classes, IDs, and CSS rules those scripts need. Builds for that post type keep them. The check shows its progress, says what it found, and links to the next step; it can also be run from CSS Status at any time. IDs and rules seen on only one page, such as numbered heading anchors, are ignored, and post types hidden from search are skipped.
+
+Unused CSS status
+
+- Each result says in plain language what visitors get for that page and what to do, instead of codes such as `critical_budget_exceeded`. A Hybrid build that was over its inline limit is marked "Ready, one file": the page is styled correctly and loads like Generated file mode.
+- Hybrid builds record how much CSS the top of the page needed. CSS Status uses that to suggest an inline limit that fits three in four pages, or recommends Generated file when the top of a typical page needs more than 50 KB.
+- Totals count only the current delivery mode. Results from before a mode change are noted separately instead of inflating the stale count. Out-of-date results explain why they are out of date and what visitors get meanwhile.
+
+Fixes
+
+- Bricks 2 pages lost their base styles when Bricks' own stylesheets were optimized. Bricks opens its framework CSS with a layer-order statement (`@layer bricks.reset, …;`), which the CSS parser read into the next rule, nesting the rest of the file inside it. Leading layer statements are now kept apart and restored; a layer statement after any rule leaves that stylesheet untouched. On anantamias.com this also let the framework file shrink from 33 KB to 8 KB per page.
+- Icon-font rules written with a single colon (`.ion-ios-add:before`, as Ionicons, Font Awesome, and most minified CSS do) were all kept whether or not the page used the icon: 696 Ionicons rules on a Bricks page that shows one. They are now tested like `::before`.
+- Posts and other pages that print their own address (the comment form's cancel-reply link, login redirects, pagination) were never served their unused CSS. The build request's token appeared in that address, so the page a visitor got never matched the build. The token is now taken off the request before WordPress renders the page.
+- Pages with an Akismet-protected comment form were never served their unused CSS either, and every uncached visit queued another build: Akismet puts a random number in each form. Builds are now matched on the markup that decides which rules apply, ignoring hidden form values, inline script contents, HTML comments, and CSP nonces.
+- Unused CSS no longer changes which stylesheet wins. All generated CSS used to go at the end of `<head>`, so when a theme's stylesheets were excluded, WordPress's global styles moved behind them and overrode the theme's fonts and link colours. Each run of consolidated stylesheets is now replaced where it stood.
+- GT Performance no longer loads its bundled libraries on every request. Composer's autoloader, with the 1,176 functions of the Safe library that the CSS parser depends on, was included for every uncached page view, admin screen, and REST call, even though the libraries are only used while CSS is pruned or JavaScript minified. They now load the first time one of their classes is needed: 201 fewer files per request on gatilab.com, and about 10 ms less start-up in a warm-cache benchmark.
+- The plugin package no longer ships its libraries' README and changelog files or the Safe library's Rector migration configs (13 files, 90 KB), and the GitHub README stays out of it.
+- CSS builds no longer fail on hosts that make the origin's no-store response cacheable (Hostinger's Site Optimizer did, and Cloudflare then answered later builds of the same page with a stored copy). Every build request now has a URL no cache has seen.
+- Hidden tooltips no longer widen admin pages on phones. Report tables no longer widen the page on phones either: a visually hidden column heading escaped the table's scroll area.
+- The settings screen has four new tabs. AI & MCP holds agent access, the adviser, and assistant proposals. Object Cache holds the Redis settings, the connection test, the drop-in installer, and the wp-config.php overrides. CSS Status holds the unused CSS build results and the regenerate controls. Database holds manual cleanup with live counts and the scheduled cleanup settings, which used to be split between Tools and Optimization. The Cache tab is now Page Cache, and Integrations keeps plugin, host, and commerce coordination. The xCloud cache status panel appears only when the xCloud integration is enabled.
+- Admin tables no longer draw a second border inside their panel, and the summary cards above them are inset like the rest of the panel.
+- Posts created or updated through the REST API with an Application Password (no login cookie), for example by automation tools, now purge the Cloudflare and xCloud edge as well as the origin.
+- Plugin Check reports no warnings. The dependency lookup prepares each (type, ID) pair on its own, so every query has a fixed number of placeholders. The AI & MCP tab reads the MCP endpoint from the server the adapter actually registered instead of calling the adapter's filter itself, so a customized route is shown correctly too.
+- An unwritable cache directory no longer floods the error log with PHP warnings while saving settings; the failure is still reported.
+
 ## 1.0.14 - 2026-09-21
 
 - Fixed individual Cloudflare purges by allowing internal PURGE requests in the managed cache rule while preserving checkout, session, and query exclusions.

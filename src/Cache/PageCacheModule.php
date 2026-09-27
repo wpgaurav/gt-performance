@@ -28,11 +28,13 @@ final class PageCacheModule implements Module {
 		private readonly Eligibility $eligibility = new Eligibility(),
 		private readonly ResponseValidator $validator = new ResponseValidator(),
 		private readonly PostPublishPurgePolicy $postPublishPurgePolicy = new PostPublishPurgePolicy(),
+		private readonly DependencyInvalidator $dependencies = new DependencyInvalidator(),
 	) {
 	}
 
 	public function register(): void {
 		add_action( 'template_redirect', array( $this, 'startCapture' ), -9999 );
+		$this->dependencies->register();
 		add_action( 'save_post', array( $this, 'purgePost' ), 20, 2 );
 		add_action( 'transition_post_status', array( $this, 'purgeStatusTransition' ), 20, 3 );
 		add_action( 'post_updated', array( $this, 'purgeRenamedPost' ), 20, 3 );
@@ -114,6 +116,7 @@ final class PageCacheModule implements Module {
 		if ( ! self::hasCacheStatus( 'REVALIDATE' ) ) {
 			header( 'X-GT-Cache: MISS' );
 		}
+		( new DependencyRecorder() )->start();
 		OutputBuffer::start( array( $this, 'capture' ) );
 	}
 
@@ -262,7 +265,7 @@ final class PageCacheModule implements Module {
 		}
 
 		$this->purgedPublishedPosts[ $postId ] = true;
-		$this->purgePublishedPost( $postId, $post );
+		$this->purgePublishedPost( $post );
 	}
 
 	/**
@@ -316,13 +319,18 @@ final class PageCacheModule implements Module {
 		);
 
 		$urls = array_values( array_unique( $urls ) );
-		( new Purger( $this->store ) )->purgeUrls( $urls );
+		$post = get_post( $postId );
+		// A withdrawn or deleted post leaves every listing that showed it.
+		$dependents = $post instanceof \WP_Post ? array_keys( $this->dependencies->forPost( $post, true ) ) : array();
+		( new Purger( $this->store ) )->purgeUrls( array_values( array_unique( array_merge( $urls, $dependents ) ) ) );
 
 		do_action( 'gt_performance_enqueue_preload', $urls );
 	}
 
 	public function purgeDeletedPost( int $postId, \WP_Post $post ): void {
-		if ( 'revision' === $post->post_type || 'auto-draft' === $post->post_status ) {
+		// Trashing already purged a post's pages; emptying the trash, one post at a
+		// time, would purge the homepage and every listing again for each one.
+		if ( 'revision' === $post->post_type || in_array( $post->post_status, array( 'auto-draft', 'trash' ), true ) ) {
 			return;
 		}
 
@@ -343,6 +351,10 @@ final class PageCacheModule implements Module {
 
 	public function purgeDeletedComment( int $commentId, \WP_Comment $comment ): void {
 		unset( $commentId );
+		// Spam and trashed comments were never on the page, so deleting them changes nothing public.
+		if ( in_array( (string) $comment->comment_approved, array( 'spam', 'trash' ), true ) ) {
+			return;
+		}
 		$this->purgeCommentPost( (int) $comment->comment_post_ID );
 	}
 
@@ -390,9 +402,10 @@ final class PageCacheModule implements Module {
 		$this->purgePostById( $postId );
 	}
 
-	private function purgePublishedPost( int $postId, \WP_Post $post ): void {
-		$mode = (string) Settings::get( 'cache.post_publish_purge', PostPublishPurgePolicy::RELATED );
-		$plan = $this->postPublishPurgePolicy->plan( $mode, $this->publishedPostUrls( $postId, $post ) );
+	private function purgePublishedPost( \WP_Post $post ): void {
+		$mode    = (string) Settings::get( 'cache.post_publish_purge', PostPublishPurgePolicy::RELATED );
+		$related = array_keys( RelatedUrls::forPost( $post ) );
+		$plan    = $this->postPublishPurgePolicy->plan( $mode, $related );
 
 		if ( $plan['all'] ) {
 			( new Purger( $this->store ) )->purgeAll();
@@ -403,43 +416,11 @@ final class PageCacheModule implements Module {
 			return;
 		}
 
-		( new Purger( $this->store ) )->purgeUrls( $plan['urls'] );
+		// Pages that recorded this post, its terms, or its listings, beyond the
+		// heuristic set. They are purged but not preloaded: there can be hundreds,
+		// and visitors or stale revalidation refill them at a normal pace.
+		$dependents = PostPublishPurgePolicy::RELATED === $mode ? array_keys( $this->dependencies->forPost( $post ) ) : array();
+		( new Purger( $this->store ) )->purgeUrls( array_values( array_unique( array_merge( $plan['urls'], $dependents ) ) ) );
 		do_action( 'gt_performance_enqueue_preload', $plan['urls'] );
-	}
-
-	/**
-	 * @return list<string>
-	 */
-	private function publishedPostUrls( int $postId, \WP_Post $post ): array {
-		$urls = array_filter(
-			array(
-				get_permalink( $postId ),
-				home_url( '/' ),
-				get_post_type_archive_link( $post->post_type ),
-				$post->post_author > 0 ? get_author_posts_url( (int) $post->post_author ) : false,
-			),
-			'is_string'
-		);
-
-		$taxonomies = get_object_taxonomies( $post->post_type, 'objects' );
-		foreach ( $taxonomies as $taxonomy ) {
-			if ( ! $taxonomy instanceof \WP_Taxonomy || ! $taxonomy->public ) {
-				continue;
-			}
-
-			$terms = get_the_terms( $postId, $taxonomy->name );
-			if ( ! is_array( $terms ) ) {
-				continue;
-			}
-
-			foreach ( $terms as $term ) {
-				$link = get_term_link( $term );
-				if ( is_string( $link ) ) {
-					$urls[] = $link;
-				}
-			}
-		}
-
-		return array_values( array_unique( $urls ) );
 	}
 }

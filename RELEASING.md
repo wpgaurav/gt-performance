@@ -92,7 +92,9 @@ which is why the self-hosted package needs the licenser at all.
 
 ## Deploy to WordPress.org
 
-GT Performance is **not yet listed** in the WordPress.org plugin directory: there is no SVN target and no directory update authority. Verify with `https://plugins.svn.wordpress.org/gt-performance/` before promising a deploy. GitHub releases are the source-of-truth archive, and the self-hosted source and FluentCart package ship `Update URI: false` so the directory cannot push updates to those installs. The WordPress.org submission package omits that header, as required by Plugin Check.
+The slug `gt-performance` is approved in the WordPress.org plugin directory; the SVN repository is `https://plugins.svn.wordpress.org/gt-performance/`. 1.0.14 was the first directory release. Stable tags pushed to GitHub are deployed to SVN by the Release workflow's `wordpress-org` job (trunk, the version tag, and `assets/` from `distribution-assets/wordpress-org/`); prereleases are not. Directory installs receive updates from WordPress.org. The self-hosted source and FluentCart package ship `Update URI: false`, so the directory never pushes updates to those installs. The WordPress.org package omits that header, as required by Plugin Check.
+
+The first commit needs the SVN credentials of the WordPress.org account that owns the plugin. Commit `assets/` (banners, icons, screenshots) with or before the first tag, so the listing appears complete.
 
 `bin/build-package.sh` fails the build if the staged tree contains a file type
 the directory does not permit, so the packaging step itself is the first gate.
@@ -109,6 +111,6 @@ Deploy from the release ZIP tree into the WordPress.org SVN repository:
 
 1. copy the extracted package tree over `trunk/` (the ZIP already excludes development files, tests, and build tooling, and includes `vendor/` with `composer.json`);
 2. copy `trunk/` to `tags/<version>/`;
-3. keep directory assets (banners, icons) in the top-level `assets/` SVN directory from `distribution-assets/wordpress-org/`;
+3. keep directory assets (banners, icons, screenshots, and `blueprints/blueprint.json`, which powers the directory's Live Preview in WordPress Playground) in the top-level `assets/` SVN directory from `distribution-assets/wordpress-org/`;
 4. confirm `Stable tag` in `trunk/readme.txt` names the new tag, then commit;
 5. verify the directory page renders the new version and changelog, and that a site running the previous version sees the update.

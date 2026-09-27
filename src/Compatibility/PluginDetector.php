@@ -11,10 +11,18 @@ namespace GTPerformance\Compatibility;
 
 final class PluginDetector {
 	/**
-	 * @return array<string, array{name:string,files:list<string>,group:string,protection:string,javascript_exclusions?:list<string>}>
+	 * Classes that carousel, lightbox, and animation libraries bundled by page
+	 * builders add after the page loads. Added once when any builder is active.
+	 *
+	 * @var list<string>
+	 */
+	public const RUNTIME_LIBRARY_SAFELIST = array( 'swiper-', 'splide', 'slick-', 'tns-', 'flickity-', 'glide__', 'mfp-', 'pswp', 'glightbox', 'gslide', 'fancybox', 'lg-', 'aos-', 'animate__', 'tippy-', 'select2-', 'aria-expanded', 'aria-selected', 'aria-hidden', 'aria-current' );
+
+	/**
+	 * @return array<string, array{name:string,files:list<string>,group:string,protection:string,themes?:list<string>,javascript_exclusions?:list<string>,css_safelist?:list<string>,css_stylesheet_exclusions?:list<string>}>
 	 */
 	public function catalog(): array {
-		return array(
+		return self::builders() + array(
 			'perfmatters'     => array(
 				'name'       => 'Perfmatters',
 				'files'      => array( 'perfmatters/perfmatters.php' ),
@@ -154,6 +162,220 @@ final class PluginDetector {
 	}
 
 	/**
+	 * Page builders whose front-end scripts add classes after the page loads.
+	 *
+	 * Unused CSS removes rules whose selectors match nothing in the rendered HTML,
+	 * so open menus, active tabs, sticky headers, popups, and entrance animations
+	 * lose their styles once a visitor interacts. Each entry keeps those state
+	 * selectors. Entries marked "from source" were extracted from the builder's
+	 * shipped front-end JavaScript (classList/addClass calls); the others, for
+	 * builders not distributed publicly, use documented state-class prefixes.
+	 * Over-keeping only leaves some CSS unpruned; it never breaks a page.
+	 *
+	 * @return array<string, array{name:string,files:list<string>,group:string,protection:string,themes?:list<string>,css_safelist:list<string>,css_stylesheet_exclusions?:list<string>}>
+	 */
+	public static function builders(): array {
+		$protection = __( 'Keeps menu, tab, accordion, sticky, popup, slider, and animation state styles out of unused CSS removal.', 'gt-performance' );
+
+		return array(
+			// From source: GT Page Blocks renders each block's own HTML, CSS, and script,
+			// whose states (for example `.visible` and `[data-theme]`) are arbitrary.
+			'gt-page-blocks'  => array(
+				'name'                      => 'GT Page Blocks Builder',
+				'files'                     => array( 'page-blocks-builder/page-blocks-builder.php' ),
+				'group'                     => 'builder',
+				'protection'                => __( 'Leaves page block styles untouched: each block ships its own CSS and scripts.', 'gt-performance' ),
+				'css_safelist'              => array(),
+				'css_stylesheet_exclusions' => array( 'gt-page-block', '/plugins/page-blocks-builder/' ),
+			),
+			// From source (Elementor 4.3 free); Pro sticky, popup, and motion prefixes documented.
+			'elementor'       => array(
+				'name'         => 'Elementor',
+				'files'        => array( 'elementor/elementor.php', 'elementor-pro/elementor-pro.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'elementor-active', 'e-active', 'e-activated', 'elementor-invisible', 'animated', 'is-sticky', 'e-scroll-active', 'e-hidden', 'e-n-tab', 'e-con--floating', 'dialog-', 'elementor-sticky--', 'elementor-motion-effects', 'elementor-popup-modal', 'elementor-lightbox', 'elementor-menu-toggle', 'elementor-nav-menu--dropdown' ),
+			),
+			// From source (Bricks front-end script served by a production site).
+			'bricks'          => array(
+				'name'         => 'Bricks',
+				'files'        => array(),
+				'themes'       => array( 'bricks' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'brx-open', 'brx-animated', 'brx-animate-', 'brx-closing', 'brx-has-multilevel', 'brx-multilevel-', 'brx-submenu-', 'brx-sub-submenu-', 'brx-gallery-item-reveal', 'brx-load-more-hidden', 'brx-loading-animation', 'brx-popup', 'brx-offcanvas', 'show-mobile-menu', 'no-scroll', 'bricks-lightbox', '/\.(active|open|show|visible|hide|loaded|closing|scrolling|sliding|dragging|is-active|is-loading)(?![\w-])/' ),
+			),
+			// Documented Divi and Extra state classes.
+			'divi'            => array(
+				'name'         => 'Divi',
+				'files'        => array( 'divi-builder/divi-builder.php' ),
+				'themes'       => array( 'divi', 'extra' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'et_pb_animation', 'et-animated', 'et-waypoint', 'et-pb-active-slide', 'et_pb_tab_active', 'et_pb_toggle_open', 'et_pb_toggle_close', 'et_mobile_menu', 'mobile_nav', 'et-fixed-header', 'et_fixed_nav', 'et-search-form', 'et_pb_sticky', 'et-pb-controllers', 'et_pb_active_control', 'et-show-dropdown', 'et-hover', '/\.(opened|closed)(?![\w-])/' ),
+			),
+			// From source (Beaver Builder Lite 2.11); theme header states documented.
+			'beaver-builder'  => array(
+				'name'         => 'Beaver Builder',
+				'files'        => array( 'bb-plugin/fl-builder.php', 'beaver-builder-lite-version/fl-builder.php' ),
+				'themes'       => array( 'bb-theme' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'fl-active', 'fl-animation', 'fl-animated', 'fl-tab-active', 'fl-accordion-item-active', 'fl-menu-mobile', 'fl-theme-builder-header-sticky', 'fl-theme-builder-header-scrolled', 'fl-slideshow', 'bx-' ),
+			),
+			// Documented Oxygen state classes.
+			'oxygen'          => array(
+				'name'         => 'Oxygen',
+				'files'        => array( 'oxygen/functions.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'oxy-nav-menu-open', 'oxy-nav-menu-prevent-overflow', 'oxy-modal', 'oxy-tab-active', 'oxy-sticky-header', 'oxy-lightbox', 'oxy-pro-accordion', '/\.oxy-[\w-]*(active|open|live|visible)/' ),
+			),
+			// Documented Breakdance BEM state modifiers.
+			'breakdance'      => array(
+				'name'         => 'Breakdance',
+				'files'        => array( 'breakdance/plugin.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'breakdance-popup', 'is-sticky', 'is-open', 'is-active', '/\.(bde|breakdance)-[\w-]*(active|open|opened|visible|sticky|scrolled|current)/' ),
+			),
+			// Documented WPBakery state classes.
+			'wpbakery'        => array(
+				'name'         => 'WPBakery Page Builder',
+				'files'        => array( 'js_composer/js_composer.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'vc_active', 'vc_tta-', 'wpb_animate_when_almost_visible', 'wpb_start_animation', 'animated', 'vc_toggle_active', 'flex-active', 'prettyphoto', 'pp_' ),
+			),
+			// Thrive's runtime classes are not published; leave its styles whole.
+			'thrive-architect' => array(
+				'name'                      => 'Thrive Architect',
+				'files'                     => array( 'thrive-visual-editor/thrive-visual-editor.php' ),
+				'group'                     => 'builder',
+				'protection'                => __( 'Leaves Thrive Architect styles untouched because its interactive states are not documented.', 'gt-performance' ),
+				'css_safelist'              => array(),
+				'css_stylesheet_exclusions' => array( '/plugins/thrive-visual-editor/' ),
+			),
+			// Documented Brizy BEM state modifiers (the front-end script is not bundled).
+			'brizy'           => array(
+				'name'         => 'Brizy',
+				'files'        => array( 'brizy/brizy.php', 'brizy-pro/brizy-pro.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'brz-animated', 'brz-popup', '/\.brz-[\w-]*--(active|opened|open|visible|shown)/' ),
+			),
+			// From source (Kadence Blocks 3.7), including Kadence header states.
+			'kadence-blocks'  => array(
+				'name'         => 'Kadence Blocks',
+				'files'        => array( 'kadence-blocks/kadence-blocks.php', 'kadence-blocks-pro/kadence-blocks-pro.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'kt-active-tab', 'kt-panel-is-', 'kb-modal-open', 'kb-smc-open', 'kb-header-sticky', 'item-is-fixed', 'item-is-stuck', 'header-is-fixed', 'child-is-fixed', 'menu-item--toggled-on', 'show-off-canvas', 'toggle-show', 'kt-masonry-trigger-animation', 'typed-cursor', '/\.kb-[\w-]*(open|active|visible)/' ),
+			),
+			// From source (Spectra 2.20).
+			'spectra'         => array(
+				'name'         => 'Spectra',
+				'files'        => array( 'ultimate-addons-for-gutenberg/ultimate-addons-for-gutenberg.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'uagb-tabs__active', 'uagb-tabs-body__active', 'uagb-faq-item-active', 'uagb-position__sticky--', 'uagb-timeline__', 'uagb-toc__', 'uagb-activated-script', 'uagb-forms-success-message', 'uagb-forms-failed-message', 'spectra-image-gallery__control-dot--active', 'show_popup', 'in-view', 'out-view', 'list-open', 'list-collapsed', 'scroll-button-is-visible' ),
+			),
+			// From source (GenerateBlocks 2.4); Pro accordion, tab, and overlay states follow its gb- naming.
+			'generateblocks'  => array(
+				'name'         => 'GenerateBlocks',
+				'files'        => array( 'generateblocks/plugin.php', 'generateblocks-pro/plugin.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'gblocks-action-message--show', 'gb-responsive-tabs', '/\.gb-[\w-]*(open|active|current|show|visible|toggled)/' ),
+			),
+			// From source (SiteOrigin Page Builder 2.36): only parallax is added at runtime.
+			'siteorigin'      => array(
+				'name'         => 'SiteOrigin Page Builder',
+				'files'        => array( 'siteorigin-panels/siteorigin-panels.php' ),
+				'group'        => 'builder',
+				'protection'   => $protection,
+				'css_safelist' => array( 'simpleParallax' ),
+			),
+		);
+	}
+
+	/**
+	 * Selector safelist entries for the active builders, plus runtime library
+	 * classes once when any builder is active.
+	 *
+	 * @param list<string> $active  Active plugin basenames.
+	 * @param list<string> $network Network-active plugin basenames.
+	 * @return list<string>
+	 */
+	public function builderCssSafelist( array $active, array $network, string $template ): array {
+		$safelist = array();
+		$any      = false;
+		foreach ( self::builders() as $builder ) {
+			if ( ! $this->builderActive( $builder, array_merge( $active, $network ), $template ) ) {
+				continue;
+			}
+			$any      = true;
+			$safelist = array_merge( $safelist, $builder['css_safelist'] );
+		}
+		if ( $any ) {
+			$safelist = array_merge( $safelist, self::RUNTIME_LIBRARY_SAFELIST );
+		}
+
+		return array_values( array_unique( $safelist ) );
+	}
+
+	/**
+	 * Stylesheet URL or inline style ID fragments to leave unpruned for active builders.
+	 *
+	 * @param list<string> $active  Active plugin basenames.
+	 * @param list<string> $network Network-active plugin basenames.
+	 * @return list<string>
+	 */
+	public function builderStylesheetExclusions( array $active, array $network, string $template ): array {
+		$exclusions = array();
+		foreach ( self::builders() as $builder ) {
+			if ( $this->builderActive( $builder, array_merge( $active, $network ), $template ) ) {
+				$exclusions = array_merge( $exclusions, $builder['css_stylesheet_exclusions'] ?? array() );
+			}
+		}
+
+		return array_values( array_unique( $exclusions ) );
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	public function activeBuilderCssSafelist(): array {
+		return $this->builderCssSafelist( ...$this->installation() );
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	public function activeBuilderStylesheetExclusions(): array {
+		return $this->builderStylesheetExclusions( ...$this->installation() );
+	}
+
+	/**
+	 * @param array{files:list<string>,themes?:list<string>} $builder Catalog entry.
+	 * @param list<string>                                    $plugins Active plugins.
+	 */
+	private function builderActive( array $builder, array $plugins, string $template ): bool {
+		return (bool) array_intersect( $builder['files'], $plugins )
+			|| ( '' !== $template && in_array( strtolower( $template ), $builder['themes'] ?? array(), true ) );
+	}
+
+	/**
+	 * @return array{0:list<string>,1:list<string>,2:string}
+	 */
+	private function installation(): array {
+		$active  = array_map( 'strval', (array) get_option( 'active_plugins', array() ) );
+		$network = is_multisite() ? array_map( 'strval', array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) ) : array();
+
+		return array( $active, $network, function_exists( 'get_template' ) ? (string) get_template() : '' );
+	}
+
+	/**
 	 * Return protected script URL fragments for the supplied plugin basenames.
 	 *
 	 * @param list<string> $active  Active site plugins.
@@ -204,6 +426,9 @@ final class PluginDetector {
 		}
 
 		$installed = array_merge( $active, $network );
+		if ( isset( $catalog[ $id ]['themes'] ) ) {
+			return $this->builderActive( $catalog[ $id ], $installed, function_exists( 'get_template' ) ? (string) get_template() : '' );
+		}
 
 		return (bool) array_intersect( $catalog[ $id ]['files'], $installed );
 	}

@@ -115,6 +115,7 @@ final class FontOptimizer {
 	 * @param array<string, mixed> $payload Job payload.
 	 */
 	public function localizeQueued( array $payload ): void {
+		\GTPerformance\Queue\JobLease::checkpoint();
 		$url = (string) ( $payload['url'] ?? '' );
 		if ( '' === $url || ! $this->isGoogleFontsUrl( $url ) ) {
 			return;
@@ -151,6 +152,7 @@ final class FontOptimizer {
 		$css = preg_replace_callback(
 			'#url\((' . preg_quote( self::FONT_ORIGIN, '#' ) . '[^)]+)\)#i',
 			function ( array $matches ) use ( $directory, &$fetched ): string {
+				\GTPerformance\Queue\JobLease::checkpoint();
 				if ( $fetched >= self::MAX_FONT_FILES ) {
 					return $matches[0];
 				}
@@ -177,10 +179,7 @@ final class FontOptimizer {
 				}
 				$file = hash( 'sha256', $body ) . '.' . $ext;
 				if ( ! is_file( $directory . '/' . $file ) ) {
-					$temp = $directory . '/' . $file . '.' . wp_generate_uuid4() . '.tmp';
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.WP.AlternativeFunctions.rename_rename -- Atomic publication of a bounded binary font; WP_Filesystem::move() may fall back to a non-atomic copy.
-					if ( strlen( $body ) !== file_put_contents( $temp, $body, LOCK_EX ) || ! rename( $temp, $directory . '/' . $file ) ) {
-						wp_delete_file( $temp );
+					if ( ! \GTPerformance\Core\AtomicFile::write( $directory . '/' . $file, $body ) ) {
 						return $matches[0];
 					}
 				}

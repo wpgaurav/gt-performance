@@ -49,7 +49,8 @@ final class ConfigFile {
 			return false;
 		}
 		$temp = dirname( $path ) . '/gtperf-config-' . wp_generate_uuid4() . '.json';
-		$stream = fopen( $temp, 'xb' );
+		// An unwritable cache directory is reported by the false return, not a PHP warning.
+		$stream = @fopen( $temp, 'xb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		if ( false === $stream ) {
 			return false;
 		}

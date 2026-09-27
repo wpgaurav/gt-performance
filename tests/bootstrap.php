@@ -45,6 +45,24 @@ if ( ! defined( 'GTPERF_BASENAME' ) ) {
 	define( 'GTPERF_BASENAME', 'gt-performance/gt-performance.php' );
 }
 
+if ( ! function_exists( 'current_filter' ) ) {
+	function current_filter(): string {
+		return '';
+	}
+}
+
+if ( ! function_exists( 'get_current_user_id' ) ) {
+	function get_current_user_id(): int {
+		return 0;
+	}
+}
+
+if ( ! function_exists( 'admin_url' ) ) {
+	function admin_url( string $path = '' ): string {
+		return 'https://example.com/wp-admin/' . ltrim( $path, '/' );
+	}
+}
+
 if ( ! function_exists( 'site_url' ) ) {
 	function site_url( string $path = '' ): string {
 		return 'https://example.com' . ( '' === $path ? '' : '/' . ltrim( $path, '/' ) );
@@ -335,6 +353,31 @@ if ( ! function_exists( 'home_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_generate_password' ) ) {
+	function wp_generate_password( int $length = 12, bool $special_chars = true, bool $extra_special_chars = false ): string {
+		return substr( bin2hex( random_bytes( $length ) ), 0, $length );
+	}
+}
+
+// The main query: set $GLOBALS['gtperf_test_singular'] to a post type to render one.
+if ( ! function_exists( 'is_singular' ) ) {
+	function is_singular(): bool {
+		return isset( $GLOBALS['gtperf_test_singular'] );
+	}
+}
+
+if ( ! function_exists( 'get_queried_object_id' ) ) {
+	function get_queried_object_id(): int {
+		return isset( $GLOBALS['gtperf_test_singular'] ) ? 1 : 0;
+	}
+}
+
+if ( ! function_exists( 'get_post_type' ) ) {
+	function get_post_type( mixed $post = null ): string|false {
+		return $GLOBALS['gtperf_test_singular'] ?? false;
+	}
+}
+
 if ( ! function_exists( 'content_url' ) ) {
 	function content_url( string $path = '' ): string {
 		return 'https://example.com/wp-content/' . ltrim( $path, '/' );
@@ -593,6 +636,17 @@ if ( ! isset( $GLOBALS['wpdb'] ) ) {
 	$GLOBALS['wpdb'] = new class() {
 		public string $prefix = 'wp_';
 
+		public string $dbname = 'gtperf_unit';
+
+		public string $options = 'wp_options';
+
+		/**
+		 * One process, so advisory locks (settings, schema, runner) are always granted.
+		 */
+		public function get_var( ?string $query = null ): ?string {
+			return null !== $query && str_contains( $query, 'GET_LOCK(' ) ? '1' : null;
+		}
+
 		/**
 		 * @param array<int, mixed> $arguments Ignored.
 		 */
@@ -608,6 +662,24 @@ if ( ! isset( $GLOBALS['wpdb'] ) ) {
 			return $query;
 		}
 	};
+}
+
+if ( ! function_exists( 'number_format_i18n' ) ) {
+	function number_format_i18n( float|int $number, int $decimals = 0 ): string {
+		return number_format( (float) $number, $decimals );
+	}
+}
+
+if ( ! function_exists( 'size_format' ) ) {
+	function size_format( int|float $bytes, int $decimals = 0 ): string {
+		foreach ( array( 'GB' => 1073741824, 'MB' => 1048576, 'KB' => 1024 ) as $unit => $size ) {
+			if ( $bytes >= $size ) {
+				return number_format( $bytes / $size, $decimals ) . ' ' . $unit;
+			}
+		}
+
+		return number_format( (float) $bytes, $decimals ) . ' B';
+	}
 }
 
 if ( ! function_exists( 'wp_salt' ) ) {

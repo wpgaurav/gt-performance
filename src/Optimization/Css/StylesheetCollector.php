@@ -24,7 +24,7 @@ final class StylesheetCollector {
 
 	/**
 	 * @param list<string> $exclusions Excluded URL or inline style ID fragments.
-	 * @return array{stylesheets:list<Stylesheet>,nodes:list<\DOMNode>,markers:list<string>}
+	 * @return array{stylesheets:list<Stylesheet>,nodes:list<\DOMNode>,markers:list<string>,runs:list<list<string>>}
 	 */
 	public function collect( \DOMDocument $document, array $exclusions = array() ): array {
 		$xpath       = new \DOMXPath( $document );
@@ -103,7 +103,61 @@ final class StylesheetCollector {
 			'stylesheets' => $stylesheets,
 			'nodes'       => $nodes,
 			'markers'     => $markers,
+			'runs'        => $this->runs( $xpath, $markers ),
 		);
+	}
+
+	/**
+	 * Consolidated stylesheets grouped so no stylesheet left in place sits inside a group.
+	 *
+	 * Each group is replaced where it stood. When all of them went in one place, at
+	 * the end of <head>, WordPress's global styles moved behind a theme's excluded
+	 * stylesheets and overrode its fonts and link colours.
+	 *
+	 * @param list<string> $markers Stamps of the consolidated stylesheets.
+	 * @return list<list<string>>
+	 */
+	private function runs( \DOMXPath $xpath, array $markers ): array {
+		$consolidated = array_flip( $markers );
+		$runs         = array();
+		$run          = array();
+		$stamped      = $xpath->query( '//*[@' . self::MARKER . ']' );
+
+		foreach ( false === $stamped ? array() : $stamped as $node ) {
+			if ( ! $node instanceof \DOMElement ) {
+				continue;
+			}
+			$marker = $node->getAttribute( self::MARKER );
+			if ( isset( $consolidated[ $marker ] ) ) {
+				$run[] = $marker;
+			} elseif ( $run && $this->affectsCascade( $node ) ) {
+				$runs[] = $run;
+				$run    = array();
+			}
+		}
+		if ( $run ) {
+			$runs[] = $run;
+		}
+
+		return $runs;
+	}
+
+	/**
+	 * Whether a stylesheet left in place applies to the page, so its position counts.
+	 */
+	private function affectsCascade( \DOMElement $node ): bool {
+		if ( $node->hasAttribute( 'disabled' ) ) {
+			return false;
+		}
+		for ( $parent = $node->parentNode; $parent instanceof \DOMElement; $parent = $parent->parentNode ) {
+			if ( 'noscript' === strtolower( $parent->tagName ) ) {
+				return false;
+			}
+		}
+
+		return 'style' === strtolower( $node->tagName )
+			? '' !== trim( $node->textContent )
+			: 'stylesheet' === strtolower( (string) preg_replace( '/\s+/', ' ', trim( $node->getAttribute( 'rel' ) ) ) );
 	}
 
 	/**

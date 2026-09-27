@@ -30,7 +30,12 @@ final class AtomicFile {
 			}
 			$closed = fclose( $stream );
 			$stream = false;
-			return $closed && rename( $temp, $path );
+			if ( ! $closed ) {
+				return false;
+			}
+			return class_exists( \GTPerformance\Queue\JobLease::class, false )
+				? \GTPerformance\Queue\JobLease::publish( static fn(): bool => rename( $temp, $path ) )
+				: rename( $temp, $path );
 		} finally {
 			if ( is_resource( $stream ) ) {
 				fclose( $stream );

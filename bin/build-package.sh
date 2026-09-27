@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTPERF_PACKAGE_VERSION:-1.0.14}"
+VERSION="${GTPERF_PACKAGE_VERSION:-1.1.0}"
 CHANNELS="${1:-all}"
 
 build_channel() {
@@ -48,10 +48,13 @@ build_channel() {
 		--exclude '__release-*'
 		--exclude '__work'
 		--exclude 'FEATURE-IMPLEMENTATION.md'
+		--exclude 'FEATURE-AUDIT.md'
+		--exclude 'docs'
 		--exclude 'notes.md'
 		--exclude 'phpcs.xml.dist'
 		--exclude 'phpstan.neon.dist'
 		--exclude 'phpunit.xml.dist'
+		--exclude '/README.md'
 		--exclude 'RELEASING.md'
 		--exclude 'task_plan.md'
 		--exclude 'tests'
@@ -85,6 +88,10 @@ build_channel() {
 	# Drop VCS placeholders and other hidden files the vendor tree carries along.
 	find "${plugin_dir}/vendor" -name '.git*' -prune -exec rm -rf {} +
 
+	# Package documentation and thecodingmachine/safe's Rector migration configs are
+	# never loaded. Licences and composer.json files stay.
+	find "${plugin_dir}/vendor" -type f \( -iname '*.md' -o -name 'rector-migrate.php' \) -delete
+
 	# composer.json stays in the package: Plugin Check flags a bundled vendor/
 	# directory whose composer.json is missing.
 	rm -f \
@@ -106,7 +113,7 @@ build_channel() {
 	# the repo root shipped into a production install and served 531 KB of internal
 	# audit notes over HTTP before this check existed. Allowlist the top level instead,
 	# so anything new has to be named here before it can ever be packaged.
-	local allowed=' assets dropins src vendor LICENSE README.md composer.json gt-performance.php readme.txt uninstall.php '
+	local allowed=' assets dropins src vendor LICENSE composer.json gt-performance.php readme.txt uninstall.php '
 	local unexpected=''
 	local entry
 	for entry in "${plugin_dir}"/* "${plugin_dir}"/.[!.]*; do

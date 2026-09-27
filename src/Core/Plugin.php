@@ -19,6 +19,8 @@ final class Plugin {
 	 */
 	private array $modules = array();
 
+	private bool $managementLoaded = false;
+
 	public static function boot(): void {
 		if ( null !== self::$instance ) {
 			return;
@@ -59,12 +61,25 @@ final class Plugin {
 			new \GTPerformance\Database\DatabaseModule(),
 		);
 
+		// Settings can change from admin, CLI, REST, or cron; each save records a revision.
+		$this->modules[] = new \GTPerformance\Configuration\ConfigurationModule();
+
+		// Two hooks and one tiny class; the registry fires them only when abilities
+		// are requested, which may be a REST request without an auth cookie.
+		if ( \GTPerformance\Abilities\AbilitiesModule::available() ) {
+			$this->modules[] = new \GTPerformance\Abilities\AbilitiesModule();
+		}
+
 		// Edge integrations hook post-save invalidation and admin actions. Neither
 		// happens on a cache miss for an anonymous visitor.
+		// needsManagementModules() runs on plugins_loaded, before REST_REQUEST is
+		// defined, so an Application Password request without cookies (an agent)
+		// would purge the origin but never the edge. Load them at REST init too.
+		add_action( 'rest_api_init', array( $this, 'loadManagementModules' ), 0 );
+
 		if ( self::needsManagementModules() ) {
-			$this->modules[] = new \GTPerformance\Cloudflare\CloudflareModule( $logger );
-			$this->modules[] = new \GTPerformance\XCloud\XCloudModule( $logger );
-			$this->modules[] = new \GTPerformance\Redis\RedisModule();
+			array_push( $this->modules, ...self::managementModules( $logger ) );
+			$this->managementLoaded = true;
 		}
 
 		if ( is_admin() ) {
@@ -94,6 +109,28 @@ final class Plugin {
 			|| ( defined( 'WP_CLI' ) && WP_CLI )
 			|| self::hasAuthenticationCookie()
 			|| ( defined( 'REST_REQUEST' ) && REST_REQUEST );
+	}
+
+	public function loadManagementModules(): void {
+		if ( $this->managementLoaded ) {
+			return;
+		}
+		$this->managementLoaded = true;
+		foreach ( self::managementModules( new Logger() ) as $module ) {
+			$this->modules[] = $module;
+			$module->register();
+		}
+	}
+
+	/**
+	 * @return list<Module>
+	 */
+	private static function managementModules( Logger $logger ): array {
+		return array(
+			new \GTPerformance\Cloudflare\CloudflareModule( $logger ),
+			new \GTPerformance\XCloud\XCloudModule( $logger ),
+			new \GTPerformance\Redis\RedisModule(),
+		);
 	}
 
 	private function register(): void {

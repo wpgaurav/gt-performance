@@ -12,4 +12,17 @@ defined( 'WP_CONTENT_DIR' ) || define( 'WP_CONTENT_DIR', '/tmp/wordpress/wp-cont
 defined( 'GTPERF_DIR' ) || define( 'GTPERF_DIR', dirname( __DIR__ ) );
 defined( 'GTPERF_FILE' ) || define( 'GTPERF_FILE', dirname( __DIR__ ) . '/gt-performance.php' );
 defined( 'GTPERF_BASENAME' ) || define( 'GTPERF_BASENAME', 'gt-performance/gt-performance.php' );
-defined( 'GTPERF_VERSION' ) || define( 'GTPERF_VERSION', '1.0.14' );
+defined( 'GTPERF_VERSION' ) || define( 'GTPERF_VERSION', '1.1.0' );
+
+if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
+	/**
+	 * WordPress 7.0 AI Client entry point, absent from the stubs this project pins.
+	 * Returns WP_AI_Client_Prompt_Builder, whose fluent API is declared with @method.
+	 *
+	 * @param mixed $prompt Prompt.
+	 * @return mixed
+	 */
+	function wp_ai_client_prompt( $prompt = null ) {
+		return $prompt;
+	}
+}

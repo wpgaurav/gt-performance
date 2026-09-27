@@ -1,3 +1,192 @@
+# 1.0.15 development: lazy library loading — 2026-09-27
+
+Not a release. gatilab.com runs `1.0.15-dev.14` (sha256 `772b25ca…4b934af0e`); anantamias.com stays on dev.12.
+
+- **Before:** every request included Composer's autoloader and, through it, 201 files of GT Performance's vendor directory on gatilab.com (the Safe library's function files and their PHP-version-specific copies), defining 1,176 functions. A warm-OPcache benchmark of the plugin's bootstrap took 10.7 ms with 175 library files; the new one takes 0.25 ms with none.
+- **After:** a request on gatilab.com includes 0 library files. Uncached `/wp-json/` over 25 origin requests: median 151.6 ms (163.8 ms before), p25 139.4 ms (148.7 ms before), p75 185.6 ms (176.0 ms before) on a shared host, so read the spread as noise around a saving of about 10 ms.
+- **The libraries still load when needed:** a CSS build of /fluentcart-pickup-scheduling/ completed in 0.59 s and visitors were served its four generated blocks; the JavaScript minifier loaded and minified through the same path. A unit test boots the real plugin file in a fresh PHP process and checks that nothing loads at boot or when the pruner is built, that pruning and minifying still work, and that Composer's loader does not stay in the autoload queue. Another checks the namespace list against composer.lock.
+- 512 unit tests / 2,067 assertions pass; PHPCS and PHPStan are clean.
+
+---
+
+# 1.0.15 development: gatilab.com and anantamias.com on dev.12 — 2026-09-27
+
+Not a release. Both sites run `1.0.15-dev.12` (sha256 `c29614b4…f46a0185`), deployed with file parity, raw-settings, and drop-in checks. Unused CSS is on at both.
+
+- **gatilab.com, /fluentcart-pickup-scheduling/.** On dev.10 its build was ready (38 KB to 20 KB) but no visitor was ever served it, and a new build was queued every few minutes. Two uncached renders differed only in Akismet's `ak_js` value, which is random per render. Its earlier builds also failed three times: Cloudflare and Hostinger answered the constant build URL from cache (`cf-cache-status: HIT`, `x-cache-status: HIT`), so GT never ran; 406 of gatilab's 407 failed CSS jobs carry that error.
+- **Cascade order.** With dev.11, visitors were served the build, and the page changed visibly: smaller body text and orange author links (6.8% of pixels on desktop, 23.5% on mobile), because `global-styles-inline-css` moved from before the theme's `md-globals-css` to the end of `<head>`. dev.12 places each run where it stood: four generated blocks around the theme's stylesheets, and the page is pixel-identical to the original at 1280 and 390 px.
+- **anantamias.com.** /siachen-glacier/ (with its script-built table of contents, kept by the browser check's results) and /admissions/ are pixel-identical at both widths on dev.12, and visitors are served the build.
+- **Fetch important CSS classes, WordPress Studio lab.** The check reports "Checking pages: N of M done", then "Saving what was found…", then what it found and a link to CSS Status (or to turn unused CSS on). Only post types that visitors can view and that are not hidden from search are checked.
+- 510 unit tests / 1,857 assertions pass; PHPCS and PHPStan are clean.
+
+---
+
+# 1.0.15 development: Bricks on anantamias.com, script-built classes — 2026-09-26
+
+Not a release. anantamias.com (Bricks 2.4.1, Bricks child theme, WordPress 7.1.2, PHP 8.5.10) runs `1.0.15-dev.10` (sha256 `1a258f7c…6b46f7016`), deployed with the same file-parity and raw-settings checks as gatilab.com. Unused CSS stays off there; every build below ran in a separate WP-CLI process with CSS forced on for that process only, and its reports, reuse entries, and build locks were deleted afterwards. Rollback stage: `/var/tmp/gtperf-ai-20260926-e6f66498`.
+
+- **Bricks stylesheets are not optimized as the site is configured.** Every Bricks and theme stylesheet is served from `r2.anantamias.com`, which is not the site or GT Performance CDN host, so only inline styles were pruned (16 KB to 7 KB per page). Rendered in Chromium against the live assets, 8 of 9 pages were pixel-identical at 1280 and 390 px.
+- **With the R2 host allowed, `1.0.15-dev.8` broke Bricks pages.** The `@layer` statement opening `frontend-light-layer.min.css` nested Bricks' base layer inside `.aligncenter`: screen-reader text became visible, navigation links underlined, spacing collapsed (8.8% of pixels changed on desktop, 17.7% on mobile). `dev.9` fixed it: all 9 pages pixel-identical, and 34 KB more CSS removed per page (for example 242 KB to 148 KB on /admissions/), because Ionicons and the Bricks framework file were finally pruned.
+- **Script-built components.** /siachen-glacier/ lost its table of contents styling and ad rail layout (the desktop page grew 4,178 px): both are built by scripts after load. The browser check learned 15 classes, 1 ID, and 19 selectors for Posts (`.sp-toc li`, `.sp-toc a:hover`, `body.aca-has-rail .aca-rail`, …) and dropped 41 per-post heading IDs. With those, a build of the page through the real request path was pixel-identical at both widths, and its CSS went from 356 KB to 185 KB.
+- **Admin flow, WordPress Studio lab.** A lab-only mu-plugin builds a table of contents on load, a widget when scrolled into view, and a bar only on narrow screens. Saving a safelist change started the check by itself; it learned exactly those classes and selectors for Posts and nothing for Pages, cleared its request, and rebuilt CSS. A visitor then received the rules: computed styles of all three components matched. Before the token fix, posts on the lab were never served their build at all.
+- 507 unit tests / 1,840 assertions pass; PHPCS and PHPStan are clean.
+
+---
+
+# 1.0.15 development: page builder unused-CSS protection — 2026-09-26
+
+Covers 14 builders: GT Page Blocks, Elementor, Bricks, Divi/Extra, Beaver Builder, Oxygen, Breakdance, WPBakery, Thrive Architect, Brizy, Kadence Blocks, Spectra, GenerateBlocks, and SiteOrigin.
+
+- Runtime state classes were extracted from shipped front-end JavaScript (`classList.add/toggle`, `addClass/toggleClass`) for:
+  - Elementor 4.3.2, Beaver Builder Lite 2.11.0.6, Kadence Blocks 3.7.11.1, Spectra 2.20.3, GenerateBlocks 2.4.1, and SiteOrigin 2.36.1, downloaded from WordPress.org;
+  - Bricks, from the `bricks.min.js` served by anantamias.com.
+- Divi, Oxygen, Breakdance, WPBakery, Brizy, and GenerateBlocks Pro use documented state prefixes. GT Page Blocks, whose live output on gatilab.com shows an inline `gt-page-block-css` with runtime `.visible` and `[data-theme]` states, and Thrive Architect are excluded whole.
+- 473 unit tests / 1,748 assertions pass. Safelist entries are all valid. Through the real pruner, builder state rules survive while unused rules (and `.interactive-*` lookalikes) are removed. The collector skips page-block inline CSS while still optimizing other inline styles.
+- gatilab.com `1.0.15-dev.3`: GT Page Blocks and GenerateBlocks were detected, and their exclusions and safelist flow through the real filters. Unused CSS is currently off on that site, so this is not yet exercised on live pages.
+
+---
+
+# 1.0.15 development: M5–M7, gatilab.com stress testing — 2026-09-26
+
+Not a release. Deployed to gatilab.com as `1.0.15-dev.2` (sha256 `cb106b3c…31e71`); receipt and rollback in `__work/deploy-m2-20260926/receipt.md`.
+
+Local verification (PHP 8.5.10, WordPress 7.1, MariaDB 13.0.2):
+
+- Coding standards and PHPStan are clean; 469 unit tests / 1,717 assertions pass. Release metadata is consistent at 1.0.15.
+- The real-database suite passes 59 tests / 515 assertions: `OperationsTest` (M5), `FrontendOptimizationTest` (M6, real core speculation rules and core-printed scripts), and `AdvisorTest` (M7, a scripted provider, and a second process holding the in-flight lock).
+- The checks found and fixed:
+  - `true` as a return type, which is invalid on the supported PHP 8.1;
+  - the `%` unit escaping measurement checks;
+  - the `jquery` alias's inline code being ignored by the first script planner. Browser-caught; a regression test now fails if the alias is skipped.
+
+Studio (WordPress 7.1.2, SQLite):
+
+- MCP operate journey: 14 abilities discovered; the purge result reported origin, edge, and public responses; replay returned the same operation; the proposal was applied through the CLI; a disallowed field was rejected by schema.
+- Browser runs (desktop MISS/HIT, mobile touch) on a fixture with jQuery plus inline "after" code, a dependent script, a delay-selected script, and a consent `text/plain` script: 0 console errors; the jQuery initializer ran; the delayed script loaded only after the first key press or touch; the consent script was untouched; the hero preload was present; speculation rules excluded `/checkout/*`.
+- All admin tabs measure exactly 390 px at a 390-pixel viewport, after constraining the adviser's controls. The editor box appears on viewable post types only.
+- AI provider: the Anthropic provider plugin was detected as registered but not configured, and the adviser reported that clearly. **No live provider request was made** (no key available).
+
+gatilab.com:
+
+- Schema 6 → 7 migrated. Frontend with defer on: 5 real pages had identical deferred-script counts and 0 JavaScript errors before and after.
+- Settings history attributed the two wp-admin changes made there on 2026-09-26: agent access off → read, and unused CSS on → off, both by administrator #3.
+- Stress runs against the local origin (at most 8 concurrent, watchdog on load 4 and 2% errors; the host is shared with other production sites):
+  - Hit path: 595/600 at 13.5 ms p50, 65.6 ms p99.
+  - Cold-miss bursts: every response 200, no fatal errors, every page stored, 0 duplicate dependency rows.
+  - Queue: exactly one active runner, no job ran twice.
+  - Health builds in 14 ms; dependents lookup takes 1 ms across 576 indexed pages.
+- Intermittent 30 s stalls (0.5–1% of PHP requests, higher in bursts) also occurred for a temporary one-line PHP file with no WordPress (3/600), so they come from the host's OpenLiteSpeed/lsphp layer. Static files never stalled. Recommendation: review gatilab's LSAPI child and connection limits in xCloud.
+
+Not covered: a live AI provider request; named MCP clients against a production HTTPS site; PHP 8.1 and WordPress 6.6/6.9.0 runs; Plugin Check and distribution packages for this build.
+
+---
+
+# 1.0.15 version preparation — 2026-09-26
+
+M1–M4 ship as 1.0.15, the first release for the WordPress.org directory. The slug `gt-performance` is approved; its SVN repository exists but has no trunk or tags yet, and the plugin information API still reports "Plugin not found". The version is 1.0.15 on every surface `bin/release-metadata.php` checks, and it passes. CHANGELOG.md has a dated 1.0.15 section (preparation date; refresh at release). readme.txt has the 1.0.15 changelog, upgrade notice, description, and FAQ. Nothing was committed to WordPress.org SVN, tagged, or published. Evidence for the milestones follows.
+
+---
+
+# 1.0.15 development, M3: configuration history and dependency-aware purge — 2026-09-26
+
+Development candidates for 1.0.15, not a release. These builds were tested before the version bump, so their headers read 1.0.14.
+
+Local verification on PHP 8.5.10, WordPress 7.1, and MariaDB 13.0.2:
+
+- WordPress coding standards and PHPStan are clean; 451 unit tests / 1,536 assertions pass. New units cover the diff, portability, import rejection (foreign format, schema version, unknown, protected, and mistyped keys), history bounds (count, age, bytes), `saveChanges()` keeping a concurrent edit, the query classifier, and affected signatures.
+- The real-database suite passes 41 tests / 351 assertions. `ConfigurationTest` covers exact restore with current credentials kept, stale-hash refusal, failed publication leaving settings and history unchanged, import, and cross-process lock contention. It exposed a real lost update: a writer that waited for the lock then read a stale per-request option cache and overwrote the first writer. Fixed by invalidating the option cache when the lock is taken. `DependenciesTest` covers membership, pagination, unrelated-page retention, reassignment, renames, reusable blocks, `get_posts()`, commerce stock, generation binding, foreign hosts, and the preview. Mutating term matching failed 3 of its tests.
+
+WordPress Studio (WordPress 7.1.2, PHP 8.4, SQLite), real HTTP renders:
+
+- A landing page with a category Query Loop, a reusable block, and Latest Posts recorded `post:18` (the block), `term:2`, the shown posts, the `get_posts()` results with `pt:post`, and the navigation fallback's `pt:page`/`pt:wp_navigation`.
+- Editing a post the landing page never showed left it cached. Editing the reusable block purged it and it then served the new content; nothing was purged for this before. Moving a post out of the category purged the landing page and the old category archive. Unrelated pages stayed cached throughout.
+- CLI history, dry-run, stale-hash refusal (exit 1), and restore all worked. An admin form save recorded an `admin` revision and left no lock row. Tools rendered at 390 px without overflow.
+
+gatilab.com (candidates `1.0.14-m3-candidate` then `.2`, same parity, settings, and HTTP checks as before; receipt in `__work/deploy-m2-20260926/receipt.md`):
+
+- Schema 5 → 6 migrated. Origin MISSes through the loopback recorded dependencies, and a purge preview for the newest post named home and `/blog/` as "shows post 1060682".
+- The preview exposed a foreign author URL (`https://gauravtiwari.org/about/`) in the related purge. That URL was also being forwarded to this zone's edge purge. Fixed in candidate `.2` and verified there.
+
+Not covered: FSE template parts and slug-referenced navigation, commerce listings rendered outside `WP_Query`, page-builder custom queries, and live Cloudflare purge of recorded dependents. No distribution package or Plugin Check run for these candidates.
+
+---
+
+# 1.0.15 development, M4: read-only MCP and gatilab.com test deployment — 2026-09-26
+
+Development candidates for 1.0.15, not a release. These builds were tested before the version bump, so their headers read 1.0.14.
+
+Local verification on PHP 8.5.10, WordPress 7.1, and MariaDB 13.0.2:
+
+- WordPress coding standards and PHPStan are clean; 441 unit tests / 1,477 assertions pass.
+- The real-database suite passes 27 tests / 279 assertions, including queue priority aging and `AbilitiesTest` on the real Abilities API. That test covers registration and category; output-schema validation of all seven abilities; administrator-only access with live off/read switching (`check_permissions()` codes, while `execute()` returns core's generic `ability_invalid_permissions`); closed, bounded, same-site inputs; secret-free settings with a hash that changes on save; cursor paging without payloads; and the core `/wp-abilities/v1` run route (200 for administrators, 401/403 otherwise).
+
+MCP over real HTTP (Studio lab: WordPress 7.1.2, PHP 8.4, SQLite, official MCP Adapter 0.6.1 with its production dependencies):
+
+- Anonymous `initialize` returned 401. An Application Password session without cookies initialized and listed the adapter's discover/get-info/execute tools.
+- With agent access off, no GT ability was discovered, and get-info and execute were refused (`mcp.public!=true`).
+- With access set to read-only through the normal settings save, all seven were discovered with their annotations. Health, status, explain-url, list-jobs, and get-settings (with hash) returned the envelope. A foreign URL and an undeclared `purge` argument were rejected.
+- A subscriber's Application Password passed the adapter's login gate. Every GT execute was refused with the administrator-only message; the adapter still lists ability names to logged-in users.
+- `/wp-json/…` and `?rest_route=…` forms of the MCP and abilities routes are both page-cache bypasses.
+- Background cleanup on gatilab.com (1.0.15-dev.7, 2026-09-26): during a sitewide warm run (192 preloads pending), a manual expired-transients run started in 7 ms at priority 30 and completed on the next queue tick, about 30 s later. At the earlier priority 60, the same run sat queued for over 5 minutes behind the preloads.
+- Plugin Check (2026-09-26, `wp plugin check` on the built WordPress.org package in the MariaDB fixture): no errors or warnings. The same check on the previous build (1.0.15-dev.6) reproduces the three reported findings (stable tag, `DependencyIndex.php:92` placeholder count, `Integration.php:50` unprefixed hook), so it would catch them. With a must-use plugin changing the adapter's default route, the AI & MCP tab showed `/wp-json/mcp/custom-route-probe`, and that route answered 401 (it exists and needs authentication).
+- Background database cleanup (2026-09-26, Studio lab): with 462 revisions, 150 spam comments, and 60 trashed posts, **Run selected optimization** returned in 0.21 s instead of holding the request. The open Database tab showed per-task progress and reloaded with fresh counts about 2 s later; every count reached 0. `DatabaseCleanupTest` (6 tests) passes on MariaDB, and its purge test fails with the old purge behavior restored.
+- Unused CSS status (2026-09-26, Studio lab): Hybrid with a 2 KB limit built five pages as "Ready, one file", recording 13.9–15.9 KB of critical CSS; CSS Status suggested 16 KB. At 16 KB, all five rebuilt with 14–15 KB inlined plus a remaining file, confirmed in the served HTML. CSS Status fits at 390 px after the hidden-heading fix.
+- Tab restructure (2026-09-26, Studio lab): all 13 tabs (Dashboard, Page Cache, Optimization, CSS Status, Exceptions, Cloudflare, CDN, Object Cache, Database, Integrations, AI & MCP, Tools, License) render without PHP or console errors and measure exactly 390 px at a 390-pixel viewport. Saving on AI and Object Cache returns to the same tab and records no settings change, Test Redis returns to Object Cache, and Refresh status works on CSS Status. The tab row wraps to two lines at 1280 px with no tab hidden, fits on one line at 1600 px, and scrolls on phones. Tables inside panels draw only the panel's border; summary cards sit 20 px inside the panel edge. xCloud cache status is hidden while the xCloud integration is off.
+- The admin panel rendered. All eight admin tabs now measure exactly 390 px at a 390-pixel viewport, after fixing hidden tooltips that widened the Cache and Integrations tabs. Tooltips still open on keyboard focus.
+
+gatilab.com (WordPress 7.1.2, PHP 8.3.33, MariaDB/InnoDB, Hostinger + Cloudflare), WordPress.org channel. Every install passed preflight, exact file parity, an owned drop-in, an unchanged raw settings option, and HTTP 200 on sample pages. Backups, the table export, and rollback steps: `__work/deploy-m2-20260926/receipt.md`.
+
+- Schema 3 → 5 migrated in one CLI pass on real data: 188 pending jobs keyed and 17 duplicates consolidated.
+- Health surfaced a warm job starved for 447 hours by strict priority. This was fixed with aging plus a warm priority of 50 and verified: the job ran and oldest-due age fell to minutes.
+- Real warm run: 1,183 URL targets from core, robots-declared, and redirected sitemaps. The first outcomes included `rebuilt`, `existing`, and 41 `edge_observed` (`cf_hit`), the first real-edge evidence for that state. One failure was a sitemap URL that 301s.
+- M4 is installed with access off: abilities are registered and hidden, and anonymous access is denied. No MCP Adapter is installed there, so no remote MCP session was run against production.
+
+Not qualified: MCP over HTTPS on a production host, WordPress 6.9.0 exactly, the adapter's STDIO transport, and specific MCP clients. No distribution package, Plugin Check run, or PHP 8.1 / WordPress 6.6 pass for these candidates.
+
+---
+
+# 1.0.15 development, M2: warming and health — 2026-09-26
+
+The second roadmap slice on `main`, on top of the unreleased queue foundation below. It is not a release or deployment, and there is no MCP endpoint or AI-provider call.
+
+Fresh verification on PHP 8.5.10, WordPress 7.1, and MariaDB 13.0.2 (InnoDB):
+
+- Composer strict validation and release metadata passed; version metadata remains 1.0.14.
+- WordPress coding standards, PHPStan, and 436 unit tests / 1,353 assertions passed. New units cover sitemap `lastmod`, robots.txt (including CRLF lines, which the first draft dropped), numeric `<loc>` values, preload outcome classification, health thresholds, stalled runs, export redaction, Site Health mapping, and sitemap-source sanitizing.
+- The real-database suite passed 19 tests / 181 assertions, up from 13 / 107. `WarmingDatabaseTest` runs the actual queue runner with in-process HTTP fixtures. It covers redirected, nested, cyclic, broken, and foreign sitemaps; a redirect cycle fetched once; no fetch beyond five levels; private and search URLs excluded; recovery from a worker dying mid-discovery without refetching or duplicate targets; mobile variants against a five-entry budget (`capacity_limited`); an origin-stored page reported as `origin_ready`/`rebuilt` while an edge MISS with nothing stored stays `requested`; and 60,000 URLs capped at exactly 50,000 targets, at most two sitemap fetches per leased job, within bounded memory.
+
+WordPress Studio qualification (WordPress 7.1.2, PHP 8.4, SQLite integration), on a fresh "GT Performance M2 Lab" site:
+
+- Found and fixed: on SQLite, `GET_LOCK` returns `'1=1'` and locks nothing, so the M1 schema lock never succeeded and no plugin tables were created. A driver probe showed the rest of the SQL used here is emulated (dbDelta with an engine clause, table status, unique indexes, `INSERT IGNORE`, `UPDATE … LIMIT`, `FOR UPDATE`, `UTC_TIMESTAMP`, `DATE_ADD`). `NamedLock` keeps `GET_LOCK` on MySQL and uses expiring option rows via `INSERT IGNORE` on SQLite. A first draft used `add_option()`, which upserts and is not exclusive; that was replaced before running. On Studio, the lock was exclusive per name, independent across names, taken over only after expiry, and left no row after release. A web-spawned cron runner holding the runner lock correctly kept a concurrent CLI runner idle.
+- A real HTTP warm run against the core sitemap (robots.txt pointed to the same sitemap and was deduplicated) read 5 sitemaps and recorded 17/17 URLs as `origin_ready`. The home page went first, then posts with recent `lastmod`, then archives. The run finished `complete`, and `curl` showed `x-gt-cache: HIT` afterwards. A full purge emptied the store, queued `warm_site` automatically, and restored `complete` with 17 `origin_ready` and HITs.
+- Tools → Health and Cache warming rendered at 1280 px, and at 390 px without horizontal overflow or console errors. The Site Health test appeared. The support export downloaded 2.4 KB of JSON with no absolute paths. Health correctly flagged 12 preload jobs that 404ed; these were post URLs made stale by switching permalinks during setup, not a plugin fault.
+- Studio ships the placeholder `AUTH_KEY`, which the plugin deliberately refuses for runtime-config encryption, so Health reported configuration publication failed until the salts were shuffled. This is existing, intended behavior.
+
+Limits: no Cloudflare/xCloud edge was involved, so `edge_observed` is covered only by fixtures. Font-localization jobs can still exceed the runner's 20-second budget. A dead SQLite runner holds its slot for up to ten minutes. 4xx preloads still retry three times. No distribution package, Plugin Check run, PHP 8.1, or WordPress 6.6 pass was repeated for this slice.
+
+---
+
+# 1.0.15 development, M1: queue foundation — 2026-09-26
+
+This is the first implementation slice of the feature/MCP/AI roadmap on `main`, based on 1.0.14. It is not a release or deployment. MCP and AI are not implemented. The saved roadmap tracks the remaining M1 budget split and M2–M7 work.
+
+Fresh verification on PHP 8.5.10, WordPress 7.1, and MariaDB 13.0.2 with an InnoDB jobs table:
+
+- Composer strict validation and release metadata consistency passed; version metadata remains 1.0.14.
+- WordPress coding standards, PHPStan, and 419 unit tests / 1,300 assertions passed. The final preload redirect condition also passed focused integration and static checks.
+- The separate real-database suite passed 13 tests / 107 assertions. Separate PHP processes use a deterministic selection barrier to reproduce enqueue and claim contention. Coverage includes worker expiry and attempt exhaustion, backoff/retry, cancellation, purge priority during pause, bounded migration beyond 500 rows, duplicate live leases, migration locking, no frontend migration, late file/CSS-report publication rejection, runner limits, and refusal to follow redirects with lease credentials.
+- Real WordPress admin browser checks passed for pause, resume, retry, and pending cancellation. Stored options/rows agreed with the UI. Errors were redacted. The page width remained 390 pixels at a 390-pixel viewport; the queue table scrolled inside its container.
+- An unauthenticated admin-post request returned HTTP 400 without resuming the queue. An authenticated administrator POST with an invalid nonce returned HTTP 403 without pausing it.
+- Both distribution candidates were built as `dist/gt-performance-1.0.14-m1-candidate*.zip`, without overwriting the release archives. Internal audit/plan files and tests are excluded. The WordPress.org package excludes licensing; the FluentCart package retains it.
+
+Plugin Check passed without findings for the WordPress.org candidate. The FluentCart candidate passed with only the directory-specific `plugin_updater` check excluded; that channel deliberately retains its existing licensed updater and Update URI. All 104 WordPress.org and 112 FluentCart runtime source/assets/drop-in files matched their packaged copies. Candidate hashes and the exact file counts are in `__work/queue-integration/package-receipt.json`.
+
+The database fixture lives under ignored `__work/queue-integration/` and uses only its dedicated `gtperf_integration_20260926` database. Reproducible database test instructions are in `tests/Integration/README.md`.
+
+Limits: existing sitemap/font tasks renew leases at checked unit boundaries but can still exceed the runner's 20-second between-job budget; durable resumable discovery and smaller jobs are pending. There is no new MCP endpoint or AI-provider call. No production data, external cache rules, or release tags were changed. PHP 8.1, WordPress 6.6, Studio/SQLite, commerce checkout journeys, live edge purge effects, and MCP/AI compatibility are not qualified by this run.
+
+---
+
 # 1.0.14 store release and two-site deployment — 2026-09-21
 
 The FluentCart package is published for product **1170147**, download **302**; prior download **298 / 1.0.12** is retained. Licensed updater checks pass **13/13**, and a real local WordPress bulk upgrade downloaded the exact artifact while maintenance mode was active. The WordPress.org package is active on **gauravtiwari.org** and **gatilab.com**, with exact 569-file parity and saved settings preserved.

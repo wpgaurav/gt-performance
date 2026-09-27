@@ -78,7 +78,8 @@ final class DatabaseModule implements Module {
 
 	public function cleanup(): void {
 		if ( (bool) Settings::get( 'database.enabled', false ) ) {
-			( new Cleaner() )->run( null, true );
+			// Same background run as the manual button; skipped while one is active.
+			( new CleanupRun() )->start( array_map( 'strval', (array) Settings::get( 'database.tasks', array() ) ), true, 'scheduled' );
 		}
 	}
 

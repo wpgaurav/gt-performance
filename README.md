@@ -4,7 +4,9 @@
 
 GT Performance is an independent WordPress performance plugin for safe page caching, server-side frontend optimization, Cloudflare Free orchestration, and commerce-aware cache protection.
 
-The current release is `1.0.14`. It is free GPL software; it is not yet listed in the WordPress.org plugin directory, and submission is pending. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+[Try it in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wpgaurav/gt-performance/main/distribution-assets/wordpress-org/blueprints/blueprint.json) · [GT Performance Community](https://gauravtiwari.org/portal/) · [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/)
+
+The current release is `1.1.0`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -25,10 +27,10 @@ The current release is `1.0.14`. It is free GPL software; it is not yet listed i
   - critical CSS inline with the remaining CSS in an immutable file.
 - Conservative JavaScript minification, defer, and interaction-delay controls.
 - Image loading priorities, missing dimensions, WebP/AVIF variants, lightweight YouTube embeds, and optional local Google Fonts.
-- Manual database scanning and selectable cleanup in Tools, scheduled database maintenance in Optimization, and Perfmatters-style WordPress request and bloat controls.
+- Manual database scanning and selectable cleanup that runs in the background with live progress, plus scheduled database maintenance, on the Database tab, and Perfmatters-style WordPress request and bloat controls.
 - Explain This Page diagnostics with cache-decision reasons, deterministic key, local artifact state, and the expected Cloudflare result.
 - Verified Purge receipts that compare bounded response fingerprints and cache headers after origin and edge invalidation without storing page bodies.
-- Standalone GT Performance admin with Dashboard, Cache, Optimization, Exceptions, Cloudflare, CDN, Integrations, and Tools sections.
+- Standalone GT Performance admin with Dashboard, Page Cache, Optimization, CSS Status, Exceptions, Cloudflare, CDN, Object Cache, Database, Integrations, AI & MCP, and Tools sections.
 - Administrator-bar actions for purging or purge-verifying the current page, warming it, purging page and edge caches, flushing object cache, and testing Redis.
 - Comprehensive cache, CSS, JavaScript, media, font, database, bloat, Cloudflare, commerce, and exception controls.
 - Live unused-CSS processing reports with ready, processing, stale, skipped, and failed states plus delivery and size details.
@@ -38,7 +40,9 @@ This list describes the current plugin. The original product plan is historical 
 
 ## How unused CSS works
 
-The **Optimization → Unused CSS status** panel shows queued, processing, ready, stale, failed, and skipped results; original and generated sizes; build duration; and failure details. Totals cover all stored URL/mode reports, while the table shows the latest 50. Use **Refresh status** to update the report without losing unsaved settings. Savings describe analyzed CSS bytes, not measured visitor bandwidth.
+The **CSS Status** tab counts results for the current delivery mode (ready, out of date, queued, building, failed, skipped) and explains each page's result in plain language: what visitors get, and what to do when something needs attention. **Refresh status** updates the report without losing unsaved settings. Savings describe analyzed CSS bytes before compression, not measured visitor bandwidth.
+
+Hybrid delivery inlines the CSS for the top of the page (the first 160 elements, plus site-wide rules such as design tokens and fonts) and loads the rest as a file. When a page needs more than the **Hybrid inline CSS limit**, it inlines nothing and sends one file, exactly like Generated file mode. CSS Status marks those pages "Ready, one file", records how much CSS they needed, and suggests a limit that fits three in four pages.
 
 Use **Force regenerate URL** or a row’s **Regenerate** button to invalidate that URL’s reusable CSS and queue a fresh build. **Force regenerate all CSS** invalidates all results, purges page caches, and rebuilds known eligible URLs in batches; other URLs rebuild on their next eligible visit. Builds respect saved rollout, exclusions, safe mode, and optimization ownership. WordPress cron must run to drain the queue. Existing generated files are retained for cached pages.
 
@@ -77,9 +81,9 @@ Active FluentCart, EDD, and WooCommerce adapters supply bypass rules for dynamic
 
 ## Redis object cache
 
-Open **GT Performance → Integrations** to configure a Redis host or Unix socket, port, database, ACL username, password, TLS, persistent connections, key prefix, and bounded connection/read timeouts. Passwords are encrypted in the WordPress option. The early object-cache drop-in receives an authenticated encrypted JSON runtime configuration and fails back to request-local caching if Redis is unavailable.
+Open **GT Performance → Object Cache** to configure a Redis host or Unix socket, port, database, ACL username, password, TLS, persistent connections, key prefix, and bounded connection/read timeouts. Passwords are encrypted in the WordPress option. The early object-cache drop-in receives an authenticated encrypted JSON runtime configuration and fails back to request-local caching if Redis is unavailable.
 
-GT Performance reads the standard constants used by [Till Krüss Redis Object Cache](https://github.com/rhubarbgroup/redis-cache), so an existing configuration does not need to be duplicated. The Integrations screen includes this copy-ready `wp-config.php` example:
+GT Performance reads the standard constants used by [Till Krüss Redis Object Cache](https://github.com/rhubarbgroup/redis-cache), so an existing configuration does not need to be duplicated. The Object Cache screen includes this copy-ready `wp-config.php` example:
 
 ```php
 define( 'WP_REDIS_HOST', '127.0.0.1' );
@@ -177,7 +181,166 @@ Only explicitly selected extensions are rewritten. Third-party URLs, extensionle
 
 ## Updates
 
-GT Performance is free software with no license key or activation. It is not yet listed in the WordPress.org plugin directory, so WordPress will not offer updates for it automatically: the plugin ships `Update URI: false` so that an unrelated plugin claiming the `gt-performance` slug can never push a package to these installs. Update by replacing the plugin directory with a release archive from this repository until the directory listing exists.
+GT Performance is free software with no license key or activation. The WordPress.org slug `gt-performance` belongs to this plugin. Installs from the plugin directory receive updates from WordPress.org. The source in this repository and the FluentCart package keep `Update URI: false` and are updated from their own channel.
+
+## Background queue controls
+
+1.1.0 adds **Tools → Background queue** with recent jobs, attempts, redacted errors, and pause/resume/retry/cancel controls. Pausing prevents new optional jobs from starting; URL invalidations and the separate Cloudflare retry cron remain active. Cancellation is cooperative: an in-flight network request cannot be recalled, and running jobs stop at their next checked boundary.
+
+```sh
+wp gt-performance queue status
+wp gt-performance queue list --status=failed --limit=20
+wp gt-performance queue pause
+wp gt-performance queue resume
+wp gt-performance queue retry --id=123
+wp gt-performance queue cancel --id=123
+wp gt-performance queue run --limit=20
+```
+
+Omitting the action still runs jobs, preserving existing cron commands. Runs start at most 100 jobs and stop taking new work after 20 seconds. Sitemap discovery now fetches at most two sitemaps per job; a single font-localization task can still exceed that interval. Leases renew between checked units. Image encoding processes one source file per job. Workers use at-least-once delivery; a repeated external HTTP effect remains possible after a crash.
+
+Schema version 4 adds unique active keys, leases, cooperative cancellation, and bounded duration metadata. Duplicate enqueue requests return the active job ID. Terminal jobs release their key; crashed workers stop after three claims and can be retried manually. Publication checks stop superseded workers from replacing local files or completed CSS reports. One connection-owned runner slot is used per site.
+
+The migration runs on admin/CLI requests, backfills up to 500 rows per request, and waits for duplicate live leases to expire. New enqueue/claim/retry work is disabled until schema readiness is confirmed. Open Tools or repeat a CLI command to advance an unfinished migration. Queue claims require MySQL/MariaDB with an InnoDB jobs table, or the SQLite integration used by WordPress Studio and Playground. Any other engine is reported as incomplete instead of silently enabling unsafe workers. MySQL uses connection-owned advisory locks for the migration and the single runner. SQLite has none, so those locks are expiring option rows; a runner that dies there holds its slot for up to one ten-minute lease period. Anonymous frontend requests do not run this backfill.
+
+## Resumable warming and health
+
+A warm run is now a sequence of bounded jobs instead of one request loop. It starts after a full purge (when warming is on), from **Tools → Cache warming → Start warm run**, or with `wp gt-performance cache warm`.
+
+- **Sources:** **Page cache → Cache warming → Sitemap sources** accepts up to 10 sitemap URLs from this site. Empty means core's `/wp-sitemap.xml` plus same-origin `Sitemap:` lines in robots.txt.
+- **Discovery:** each job fetches at most two sitemaps, with a 10-second timeout and a 2 MB response limit. Nested indexes and redirect hops are followed five levels deep, and redirects are not followed automatically. Other hosts, visited sitemaps, and ineligible or private URLs are skipped. A run holds at most 50,000 targets and keeps its state in `gtperf_warm_targets` for seven days, so a worker that dies resumes where it stopped.
+- **Order and limits:** the home page goes first, then sitemap entries modified in the last seven days, then everything else. **URLs per warming batch** (`preload_max_urls`, default 200, maximum 2,000) sets how many preloads are queued at once. The next batch waits until the previous one reports. With a positive `cache.entry_budget`, a run stops at that many entries (mobile copies count separately) and reports `capacity_limited` instead of evicting pages just to finish.
+- **Outcomes:** every preload records `origin_ready` (a fresh page is stored, and whether this request rebuilt it), `edge_observed` (Cloudflare answered from cache, so the origin was not rebuilt), `requested` (HTTP 200 with no stored page), `skipped`, or `failed`. HTTP 200 alone is not treated as success. With a separate mobile cache, mobile copies are requested with a phone user agent.
+- **Run states:** `discovering`, `warming`, `complete`, `partial` (a sitemap failed, was truncated, hit a limit, or preloads were disabled), `capacity_limited`, or `superseded`.
+
+**Tools → Health** combines queue backlog and age, the last scheduled queue run, WP-Cron, cache storage, drop-ins, edge ownership, runtime configuration publication, purge verification receipts, recent unused-CSS failures, and the latest warm run. Each row names its source (live probe or saved state) and observation time. It requests no pages and never estimates a site-wide hit rate: early cache and edge hits skip WordPress, so the plugin cannot count them. The same report appears as one WordPress Site Health test. **Download support report** exports redacted JSON, without absolute paths, credentials, or query strings.
+
+```sh
+wp gt-performance cache warm
+wp gt-performance cache warm-status
+wp gt-performance health
+wp gt-performance health --format=json
+```
+
+Schema version 5 adds the warm-targets table through the same locked admin/CLI upgrade.
+
+Waiting jobs age toward priority 20: after 30 minutes they run as 50, after two hours as 30, after six hours as 20. Purge invalidation (10) always leads. Warm-run jobs themselves run at 50, level with preloads and ahead of unused-CSS generation (70). Before this, a steady CSS backlog could postpone warming indefinitely; one production site had a warm run waiting 18 days.
+
+## Dependency-aware purging
+
+When the origin renders and stores a page, GT Performance records what the page was built from:
+
+- the posts it showed, including those fetched with `get_posts()` (for example the Latest Posts block);
+- the listings it asked for: a post type, or a category or tag for term-limited queries such as Query Loop blocks and category archives;
+- reusable blocks and navigation menus it embedded.
+
+When content changes, the automatic purge still clears the same related pages as before (the post, home, archives, author, and terms). It then adds every cached page whose recorded dependencies the change affects:
+
+- A content edit reaches pages that showed that post.
+- Publishing, unpublishing, deleting, changing the date, or moving a post between terms reaches every listing of that post type or term, including a page two it was never shown on and the category it was moved out of.
+- Editing a reusable block or navigation menu purges the pages that embed it; previously nothing was purged.
+- Commerce price and stock changes purge shop pages and product grids as well as the product page.
+- Renaming a term purges its old and new archive URLs.
+
+Pages that recorded nothing affected stay cached. Records belong to the current settings generation and are pruned in bounded batches; a page not rendered since the last settings save simply has none, and the related-page purge still covers it. Related URLs on another host (an author link to a personal site, for example) are now left out of both local and edge purges. Only the "post and related pages" purge policy adds recorded dependents.
+
+```sh
+wp gt-performance cache preview --post=123              # a content edit
+wp gt-performance cache preview --post=123 --membership # a publication, withdrawal, or term move
+```
+
+The preview lists every URL with its reasons and how many pages are indexed. It purges nothing.
+
+## Settings history, export, and restore
+
+Every settings save, whether from the admin screens, WP-CLI, connection flows, or a restore, records the non-secret values it replaced. History keeps the last 20 revisions, none older than 90 days, 512 KB at most. **Tools → Settings history** lists them with the differences from now and a restore button. From there you can also export settings to JSON, then preview and apply an import.
+
+Credentials, Cloudflare and xCloud identity, Redis, agent access, and the cache generation are never stored in history, exported, imported, or restored. Restoring keeps the current credentials. Imports reject a foreign file, an unsupported schema version, and any unknown or protected key. Restore and import are bound to the settings hash you previewed, so they refuse to overwrite a change made in the meantime. All writers share one settings lock, and connection flows that call a remote API before saving now apply only the keys they changed. A restore changes local settings only: when Cloudflare is connected and cache settings changed, it asks you to run a Cloudflare sync rather than claiming the edge was restored.
+
+```sh
+wp gt-performance config history
+wp gt-performance config export --file=settings.json
+wp gt-performance config diff settings.json
+wp gt-performance config import settings.json --dry-run
+wp gt-performance config import settings.json --expected-hash=<hash>
+wp gt-performance config restore <revision-id-or-prefix> --expected-hash=<hash>
+```
+
+Schema version 6 adds a generation column to the dependency table.
+
+## Frontend loading safety
+
+**JavaScript.** Defer and delay decisions come from WordPress's script registry:
+
+- A script is deferred only when no inline code runs right after it and every script that depends on it can be deferred too. This is the same rule WordPress core applies to its own loading strategies.
+- Aliases count: inline code attached to `jquery` keeps jQuery blocking. Previously, enabling defer also deferred jQuery and broke inline `jQuery(...)` calls.
+- A script matching a delay pattern is delayed together with every script that depends on it, or, when any of them is excluded or has inline code after it, none of them are.
+- Scripts WordPress did not register (hardcoded tags) have unknown ordering. They are never deferred, but can still be delayed by naming them in the delay patterns.
+- With diagnostic logging on, every page ends with an HTML comment explaining each decision.
+- The editor's **GT Performance** box can turn off delay, or all script changes, for one page.
+
+**Hero images.** **Optimization → Media → Hero image rules** replaces "the first image in the document" with a declared hero, one rule per line:
+
+```text
+post_type:product => .wp-post-image preload
+front_page => url:https://example.com/wp-content/uploads/hero.jpg
+template:landing => attachment:123 preload
+* => .hero-image
+```
+
+The first matching rule, or the page's own setting in the editor, picks the image that gets `fetchpriority="high"` and eager loading. `preload` adds one responsive `<link rel="preload">`, never duplicating an existing preload. `url:` declares a CSS background hero to preload; backgrounds are never guessed from stylesheets. Attributes your theme or WordPress set still win.
+
+**Speculative loading.** On WordPress 6.8+, core prefetches a page when a visitor starts to click its link. GT Performance adds every cache bypass path to core's exclusions, including each active commerce adapter's cart, checkout, and account paths. With plain permalinks it also excludes action, cart, download, and signature parameters. Modes: WordPress default plus exclusions (recommended), prefetch on press only, or off. If the Speculative Loading plugin is active, it keeps control of the mode and GT adds exclusions only.
+
+## Optional AI adviser
+
+On WordPress 7.0+ with an AI provider configured in WordPress (for example the AI Provider for Anthropic, OpenAI, or Google plugins), **AI & MCP → AI adviser** enables the adviser on the same tab. It can explain a page's caching, diagnose the queue and warming, review optimization settings, or explain a purge.
+
+Each request is two explicit steps. **Prepare** builds a redacted report and shows exactly what will be sent and to which provider. The report is at most 24 KB and holds relative paths only: no HTML, cookies, headers, credentials, customers, orders, or server paths. **Send** makes one request through the WordPress AI Client, with at most 2,000 output tokens, a 30-second timeout, and no retry. GT Performance stores no AI keys and names no model.
+
+Answers are validated before they are shown:
+
+- findings must cite report items;
+- numbers not present in the report are marked;
+- model text is shown as plain text;
+- suggestions must be allowlisted settings with valid values.
+
+Suggestions have no authority. **Create a proposal** turns them into a settings proposal that an administrator applies separately. Limits: one request at a time and 20 per site per UTC day. Failed requests still count. The last 20 answers are kept for seven days, token usage is shown, and nothing estimates cost.
+
+## AI assistants through MCP and REST
+
+On WordPress 6.9 and later, GT Performance registers seven abilities with the WordPress Abilities API. An external AI assistant (Claude, ChatGPT/Codex, or any MCP client) can then read this site's cache evidence through the official [WordPress MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin:
+
+| Ability | Returns |
+|---|---|
+| `gt-performance/get-status` | Versions, schema and queue readiness, enabled modules, MCP/AI availability, last runner and warm-run times |
+| `gt-performance/explain-url` | Cacheability and reason, cache key, stored origin page state, Cloudflare rule agreement (public or mobile variant) |
+| `gt-performance/get-health` | The redacted health report |
+| `gt-performance/list-jobs` | Queue jobs, newest first, filterable by status and type, paged by cursor; no payloads |
+| `gt-performance/get-css-report` | The stored unused-CSS report for one URL; no server paths |
+| `gt-performance/get-settings` | Non-secret settings and their hash; credentials, account emails, Redis host/auth, and hosting identifiers are never included |
+| `gt-performance/list-purge-receipts` | Saved purge-verification receipts |
+
+Two more read abilities accompany operations: `preview-purge` (what an update to a post would purge, and why) and `get-operation` (the state and result of an operation or proposal).
+
+**Read and operate** access adds five abilities. Each needs a client-generated `request_id` UUID: repeating it returns the first result, and reusing it with different arguments is a conflict.
+
+| Ability | Does |
+|---|---|
+| `gt-performance/purge-urls` | Purges up to 20 of this site's URLs at the origin and configured edge, then requests each publicly; per-URL results report origin, edge, and public response |
+| `gt-performance/preload-urls` | Queues preloads for up to 20 URLs |
+| `gt-performance/regenerate-css` | Queues an unused-CSS rebuild for one URL |
+| `gt-performance/retry-job` | Retries one failed preload, warming, CSS, or image job |
+| `gt-performance/propose-settings` | Records a proposal for warming, JavaScript defer/delay, critical images, CSS rollout, or safelist changes; an administrator applies it in Tools or `wp gt-performance operations apply <id>` within 15 minutes |
+
+Operations run in the background queue and return an operation ID immediately. Before starting, a queued operation re-checks that access is still "operate" and that its requester is still an administrator; otherwise it is cancelled. Limits: 60 submissions a minute per user and 100 outstanding operations per site. There is no full-site or zone purge, settings apply, credential change, or raw database access.
+
+Access is off by default. Set it under **AI & MCP → MCP and REST access → Agent access**, which also shows the REST and MCP endpoints and the last call. While access is off, abilities are hidden from MCP and REST and every call is denied, even from a client that listed them earlier; read-only hides the five operations the same way. Calls always require an administrator account.
+
+**REST needs no extra plugin.** Scripts, automation tools, and assistants that call HTTP APIs can run abilities at `/wp-json/wp-abilities/v1/abilities/gt-performance/<name>/run` with an Application Password. The MCP Adapter is only needed for MCP clients such as Claude, Codex, or Cursor.
+
+To connect an MCP client: install and activate the MCP Adapter (qualified against 0.6.1). Create a WordPress Application Password for a dedicated administrator account and use HTTPS. The endpoint is `/wp-json/mcp/mcp-adapter-default-server`. The adapter's default server exposes discovery, info, and execute tools; clients discover GT abilities through them rather than as separate top-level tools. An Application Password carries the account's full WordPress privileges, so revoke it from that user's profile to disconnect. Other plugins' abilities on the shared server are theirs to control. `wp gt-performance abilities status` shows the same readiness from the command line.
+
 
 ## Development
 
@@ -190,6 +353,12 @@ composer check
 ```
 
 `composer check` runs WordPress coding standards, PHPStan level 6 with WordPress/WP-CLI stubs, and PHPUnit.
+
+Real queue, warming, Abilities, settings, and dependency tests run separately against a disposable WordPress installation with a database named `gtperf_integration_*`. They truncate the fixture jobs and warm-target tables and exercise schema upgrades. Never point them at a customer site. See [the integration fixture instructions](tests/Integration/README.md).
+
+```sh
+GTPERF_TEST_WP_ROOT=/absolute/path/to/disposable-wordpress vendor/bin/phpunit -c tests/Integration/phpunit.xml
+```
 
 ## Status
 

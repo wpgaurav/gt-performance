@@ -25,6 +25,17 @@ final class ReportRepository {
 	private array $buildVersions = array();
 
 	public function begin( string $url, string $mode ): string {
+		$fingerprint = hash( 'sha256', $url . '|' . $mode );
+		\GTPerformance\Queue\JobLease::publish(
+			function () use ( $url, $mode ): bool {
+				$this->beginOwned( $url, $mode );
+				return true;
+			}
+		);
+		return $fingerprint;
+	}
+
+	private function beginOwned( string $url, string $mode ): string {
 		global $wpdb;
 
 		$fingerprint = hash( 'sha256', $url . '|' . $mode );
@@ -94,6 +105,16 @@ final class ReportRepository {
 	 * @param array<string, mixed> $metadata Generation metadata.
 	 */
 	public function complete( string $fingerprint, string $mode, string $status, string $path, array $metadata ): void {
+		\GTPerformance\Queue\JobLease::publish(
+			function () use ( $fingerprint, $mode, $status, $path, $metadata ): bool {
+				$this->writeComplete( $fingerprint, $mode, $status, $path, $metadata );
+				return true;
+			}
+		);
+	}
+
+	/** @param array<string,mixed> $metadata Generation metadata. */
+	private function writeComplete( string $fingerprint, string $mode, string $status, string $path, array $metadata ): void {
 		global $wpdb;
 
 		$metadata['generation'] = $this->buildVersions[ $fingerprint ]['generation'] ?? (int) Settings::get( 'generation', 1 );
@@ -198,29 +219,38 @@ final class ReportRepository {
 			return array();
 		}
 
-		$currentGeneration = (int) Settings::get( 'generation', 1 );
-		$reports           = array();
+		$reports = array();
 		foreach ( $rows as $row ) {
-			$metadata = json_decode( (string) ( $row['metadata'] ?? '' ), true );
-			$metadata = is_array( $metadata ) ? $metadata : array();
-			$status   = (string) ( $row['status'] ?? 'failed' );
-			if ( in_array( $status, array( 'ready', 'skipped' ), true ) && ( (int) ( $metadata['generation'] ?? 0 ) < $currentGeneration || (string) ( $metadata['revision'] ?? 1 ) !== (string) get_option( 'gtperf_css_revision', 1 ) ) ) {
-				$status = 'stale';
-			}
-
-			if ( 'ready' === $status ) {
-				foreach ( (array) ( $metadata['outputs'] ?? array() ) as $output ) {
-					if ( ! empty( $output['path'] ) && ! is_file( (string) $output['path'] ) ) {
-						$status = 'stale';
-					}
-				}
-			}
-			$row['metadata'] = $metadata;
-			$row['status']   = $status;
+			$metadata        = json_decode( (string) ( $row['metadata'] ?? '' ), true );
+			$row['metadata'] = is_array( $metadata ) ? $metadata : array();
+			$row['status']   = $this->effectiveStatus( $row );
 			$reports[]       = $row;
 		}
 
 		return $reports;
+	}
+
+	/**
+	 * A stored ready report is stale once settings or the CSS revision moved on,
+	 * or when one of its generated files has gone.
+	 *
+	 * @param array<string, mixed> $row Report with decoded metadata.
+	 */
+	public function effectiveStatus( array $row ): string {
+		$metadata = (array) ( $row['metadata'] ?? array() );
+		$status   = (string) ( $row['status'] ?? 'failed' );
+		if ( in_array( $status, array( 'ready', 'skipped' ), true ) && ( (int) ( $metadata['generation'] ?? 0 ) < (int) Settings::get( 'generation', 1 ) || (string) ( $metadata['revision'] ?? 1 ) !== (string) get_option( 'gtperf_css_revision', 1 ) ) ) {
+			return 'stale';
+		}
+		if ( 'ready' === $status ) {
+			foreach ( (array) ( $metadata['outputs'] ?? array() ) as $output ) {
+				if ( ! empty( $output['path'] ) && ! is_file( (string) $output['path'] ) ) {
+					return 'stale';
+				}
+			}
+		}
+
+		return $status;
 	}
 
 	/** @return array<string, mixed>|null */
@@ -239,33 +269,84 @@ final class ReportRepository {
 	}
 
 	/**
-	 * All report totals; byte savings include current ready reports only.
+	 * Report totals; byte savings include current ready reports only.
+	 *
+	 * With a delivery mode, results built for another mode are left out of the
+	 * status counts and totalled as `other_mode`: they are history from before a
+	 * mode change, and counting them made a site look mostly stale.
 	 *
 	 * @return array<string, int>
 	 */
-	public function statistics(): array {
+	public function statistics( string $mode = '' ): array {
 		$totals = $this->summary( array() ) + array(
-			'total' => 0,
-			'original_bytes' => 0,
+			'total'           => 0,
+			'original_bytes'  => 0,
 			'generated_bytes' => 0,
+			'other_mode'      => 0,
 		);
-		$offset = 0;
-		do {
-			$rows = $this->recent( 200, $offset );
-			foreach ( $this->summary( $rows ) as $status => $count ) {
-				$totals[ $status ] += $count;
-			}
+		foreach ( $this->all() as $rows ) {
 			foreach ( $rows as $row ) {
+				if ( '' !== $mode && (string) ( $row['mode'] ?? '' ) !== $mode ) {
+					++$totals['other_mode'];
+					continue;
+				}
+				++$totals['total'];
+				if ( isset( $totals[ $row['status'] ] ) ) {
+					++$totals[ $row['status'] ];
+				}
 				if ( 'ready' === $row['status'] ) {
-					$totals['original_bytes'] += max( 0, (int) ( $row['metadata']['original_bytes'] ?? 0 ) );
+					$totals['original_bytes']  += max( 0, (int) ( $row['metadata']['original_bytes'] ?? 0 ) );
 					$totals['generated_bytes'] += max( 0, (int) ( $row['metadata']['generated_bytes'] ?? 0 ) );
 				}
 			}
-			$count = count( $rows );
-			$totals['total'] += $count;
-			$offset += 200;
-		} while ( 200 === $count );
+		}
+
 		return $totals;
+	}
+
+	/**
+	 * Current Hybrid builds: how many fell back to one file, and the critical
+	 * CSS sizes of those that recorded one.
+	 *
+	 * @return array{builds:int,fallbacks:int,sizes:list<int>}
+	 */
+	public function hybridBudget(): array {
+		$result = array(
+			'builds'    => 0,
+			'fallbacks' => 0,
+			'sizes'     => array(),
+		);
+		foreach ( $this->all() as $rows ) {
+			foreach ( $rows as $row ) {
+				if ( 'hybrid' !== (string) ( $row['mode'] ?? '' ) || 'ready' !== $row['status'] ) {
+					continue;
+				}
+				++$result['builds'];
+				if ( ReportExplainer::FALLBACK_BUDGET === ( $row['metadata']['fallback'] ?? '' ) ) {
+					++$result['fallbacks'];
+				}
+				if ( isset( $row['metadata']['critical_bytes'] ) ) {
+					$result['sizes'][] = (int) $row['metadata']['critical_bytes'];
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Every report, 200 at a time.
+	 *
+	 * @return \Generator<int, list<array<string, mixed>>>
+	 */
+	private function all(): \Generator {
+		$offset = 0;
+		do {
+			$rows    = $this->recent( 200, $offset );
+			$fetched = count( $rows );
+			yield $rows;
+			$offset += 200;
+		} while ( 200 === $fetched );
 	}
 
 	/**

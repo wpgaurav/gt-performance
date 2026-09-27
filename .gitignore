@@ -3,6 +3,7 @@
 /.DS_Store
 /.phpunit.cache/
 /.phpunit.result.cache
+/tests/Integration/.phpunit.result.cache
 /build/
 /coverage/
 /dist/

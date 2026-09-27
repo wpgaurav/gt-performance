@@ -157,13 +157,27 @@ final class ImageVariantGenerator {
 		}
 
 		$editor->set_quality( (int) Settings::get( 'media.compression', 82 ) );
-		$saved = $editor->save( $target, $mime );
+		\GTPerformance\Queue\JobLease::checkpoint();
+		$temp = dirname( $target ) . '/.gtperf-' . wp_generate_uuid4() . '.' . ( 'image/avif' === $mime ? 'avif' : 'webp' );
+		$saved = $editor->save( $temp, $mime );
 		if ( is_wp_error( $saved ) ) {
+			wp_delete_file( $temp );
 			$this->logger->log( 'warning', 'Image variant generation failed', array( 'error' => $saved->get_error_message() ) );
 			return false;
 		}
 
-		return true;
+		try {
+			return \GTPerformance\Queue\JobLease::publish(
+				static function () use ( $temp, $target ): bool {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Publish the complete encoded image atomically.
+					return rename( $temp, $target );
+				}
+			);
+		} finally {
+			if ( is_file( $temp ) ) {
+				wp_delete_file( $temp );
+			}
+		}
 	}
 
 	/**

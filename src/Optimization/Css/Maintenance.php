@@ -84,6 +84,7 @@ final class Maintenance {
 		}
 		$rows = ( new ReportRepository() )->batch( (int) ( $payload['after_id'] ?? 0 ) );
 		foreach ( $rows as $row ) {
+			\GTPerformance\Queue\JobLease::checkpoint();
 			$metadata = json_decode( (string) $row['metadata'], true );
 			$this->enqueue( (string) ( $metadata['url'] ?? '' ) );
 		}

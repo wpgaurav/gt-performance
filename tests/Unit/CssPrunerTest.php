@@ -198,6 +198,93 @@ final class CssPrunerTest extends TestCase {
 		self::assertStringNotContainsString( '.missing', $output );
 	}
 
+	/**
+	 * Icon fonts ship one `.icon:before` rule per glyph. Before the single-colon form
+	 * was recognised, every one of them was kept, whether or not the page used it.
+	 */
+	public function test_single_colon_pseudo_elements_are_pruned_like_double_colon_ones(): void {
+		$output = ( new CssPruner() )->prune(
+			'.button:before{content:"a"}.ion-ios-add:before{content:"b"}'
+			. '.copy:after{content:"c"}.ion-ios-alarm:after{content:"d"}'
+			. '.copy:first-letter{font-size:2em}.missing:first-line{color:red}'
+			. '.button:hover:before{color:blue}.missing:hover:before{color:blue}',
+			$this->document()
+		);
+
+		self::assertStringContainsString( '.button:before', $output );
+		self::assertStringContainsString( '.copy:after', $output );
+		self::assertStringContainsString( '.copy:first-letter', $output );
+		self::assertStringContainsString( '.button:hover:before', $output );
+		self::assertStringNotContainsString( 'ion-ios-add', $output );
+		self::assertStringNotContainsString( 'ion-ios-alarm', $output );
+		self::assertStringNotContainsString( '.missing', $output );
+	}
+
+	/**
+	 * Bricks 2 opens its framework CSS with a layer-order statement. The parser read
+	 * it into the next rule and nested the rest of the sheet inside that rule with an
+	 * unchanged brace count, so the round-trip check let the broken CSS through.
+	 */
+	public function test_leading_layer_statements_keep_the_sheet_structure(): void {
+		$output = ( new CssPruner() )->prune(
+			'@charset "UTF-8";@layer bricks.reset, bricks.icons;'
+			. '.aligncenter{display:block;margin:.5em auto}.alignright{float:right}'
+			. '@layer bricks{:root{--brx-gap:1rem}.hero{display:flex}.unused{color:red}}',
+			$this->document()
+		);
+
+		self::assertSame( '@charset "UTF-8";@layer bricks.reset, bricks.icons;@layer bricks{:root{--brx-gap:1rem}.hero{display:flex}}', $output );
+	}
+
+	public function test_layer_statements_survive_when_every_rule_is_pruned(): void {
+		self::assertSame( '@layer reset, base;', ( new CssPruner() )->prune( '@layer reset, base;.unused{color:red}', $this->document() ) );
+	}
+
+	public function test_a_layer_statement_after_a_rule_leaves_the_sheet_untouched(): void {
+		$css = '.hero{color:red}@layer a, b;.unused{color:blue}';
+
+		self::assertSame( $css, ( new CssPruner() )->prune( $css, $this->document() ) );
+		self::assertSame( '', ( new CssPruner() )->prune( $css, $this->document(), 'remaining' ) );
+	}
+
+	/**
+	 * A browser serialises selectors its own way; a kept selector must still find
+	 * the rule the stylesheet spelled differently.
+	 */
+	public function test_kept_selectors_match_however_the_stylesheet_spells_them(): void {
+		$keep   = array_fill_keys( array_map( array( CssPruner::class, 'canonical' ), array( '.sp-toc > li', '.sp-toc a::before', '[data-slot="rail"] .ad' ) ), true );
+		$output = ( new CssPruner() )->prune(
+			'.sp-toc>li{margin:0}.sp-toc a:before{content:""}[data-slot=rail] .ad{width:1px}.sp-toc li a{color:red}.unused{color:blue}',
+			$this->document(),
+			'used',
+			array(),
+			true,
+			$keep
+		);
+
+		self::assertStringContainsString( '.sp-toc>li', $output );
+		self::assertStringContainsString( '.sp-toc a:before', $output );
+		self::assertStringContainsString( '[data-slot=rail] .ad', $output );
+		self::assertStringNotContainsString( '.sp-toc li a', $output, 'Only the exact selector is kept.' );
+		self::assertStringNotContainsString( '.unused', $output );
+	}
+
+	public function test_an_escaped_colon_in_a_class_name_is_not_a_pseudo_element(): void {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$document->loadHTML( '<!doctype html><html><body><p class="hover:before:block">Text</p></body></html>' );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+
+		$output = ( new CssPruner() )->prune(
+			'.hover\\:before\\:block{display:block}.hover\\:before\\:hidden{display:none}',
+			$document
+		);
+
+		self::assertStringContainsString( 'block{display:block}', $output );
+		self::assertStringNotContainsString( 'hidden', $output );
+	}
+
 	public function test_icon_font_unicode_escapes_survive_inline_html_serialization(): void {
 		$output = ( new CssPruner() )->prune(
 			'.md-icon-twitter::before{content:\'\\e800\'}'

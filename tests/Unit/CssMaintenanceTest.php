@@ -72,10 +72,12 @@ final class CssMaintenanceTest extends TestCase {
 	}
 
 	public function test_failed_queue_inserts_do_not_create_queued_reports(): void {
+		update_option( 'gt_performance_schema_version', \GTPerformance\Core\Database::SCHEMA_VERSION );
 		$GLOBALS['wpdb'] = new class() {
 			public string $prefix = 'wp_';
 			public int $insert_id = 0;
 			public array $tables = array();
+			public function suppress_errors( bool $suppress = true ): bool { return false; }
 			public function prepare( string $sql, mixed ...$args ): string { return $sql; }
 			public function get_var( string $sql ): mixed { return null; }
 			public function insert( string $table, array $values, array $formats ): bool {
@@ -85,6 +87,7 @@ final class CssMaintenanceTest extends TestCase {
 		};
 		self::assertFalse( ( new Maintenance() )->enqueue( 'https://example.com/css-test/' ) );
 		self::assertSame( array( 'wp_gtperf_jobs' ), $GLOBALS['wpdb']->tables );
+		delete_option( 'gt_performance_schema_version' );
 	}
 
 	public function test_generator_token_does_not_split_report_identity_or_reuse(): void {
@@ -123,6 +126,32 @@ final class CssMaintenanceTest extends TestCase {
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'without a completed CSS report' );
 		( new UnusedCssOptimizer( new Logger() ) )->generateQueued( array( 'url' => 'https://example.com/css-test/' ) );
+	}
+
+	/**
+	 * A host that turns the origin's no-store into a cacheable response let
+	 * Cloudflare keep the build URL, so later builds of a page got the stored copy
+	 * and never ran. Every build request must be a URL no cache has seen.
+	 */
+	public function test_every_build_request_has_a_url_no_cache_has_seen(): void {
+		$GLOBALS['gtperf_test_http_requests'] = array();
+		$GLOBALS['gtperf_test_http_response'] = array( 'response' => array( 'code' => 200 ) );
+		for ( $i = 0; $i < 2; $i++ ) {
+			try {
+				( new UnusedCssOptimizer( new Logger() ) )->generateQueued( array( 'url' => 'https://example.com/css-test/' ) );
+			} catch ( \RuntimeException ) {
+				// No report was written in this stubbed request; only the URL matters here.
+			}
+		}
+
+		$urls = array_column( $GLOBALS['gtperf_test_http_requests'], 'url' );
+		self::assertCount( 2, $urls );
+		self::assertNotSame( $urls[0], $urls[1] );
+		foreach ( $urls as $url ) {
+			parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+			self::assertArrayHasKey( UnusedCssOptimizer::GENERATOR_PARAM, $query );
+			self::assertNotEmpty( $query[ UnusedCssOptimizer::GENERATOR_RUN_PARAM ] ?? '' );
+		}
 	}
 
 	public function test_http_errors_fail_the_worker_so_the_queue_can_retry(): void {
