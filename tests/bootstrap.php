@@ -192,6 +192,13 @@ if ( ! class_exists( 'WP_CLI' ) ) {
 		public static function log( string $message ): void {
 			self::$logs[] = $message;
 		}
+
+		/** Exit status a command asked for, or null when it finished normally. */
+		public static ?int $halted = null;
+
+		public static function halt( int $code ): void {
+			self::$halted = $code;
+		}
 	}
 }
 
@@ -742,3 +749,5 @@ if ( ! function_exists( 'remove_query_arg' ) ) {
 
 // Exercise the real core enqueue and printing behavior, including loader filters.
 require_once __DIR__ . '/wordpress-assets.php';
+
+require_once __DIR__ . '/wp-cli-utils.php';

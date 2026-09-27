@@ -95,6 +95,22 @@ final class ConfigurationTest extends TestCase {
 		}
 	}
 
+	public function test_a_setting_named_like_a_credential_but_holding_none_is_exported(): void {
+		// The credential-name guard matched "password" in this toggle, so an
+		// export, a read-only ability, and a proposal all silently lost it.
+		$settings                                           = Settings::defaults();
+		$settings['bloat']['disable_password_strength_meter'] = true;
+		$settings['redis']['password']                      = 'unit-redis-password';
+		$settings['redis']['username']                      = 'unit-redis-user';
+		$GLOBALS['gtperf_test_options'][ Settings::OPTION ] = $settings;
+
+		$export = ( new ConfigurationService() )->export();
+
+		self::assertTrue( $export['settings']['bloat']['disable_password_strength_meter'] );
+		self::assertArrayNotHasKey( 'password', $export['settings']['redis'] ?? array() );
+		self::assertStringNotContainsString( 'unit-redis', (string) wp_json_encode( $export ) );
+	}
+
 	public function test_save_changes_keeps_a_concurrent_edit_it_did_not_make(): void {
 		$before = Settings::all();
 

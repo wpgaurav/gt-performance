@@ -30,6 +30,9 @@ use GTPerformance\XCloud\SiteService;
 final class Command {
 	/**
 	 * Show environment and integration health.
+	 *
+	 * Exits with status 1 when any check fails, so monitoring and CI can act on
+	 * it. Warnings, such as an integration that is simply not in use, exit 0.
 	 */
 	public function doctor(): void {
 		$checks = array(
@@ -77,6 +80,18 @@ final class Command {
 		);
 
 		\WP_CLI\Utils\format_items( 'table', $checks, array( 'check', 'value', 'status' ) );
+		self::haltOnFailure( $checks );
+	}
+
+	/**
+	 * End with a non-zero status when any check failed.
+	 *
+	 * @param list<array<string, mixed>> $checks Checks with a status of pass, info, warning, or fail.
+	 */
+	private static function haltOnFailure( array $checks ): void {
+		if ( 'fail' === HealthReport::overall( $checks ) ) {
+			\WP_CLI::halt( 1 );
+		}
 	}
 
 	/**
@@ -326,7 +341,8 @@ final class Command {
 	/**
 	 * Report queue, cron, storage, drop-in, configuration, purge, CSS, and warming health.
 	 *
-	 * Reads saved and local evidence only; it requests no pages.
+	 * Reads saved and local evidence only; it requests no pages. Exits with
+	 * status 1 when any check fails; warnings exit 0.
 	 *
 	 * ## OPTIONS
 	 *
@@ -347,10 +363,10 @@ final class Command {
 		$report = ( new HealthReport() )->build();
 		if ( 'json' === $format ) {
 			\WP_CLI::line( (string) wp_json_encode( HealthReport::redact( $report ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-			return;
+		} else {
+			\WP_CLI\Utils\format_items( 'table', $report['checks'], array( 'label', 'status', 'value', 'source' ) );
 		}
-
-		\WP_CLI\Utils\format_items( 'table', $report['checks'], array( 'label', 'status', 'value', 'source' ) );
+		self::haltOnFailure( $report['checks'] );
 	}
 
 	/**
@@ -833,21 +849,34 @@ final class Command {
 	/**
 	 * Preview or execute database cleanup.
 	 *
+	 * Runs the tasks saved on the Database tab. Revisions keep the newest
+	 * "Scheduled revisions to retain" per post, as a scheduled run does, so a
+	 * server cron calling this matches the built-in schedule.
+	 *
 	 * ## OPTIONS
 	 *
 	 * [<action>]
 	 * : preview or run. Defaults to preview.
 	 *
-	 * @param list<string> $args Positional arguments.
+	 * [--all-revisions]
+	 * : With run, delete every revision, as the Run cleanup button does.
+	 *
+	 * @param list<string>          $args      Positional arguments.
+	 * @param array<string, string> $assocArgs Named arguments.
 	 */
-	public function database( array $args ): void {
+	public function database( array $args, array $assocArgs = array() ): void {
 		$action = $this->action( $args, 'preview', array( 'preview', 'run' ), 'database' );
 		if ( null === $action ) {
 			return;
 		}
+		$allRevisions = array_key_exists( 'all-revisions', $assocArgs );
+		if ( $allRevisions && 'run' !== $action ) {
+			\WP_CLI::error( '--all-revisions is supported only by database run.' );
+			return;
+		}
 
 		$cleaner = new Cleaner();
-		$result  = 'run' === $action ? $cleaner->run() : $cleaner->preview();
+		$result  = 'run' === $action ? $cleaner->run( null, ! $allRevisions ) : $cleaner->preview();
 		$rows    = array();
 		foreach ( $result as $type => $count ) {
 			$rows[] = array(

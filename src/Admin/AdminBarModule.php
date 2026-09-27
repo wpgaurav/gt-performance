@@ -53,12 +53,12 @@ final class AdminBarModule implements Module {
 					'title'  => __( 'Explain this page', 'gt-performance' ),
 					'href'   => add_query_arg(
 						array(
-							'page'    => 'gt-performance',
-							'tab'     => 'tools',
-							'gtperf_url' => $url,
+							'page'       => 'gt-performance',
+							'tab'        => 'tools',
+							'gtperf_url' => rawurlencode( $url ),
 						),
 						admin_url( 'admin.php' )
-					),
+					) . '#gtp-explain',
 				)
 			);
 			$this->actionNode( $bar, 'gtp-purge-current', __( 'Purge this URL', 'gt-performance' ), 'purge-url', $url );

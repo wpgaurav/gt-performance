@@ -31,6 +31,8 @@ final class CommandTest extends TestCase {
 		\WP_CLI::$successes                = array();
 		\WP_CLI::$lines                    = array();
 		\WP_CLI::$logs                     = array();
+		\WP_CLI::$halted                   = null;
+		$GLOBALS['gtperf_test_cli_items']  = array();
 	}
 
 	public function testCloudflarePurgeClearsTheEntireZone(): void {
@@ -101,6 +103,104 @@ final class CommandTest extends TestCase {
 		( new Command() )->cloudflare( array( 'purge' ), array( 'page-url' => 'https://EXAMPLE.com/article/' ) );
 
 		self::assertSame( array( 'Cloudflare URL purge completed.' ), \WP_CLI::$successes );
+	}
+
+	/**
+	 * Run database run with a $wpdb that records the revision query.
+	 *
+	 * @param array<string, string> $assocArgs Named arguments.
+	 * @return list<string>
+	 */
+	private function revisionQueries( array $assocArgs ): array {
+		$settings                                   = $GLOBALS['gtperf_test_options'][ Settings::OPTION ];
+		$settings['database']['tasks']              = array( 'revisions' );
+		$settings['database']['retain_revisions']   = 5;
+		$GLOBALS['gtperf_test_options'][ Settings::OPTION ] = $settings;
+
+		$original        = $GLOBALS['wpdb'];
+		$GLOBALS['wpdb'] = new class() {
+			public string $posts = 'wp_posts';
+
+			/** @var list<string> */
+			public array $queries = array();
+
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return vsprintf( str_replace( '%d', '%s', $query ), array_map( 'strval', $arguments ) );
+			}
+
+			/**
+			 * @return list<string>
+			 */
+			public function get_col( string $query ): array {
+				$this->queries[] = $query;
+
+				return array();
+			}
+		};
+
+		try {
+			( new Command() )->database( array( 'run' ), $assocArgs );
+
+			return array_values( array_filter( $GLOBALS['wpdb']->queries, static fn( string $query ): bool => str_contains( $query, 'HAVING COUNT(*)' ) ) );
+		} finally {
+			$GLOBALS['wpdb'] = $original;
+		}
+	}
+
+	public function testDatabaseRunKeepsTheRetainedRevisions(): void {
+		$queries = $this->revisionQueries( array() );
+
+		self::assertNotEmpty( $queries );
+		self::assertStringContainsString( 'HAVING COUNT(*) > 5', $queries[0] );
+	}
+
+	public function testDatabaseRunCanDeleteEveryRevisionOnRequest(): void {
+		$queries = $this->revisionQueries( array( 'all-revisions' => '' ) );
+
+		self::assertStringContainsString( 'HAVING COUNT(*) > 0', $queries[0] );
+	}
+
+	public function testAllRevisionsIsRejectedForAPreview(): void {
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( '--all-revisions is supported only by database run.' );
+
+		( new Command() )->database( array( 'preview' ), array( 'all-revisions' => '' ) );
+	}
+
+	/**
+	 * Run a health command with the cache directory writable or not, which is a
+	 * check both commands report as a failure.
+	 */
+	private function runWithCacheDirectory( bool $writable, callable $command ): ?int {
+		$root = \GTPerformance\Core\Paths::cacheRoot();
+		wp_mkdir_p( $root );
+		chmod( $root, $writable ? 0o755 : 0o555 );
+		try {
+			$command();
+		} finally {
+			chmod( $root, 0o755 );
+		}
+
+		return \WP_CLI::$halted;
+	}
+
+	public function testDoctorAndHealthExitNonZeroWhenACheckFails(): void {
+		self::assertSame( 1, $this->runWithCacheDirectory( false, static fn() => ( new Command() )->doctor() ) );
+
+		\WP_CLI::$halted = null;
+		self::assertSame( 1, $this->runWithCacheDirectory( false, static fn() => ( new Command() )->health( array(), array() ) ) );
+
+		\WP_CLI::$halted = null;
+		self::assertSame( 1, $this->runWithCacheDirectory( false, static fn() => ( new Command() )->health( array(), array( 'format' => 'json' ) ) ) );
+	}
+
+	public function testDoctorWarningsAloneExitZero(): void {
+		// Integrations that are simply not in use report warnings, and monitoring
+		// must not page anyone for a site that never connected Cloudflare.
+		self::assertNull( $this->runWithCacheDirectory( true, static fn() => ( new Command() )->doctor() ) );
+		$statuses = array_column( $GLOBALS['gtperf_test_cli_items'][0]['items'], 'status' );
+		self::assertContains( 'warning', $statuses );
+		self::assertNotContains( 'fail', $statuses );
 	}
 
 	public function testActionSpecificOptionsCannotBeSilentlyIgnored(): void {

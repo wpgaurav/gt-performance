@@ -14,6 +14,9 @@ use GTPerformance\Core\Settings;
 
 final class DatabaseModule implements Module {
 	public function register(): void {
+		// Plugin::boot() registers modules on plugins_loaded, before WordPress
+		// defines its own default.
+		$this->defineAutosaveInterval();
 		add_action( 'init', array( $this, 'schedule' ) );
 		add_action( 'gt_performance_database_cleanup', array( $this, 'cleanup' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'settingsUpdated' ), 20, 2 );
@@ -136,7 +139,17 @@ final class DatabaseModule implements Module {
 				}
 			}
 		}
+	}
 
+	/**
+	 * Define AUTOSAVE_INTERVAL from the setting.
+	 *
+	 * WordPress defines it in wp_functionality_constants(), straight after
+	 * plugins_loaded, so this has to run during plugins_loaded. On init it came
+	 * too late and the setting never took effect. A value in wp-config.php
+	 * still wins.
+	 */
+	public function defineAutosaveInterval(): void {
 		$autosave = (int) Settings::get( 'bloat.autosave_interval', 60 );
 		if ( ! defined( 'AUTOSAVE_INTERVAL' ) && 60 !== $autosave ) {
 			define( 'AUTOSAVE_INTERVAL', $autosave );

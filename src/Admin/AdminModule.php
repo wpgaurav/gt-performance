@@ -1052,7 +1052,7 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->panelOpen( __( 'Diagnostics', 'gt-performance' ), __( 'Only turn these on while you are troubleshooting.', 'gt-performance' ) );
-		$this->checkboxRoot( 'debug', __( 'Diagnostic logging', 'gt-performance' ), __( 'Write redacted plugin errors to the GT Performance log directory.', 'gt-performance' ), $settings );
+		$this->checkboxRoot( 'debug', __( 'Diagnostic logging', 'gt-performance' ), __( 'Keep the last 100 redacted plugin events in the database, and add cache-decision headers and a script-decision comment to public pages.', 'gt-performance' ), $settings );
 		$this->checkboxRoot( 'remove_data_on_uninstall', __( 'Remove all data when the plugin is deleted', 'gt-performance' ), __( 'Delete everything this plugin created when you delete the plugin.', 'gt-performance' ), $settings, __( 'Leave this off to keep your settings if you reinstall. With it off, deleting the plugin leaves its data behind, including saved Redis credentials.', 'gt-performance' ) );
 		$this->panelClose();
 
@@ -1707,11 +1707,84 @@ PHP;
 			<div class="gtp-inline-link"><a href="<?php echo esc_url( $this->tabUrl( 'dashboard' ) ); ?>"><?php esc_html_e( 'Install drop-ins, purge, and sync Cloudflare on the dashboard', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 		</section>
 		<?php
+		$this->renderExplain();
 		$this->renderHealth();
 		$this->renderWarming();
 		$this->renderPurgeReceipts();
 		$this->renderSettingsHistory();
 		$this->renderQueue();
+	}
+
+	/**
+	 * Explain This Page: why one URL is or is not cached, and what the origin and
+	 * Cloudflare hold for it. The admin bar links here with gtperf_url.
+	 */
+	private function renderExplain(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only report for a manage_options screen; nothing is changed.
+		$url    = isset( $_GET['gtperf_url'] ) ? esc_url_raw( wp_unslash( (string) $_GET['gtperf_url'] ) ) : '';
+		$report = '' !== $url ? ( new CacheInspector() )->inspect( $url ) : null;
+		$format = (string) get_option( 'date_format' ) . ' ' . (string) get_option( 'time_format' );
+		$when   = static fn( int $timestamp ): string => $timestamp > 0 ? (string) wp_date( $format, $timestamp ) : __( 'Not stored', 'gt-performance' );
+		$states = array(
+			'fresh'   => __( 'Stored and fresh', 'gt-performance' ),
+			'stale'   => __( 'Stored, stale (served while it is rebuilt)', 'gt-performance' ),
+			'expired' => __( 'Stored, expired (the next visit rebuilds it)', 'gt-performance' ),
+			'missing' => __( 'Not stored', 'gt-performance' ),
+		);
+		?>
+		<section class="gtp-panel" id="gtp-explain">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Explain this page', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Why a URL is or is not cached, and what the origin and Cloudflare hold for it. Checked as a signed-out visitor; nothing is fetched or purged.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="gtp-inline-form">
+				<input type="hidden" name="page" value="<?php echo esc_attr( self::PAGE_SLUG ); ?>">
+				<input type="hidden" name="tab" value="tools">
+				<label class="screen-reader-text" for="gtp-explain-url"><?php esc_html_e( 'Page URL', 'gt-performance' ); ?></label>
+				<input type="url" id="gtp-explain-url" name="gtperf_url" class="regular-text" required value="<?php echo esc_attr( '' !== $url ? $url : home_url( '/' ) ); ?>">
+				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Explain', 'gt-performance' ); ?></button>
+			</form>
+			<?php if ( is_wp_error( $report ) ) : ?>
+				<div class="notice notice-error inline"><p><?php echo esc_html( $report->get_error_message() ); ?></p></div>
+			<?php elseif ( is_array( $report ) ) : ?>
+				<?php
+				$origin = (array) $report['origin'];
+				$edge   = (array) $report['cloudflare'];
+				?>
+				<dl class="gtp-definition-list">
+					<div><dt><?php esc_html_e( 'URL', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) $report['url'] ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Decision', 'gt-performance' ); ?></dt><dd>
+						<?php
+						echo esc_html(
+							$report['cacheable']
+								? __( 'Cacheable', 'gt-performance' )
+								/* translators: %s: machine-readable bypass reason, such as path:/cart/. */
+								: sprintf( __( 'Bypassed (%s)', 'gt-performance' ), (string) $report['reason'] )
+						);
+						?>
+					</dd></div>
+					<div><dt><?php esc_html_e( 'Origin copy', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $states[ (string) $origin['state'] ] ?? (string) $origin['state'] ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Stored', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $when( (int) $origin['stored_at'] ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Fresh until', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $when( (int) $origin['fresh_until'] ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Size', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (int) $origin['bytes'] > 0 ? size_format( (int) $origin['bytes'], 1 ) : '0 B' ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Cache key', 'gt-performance' ); ?></dt><dd><code><?php echo esc_html( (string) $report['cache_hash_short'] ); ?></code></dd></div>
+					<?php if ( (bool) $edge['enabled'] ) : ?>
+						<div><dt><?php esc_html_e( 'Cloudflare', 'gt-performance' ); ?></dt><dd>
+							<?php
+							echo esc_html(
+								(bool) $edge['agrees']
+									? ( 'eligible' === $edge['expectation'] ? __( 'Agrees with the origin: may cache at the edge', 'gt-performance' ) : __( 'Agrees with the origin: bypasses the edge', 'gt-performance' ) )
+									: (string) $edge['disagreement']
+							);
+							?>
+						</dd></div>
+					<?php endif; ?>
+				</dl>
+			<?php endif; ?>
+		</section>
+		<?php
 	}
 
 	/**
@@ -2456,7 +2529,7 @@ PHP;
 				</div>
 			</div>
 			<div class="gtp-tools-grid">
-				<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove origin HTML and generated asset cache entries managed by GT Performance.', 'gt-performance' ), 'gtperf_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
+				<?php $this->operation( __( 'Purge GT cache', 'gt-performance' ), __( 'Remove every page GT Performance has stored, and purge Cloudflare or xCloud when connected.', 'gt-performance' ), 'gtperf_purge', __( 'Purge GT cache', 'gt-performance' ) ); ?>
 				<?php $this->operation( __( 'Cloudflare rule', 'gt-performance' ), __( 'Discover the zone when needed and reconcile the managed Cloudflare Free cache rule.', 'gt-performance' ), 'gtperf_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
 				<?php $this->operation( __( 'Page cache drop-in', 'gt-performance' ), __( 'Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE.', 'gt-performance' ), 'gtperf_install_dropin', __( 'Install page-cache drop-in', 'gt-performance' ) ); ?>
 				<?php $this->operation( __( 'Redis object cache', 'gt-performance' ), __( 'Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts.', 'gt-performance' ), 'gtperf_install_redis', __( 'Test and install Redis', 'gt-performance' ) ); ?>

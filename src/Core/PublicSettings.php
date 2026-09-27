@@ -43,6 +43,15 @@ final class PublicSettings {
 	private const SECRET_KEY = '/token|secret|password|passwd|username|email|api_?key|private|credential/i';
 
 	/**
+	 * Keys the credential pattern matches that hold no secret, reviewed one by
+	 * one. The pattern still drops any new key, so this list only ever loosens
+	 * the guard for a name someone has checked.
+	 */
+	private const NOT_SECRET = array(
+		'bloat.disable_password_strength_meter',
+	);
+
+	/**
 	 * @return list<string>
 	 */
 	public static function sections(): array {
@@ -67,7 +76,7 @@ final class PublicSettings {
 			}
 			$view[ $section ] = array_filter(
 				$values,
-				static fn ( $key ): bool => 1 !== preg_match( self::SECRET_KEY, (string) $key ),
+				static fn ( $key ): bool => in_array( $section . '.' . $key, self::NOT_SECRET, true ) || 1 !== preg_match( self::SECRET_KEY, (string) $key ),
 				ARRAY_FILTER_USE_KEY
 			);
 		}
