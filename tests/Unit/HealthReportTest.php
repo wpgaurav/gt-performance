@@ -70,6 +70,7 @@ final class HealthReportTest extends TestCase {
 		self::assertArrayNotHasKey( 'object_cache_dropin', $byId );
 		self::assertArrayNotHasKey( 'css_reports', $byId );
 		self::assertArrayNotHasKey( 'edge_ownership', $byId );
+		self::assertArrayNotHasKey( 'visitor_variation', $byId );
 		self::assertSame( 'info', $byId['warming']['status'] );
 		self::assertSame( 0, $byId['warming']['observed_at'] );
 	}
@@ -217,5 +218,14 @@ final class HealthReportTest extends TestCase {
 		self::assertCount( 10, $saved['cache']['preload_sitemaps'] );
 		self::assertSame( 'https://example.com/sitemap_index.xml', $saved['cache']['preload_sitemaps'][0] );
 		self::assertSame( 'https://example.com/extra-0.xml', $saved['cache']['preload_sitemaps'][1] );
+	}
+
+	public function test_language_and_currency_plugins_are_named_as_a_warning(): void {
+		$checks = HealthReport::evaluate( $this->evidence( array( 'visitor_variation' => array( 'WPML', 'CURCY Multi Currency for WooCommerce' ) ) ), self::NOW );
+		$check  = $this->byId( $checks )['visitor_variation'];
+
+		self::assertSame( 'warning', $check['status'] );
+		self::assertStringStartsWith( 'WPML, CURCY Multi Currency for WooCommerce can show different pages', $check['value'] );
+		self::assertSame( 'warning', HealthReport::overall( $checks ) );
 	}
 }

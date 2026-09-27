@@ -68,4 +68,16 @@ final class PluginDetectorTest extends TestCase {
 		self::assertSame( 1, array_count_values( $exclusions )['googletagmanager.com'] );
 		self::assertSame( 1, array_count_values( $exclusions )['google-analytics.com'] );
 	}
+
+	public function test_active_language_and_currency_plugins_are_reported_by_name(): void {
+		$GLOBALS['gtperf_test_options']['active_plugins'] = array( 'polylang-pro/polylang.php', 'woo-multi-currency/woo-multi-currency.php', 'akismet/akismet.php' );
+		try {
+			self::assertSame( array( 'Polylang', 'CURCY Multi Currency for WooCommerce' ), ( new PluginDetector() )->activeVisitorVariation() );
+
+			$GLOBALS['gtperf_test_options']['active_plugins'] = array( 'akismet/akismet.php' );
+			self::assertSame( array(), ( new PluginDetector() )->activeVisitorVariation() );
+		} finally {
+			unset( $GLOBALS['gtperf_test_options']['active_plugins'] );
+		}
+	}
 }

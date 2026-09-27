@@ -158,7 +158,62 @@ final class PluginDetector {
 				'protection'            => __( 'Keeps analytics and advertising pixels out of JavaScript optimization and delay.', 'gt-performance' ),
 				'javascript_exclusions' => array( '/plugins/pixelyoursite/', '/plugins/pixelyoursite-pro/', 'connect.facebook.net', 'googletagmanager.com' ),
 			),
+		) + self::visitorVariation();
+	}
+
+	/**
+	 * Plugins that can show two visitors different pages at the same URL.
+	 *
+	 * The page cache stores one copy per URL and query, so a language picked from a
+	 * cookie or the browser, or a currency remembered per visitor, can be served to
+	 * someone who chose another. Nothing here is changed automatically: which
+	 * cookie or parameter carries the choice depends on how each site is set up.
+	 *
+	 * @return array<string, array{name:string,files:list<string>,group:string,protection:string}>
+	 */
+	public static function visitorVariation(): array {
+		$language = __( 'Each language is cached separately when it has its own URL (a directory, subdomain, or domain). If the language comes from a ?lang= parameter, add lang under Cache each value separately. If it is detected from a cookie or the browser, turn that redirect off or add its cookie under Never cache cookies, or visitors can get a page in another language.', 'gt-performance' );
+		$currency = __( 'Remembers each visitor\'s currency, usually in a cookie, while the page cache keeps one copy per URL, so a cached page can show another visitor\'s prices. Add the switcher\'s currency cookie under Never cache cookies so visitors who switch get fresh pages, or check that it converts prices in the browser.', 'gt-performance' );
+
+		$entries = array(
+			'wpml'              => array( 'WPML', array( 'sitepress-multilingual-cms/sitepress.php' ), $language ),
+			'polylang'          => array( 'Polylang', array( 'polylang/polylang.php', 'polylang-pro/polylang.php' ), $language ),
+			'translatepress'    => array( 'TranslatePress', array( 'translatepress-multilingual/index.php' ), $language ),
+			'weglot'            => array( 'Weglot', array( 'weglot/weglot.php' ), $language ),
+			'wcml'              => array( 'WooCommerce Multilingual & Multicurrency', array( 'woocommerce-multilingual/wpml-woocommerce.php' ), $currency ),
+			'curcy'             => array( 'CURCY Multi Currency for WooCommerce', array( 'woo-multi-currency/woo-multi-currency.php', 'woocommerce-multi-currency/woocommerce-multi-currency.php' ), $currency ),
+			'woocs'             => array( 'FOX Currency Switcher (WOOCS)', array( 'woocommerce-currency-switcher/index.php' ), $currency ),
+			'aelia-currency'    => array( 'Aelia Currency Switcher', array( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ), $currency ),
+			'price-by-country'  => array( 'Price Based on Country', array( 'woocommerce-product-price-based-on-countries/woocommerce-product-price-based-on-countries.php' ), $currency ),
 		);
+
+		$catalog = array();
+		foreach ( $entries as $id => $entry ) {
+			$catalog[ $id ] = array(
+				'name'       => $entry[0],
+				'files'      => $entry[1],
+				'group'      => 'variation',
+				'protection' => $entry[2],
+			);
+		}
+
+		return $catalog;
+	}
+
+	/**
+	 * Names of active plugins that can vary a page by visitor at the same URL.
+	 *
+	 * @return list<string>
+	 */
+	public function activeVisitorVariation(): array {
+		$names = array();
+		foreach ( self::visitorVariation() as $id => $plugin ) {
+			if ( $this->active( $id ) ) {
+				$names[] = $plugin['name'];
+			}
+		}
+
+		return $names;
 	}
 
 	/**

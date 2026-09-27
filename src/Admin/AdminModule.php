@@ -1689,7 +1689,7 @@ PHP;
 				<?php
 				$active = $detector->active( $id );
 				// Fourteen builders would crowd the list; show only the ones in use.
-				if ( 'builder' === $plugin['group'] && ! $active ) {
+				if ( in_array( $plugin['group'], array( 'builder', 'variation' ), true ) && ! $active ) {
 					continue;
 				}
 				$tone   = 'neutral';
@@ -1700,6 +1700,9 @@ PHP;
 					if ( 'cache' === $plugin['group'] || in_array( $id, array( 'autoptimize', 'jetpack-boost' ), true ) ) {
 						$tone  = 'warning';
 						$label = __( 'Review ownership', 'gt-performance' );
+					} elseif ( 'variation' === $plugin['group'] ) {
+						$tone  = 'warning';
+						$label = __( 'Review cache setup', 'gt-performance' );
 					} elseif ( 'perfmatters' === $id && 'perfmatters' === (string) $settings['integrations']['perfmatters_owner'] ) {
 						$label = __( 'Perfmatters owns optimization', 'gt-performance' );
 					}

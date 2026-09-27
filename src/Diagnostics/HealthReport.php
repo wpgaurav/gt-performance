@@ -211,6 +211,18 @@ final class HealthReport {
 			);
 		}
 
+		$varying = array_map( 'strval', (array) ( $evidence['visitor_variation'] ?? array() ) );
+		if ( $varying ) {
+			$checks[] = self::check(
+				'visitor_variation',
+				'Language and currency plugins',
+				'warning',
+				implode( ', ', $varying ) . ' can show different pages at the same URL. Cached pages are shared per URL; see Integrations for what to set so visitors are not served another visitor\'s language or prices.',
+				'live',
+				$now
+			);
+		}
+
 		$checks[] = self::warming( $evidence['warm'], $now );
 
 		return $checks;
@@ -294,6 +306,7 @@ final class HealthReport {
 			'css_enabled'      => (bool) Settings::get( 'css.enabled', false ),
 			'css'              => $css,
 			'warm'             => $ready ? ( new CacheWarmer( new Logger() ) )->summary() : null,
+			'visitor_variation' => ( new \GTPerformance\Compatibility\PluginDetector() )->activeVisitorVariation(),
 		);
 	}
 
