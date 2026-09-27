@@ -160,6 +160,7 @@ The complete release history is on the [GT Performance changelog](https://produc
 * Preload requests carry a short-lived signed token, so visitors can no longer force stale pages to rebuild.
 * Cloudflare and xCloud now purge when the purge starts from a signed-out request, such as a visitor's approved comment or a checkout that changes stock.
 * WordPress core, plugin, and theme updates purge the page cache, so cached pages no longer point at replaced asset versions.
+* Lightweight YouTube previews no longer leave an empty band above the video in the YouTube embed block, show YouTube's red play button, and play from a click anywhere on the thumbnail.
 * New: Tools → Explain this page shows why a URL is or is not cached, what the origin holds, and whether Cloudflare agrees. The admin bar links straight to it, with a link to view the page with every optimization off.
 * `wp gt-performance database run` keeps your "Scheduled revisions to retain". Add `--all-revisions` to delete every revision, as the Run cleanup button does.
 * `wp gt-performance doctor` and `health` exit with status 1 when a check fails. Warnings still exit 0.

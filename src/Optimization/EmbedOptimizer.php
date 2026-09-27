@@ -28,6 +28,34 @@ final class EmbedOptimizer {
 	 */
 	private const RESERVED_PATHS = array( 'videoseries', 'live_stream' );
 
+	/**
+	 * YouTube's own large play button: the rounded red plate and the white triangle.
+	 * Decorative, because the button's aria-label already names the action.
+	 */
+	private const PLAY_ICON = '<svg viewBox="0 0 68 48" width="68" height="48" aria-hidden="true" focusable="false">'
+		. '<path class="gtp-youtube-plate" d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.63 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z"/>'
+		. '<path fill="#fff" d="M45 24 27 14v20z"/></svg>';
+
+	/**
+	 * The preview carries its own 16:9 box because a bare iframe does. Inside a
+	 * responsive embed block, core already reserves that box with a padding
+	 * `::before` on the wrapper and pins the iframe over it, so the preview has to
+	 * be pinned the same way. Keeping its 16:9 there stacked a second box under the
+	 * reserved one, leaving an empty band the height of the video above it. The
+	 * wrapper selector mirrors core's `.wp-has-aspect-ratio iframe` rule exactly, so
+	 * the two agree on every theme.
+	 *
+	 * Nothing here is inline, so a theme's own embed wrapper can still position it.
+	 */
+	private const STYLES = '.gtp-youtube{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#000 center/cover no-repeat}'
+		. '.wp-embed-responsive .wp-has-aspect-ratio .gtp-youtube{position:absolute;inset:0;height:100%;aspect-ratio:auto}'
+		. '.gtp-youtube>button{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;cursor:pointer}'
+		. '.gtp-youtube>button svg{position:absolute;top:50%;left:50%;width:68px;height:48px;transform:translate(-50%,-50%)}'
+		. '.gtp-youtube-plate{fill:#f00;transition:fill .1s}'
+		. '.gtp-youtube>button:hover .gtp-youtube-plate,.gtp-youtube>button:focus-visible .gtp-youtube-plate{fill:#c00}'
+		. '.gtp-youtube>button:focus-visible{outline:3px solid #fff;outline-offset:-6px}'
+		. '.gtp-youtube iframe{position:absolute;inset:0;width:100%;height:100%;border:0}';
+
 	public function optimize( string $html ): string {
 		$youtube   = (bool) Settings::get( 'media.youtube_previews', false );
 		$selectors = array_map( 'strval', (array) Settings::get( 'media.lazy_render_selectors', array() ) );
@@ -79,13 +107,15 @@ final class EmbedOptimizer {
 
 				++$replaced;
 
+				// The button covers the whole thumbnail, so a click anywhere plays, as
+				// it does on YouTube's own embed.
 				return sprintf(
-					'<div class="gtp-youtube" data-video-id="%1$s" data-video-query="%2$s" style="aspect-ratio:16/9;position:relative;background:#000 url(https://i.ytimg.com/vi/%1$s/hqdefault.jpg) center/cover no-repeat">'
-					. '<button type="button" aria-label="%3$s" style="position:absolute;inset:0;margin:auto;width:5rem;height:3.5rem;cursor:pointer">%4$s</button></div>',
+					'<div class="gtp-youtube" data-video-id="%1$s" data-video-query="%2$s" style="background-image:url(https://i.ytimg.com/vi/%1$s/hqdefault.jpg)">'
+					. '<button type="button" aria-label="%3$s">%4$s</button></div>',
 					esc_attr( rawurlencode( $videoId ) ),
 					esc_attr( $query ),
 					esc_attr( $label ),
-					esc_html__( 'Play', 'gt-performance' )
+					self::PLAY_ICON
 				);
 			},
 			$html
@@ -94,6 +124,8 @@ final class EmbedOptimizer {
 		if ( ! is_string( $out ) || 0 === $replaced ) {
 			return $html;
 		}
+
+		$out = $this->injectBeforeLast( $out, '</head>', BufferedAssets::style( 'youtube', self::STYLES ) );
 
 		return $this->injectBeforeLast( $out, '</body>', $this->playerScript() );
 	}

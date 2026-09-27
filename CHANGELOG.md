@@ -17,6 +17,11 @@ Purging
 - WordPress core, plugin, and theme updates purge the cache. Translation updates and plugin installs do not.
 - `--page-url` for `cache purge|explain|verify` and `cloudflare purge` must be on one of the site's canonical hosts. `verify` fetched any URL, and purges handed foreign URLs to the edge.
 
+YouTube previews
+
+- In a theme with responsive embeds, a YouTube embed block showed an empty band the height of the video above the preview. Core reserves the 16:9 box with a padding `::before` on the block wrapper and pins the iframe over it; the preview kept its own inline 16:9 box, so it stacked under the reserved one. Its styles now live in one stylesheet in the head, which pins the preview over the wrapper with core's own selector, and nothing is inline except the thumbnail, so a theme's embed wrapper can position it too.
+- The preview shows YouTube's red play button instead of a browser-styled "Play" button, and a click anywhere on the thumbnail starts the video. Pages cached before this release keep the old preview until they are rebuilt.
+
 Administration and WP-CLI
 
 - Tools → Explain this page is new: wp-admin had no view for it, and the admin-bar link opened Tools with a URL nothing read. The panel shows the decision and reason, the origin copy's state and times, the cache key, and whether Cloudflare agrees, with a link to the page in per-request safe mode. The admin-bar link now encodes the URL and jumps to the panel.
