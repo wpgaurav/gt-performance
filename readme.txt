@@ -125,7 +125,7 @@ GT Performance also sends requests to your own site's URLs for cache warming, CS
 
 = Hostnames that are matched, not contacted =
 
-GT Performance stores a list of script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are exclusion rules, not connections. They are compared against the script URLs your own site already loads so that those scripts are never minified, deferred, or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
+GT Performance stores script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are matching rules, not connections. They are compared only against the script URLs your own site already loads. The default "Scripts to delay" list uses them to pick which third-party scripts wait for a visitor's first interaction or five seconds, and only after you turn on JavaScript delay, which is off by default. When a supported analytics plugin such as Site Kit by Google or PixelYourSite is active, its hostnames are also added to the exclusions, so those scripts are never deferred or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
 
 == Upgrade Notice ==
 
