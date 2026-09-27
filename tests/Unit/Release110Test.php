@@ -80,37 +80,4 @@ final class Release110Test extends TestCase {
 		self::assertFalse( $defaults['css']['enabled'], 'Rewriting a site\'s CSS is not a default.' );
 		self::assertArrayHasKey( 'mode', $defaults['css'] );
 	}
-
-	/**
-	 * A saved setting bumps `generation`, which is part of the cache key, so every
-	 * save orphans the entire store. Nothing collects orphans, so the purge has to
-	 * happen at the moment the generation changes.
-	 */
-	public function test_saving_settings_always_bumps_the_generation(): void {
-		$stored    = Settings::all();
-		$sanitized = Settings::sanitize( Settings::defaults() );
-
-		// The increment is relative to the stored generation, not the submitted one,
-		// so every save produces a key nothing already on disk can match.
-		self::assertSame(
-			(int) $stored['generation'] + 1,
-			(int) $sanitized['generation'],
-			'AdminModule::afterSettingsUpdate() purges on this change; if it stops moving, the purge stops firing.'
-		);
-	}
-
-	/**
-	 * The purge is what stops a settings save from orphaning the entire store, so
-	 * the condition that triggers it has to keep naming the generation.
-	 */
-	public function test_the_settings_update_handler_purges_on_a_generation_change(): void {
-		$source = file_get_contents( dirname( __DIR__, 2 ) . '/src/Admin/AdminModule.php' );
-
-		self::assertIsString( $source );
-		self::assertStringContainsString( "\$generationChanged", $source );
-		self::assertMatchesRegularExpression(
-			'/if \( \$generationChanged \|\|.*\) \{\s*\( new Purger\(\) \)->purgeAll\(\);/s',
-			$source
-		);
-	}
 }

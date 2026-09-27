@@ -294,8 +294,8 @@ final class Settings {
 		$current  = self::all();
 		$merged   = self::merge( $current, $input );
 
-		$merged['generation'] = max( 1, (int) $current['generation'] + 1 );
-		$merged['debug']      = (bool) ( $merged['debug'] ?? false );
+		$merged['generation'] = max( 1, (int) $current['generation'] );
+		$merged['debug']     = (bool) ( $merged['debug'] ?? false );
 		$merged['remove_data_on_uninstall'] = (bool) ( $merged['remove_data_on_uninstall'] ?? false );
 
 		$merged['cache']['entry_budget'] = max( 0, min( 200000, (int) ( $merged['cache']['entry_budget'] ?? 5000 ) ) );
@@ -472,7 +472,90 @@ final class Settings {
 		$safelist                                  = array_map( 'sanitize_text_field', $safelist );
 		$merged['css']['safelist']                 = ( new \GTPerformance\Optimization\Css\SelectorSafelist() )->validate( $safelist )['valid'];
 		$merged['css']['excluded_stylesheets']    = self::sanitizeList( $merged['css']['excluded_stylesheets'] ?? array() );
-		return self::merge( $defaults, $merged );
+		$clean = self::merge( $defaults, $merged );
+
+		// `generation` is part of every cache key, so advancing it retires every stored
+		// page and purges the origin and the edge. Only a change to what a visitor is
+		// served, or to which request gets which copy, is worth that.
+		if ( self::affectsCachedPages( $current, $clean ) ) {
+			$clean['generation'] = $clean['generation'] + 1;
+		}
+
+		return $clean;
+	}
+
+	/**
+	 * Settings that never change a stored page, its headers, or which request it
+	 * answers: credentials, connection status, background work, and admin-only
+	 * behavior. Anything not listed here counts as cache-relevant, so a new setting
+	 * purges until someone decides it does not need to.
+	 */
+	private const OUTPUT_NEUTRAL = array(
+		'cache.post_publish_purge',
+		'cache.entry_budget',
+		'cache.preload',
+		'cache.preload_max_urls',
+		'cache.preload_sitemaps',
+		'cloudflare.auth_mode',
+		'cloudflare.zone_id',
+		'cloudflare.domain',
+		'cloudflare.api_token',
+		'cloudflare.global_api_key',
+		'cloudflare.email',
+		'cloudflare.drift_hash',
+		'xcloud',
+		'media.optimize_uploads',
+		'media.compression',
+		'database',
+		'bloat.heartbeat_mode',
+		'bloat.heartbeat_seconds',
+		'bloat.autosave_interval',
+		'redis',
+		'agents',
+		'advisor',
+		'remove_data_on_uninstall',
+	);
+
+	/**
+	 * Whether moving from one complete settings array to another changes what the
+	 * page cache stores or serves.
+	 *
+	 * @param array<string, mixed> $from Settings before.
+	 * @param array<string, mixed> $to   Settings after.
+	 */
+	public static function affectsCachedPages( array $from, array $to ): bool {
+		$strip = static function ( array $settings ): array {
+			unset( $settings['generation'] );
+			foreach ( self::OUTPUT_NEUTRAL as $path ) {
+				$parts = explode( '.', $path, 2 );
+				if ( 1 === count( $parts ) ) {
+					unset( $settings[ $parts[0] ] );
+				} elseif ( is_array( $settings[ $parts[0] ] ?? null ) ) {
+					unset( $settings[ $parts[0] ][ $parts[1] ] );
+				}
+			}
+			return self::sortKeys( $settings );
+		};
+
+		return $strip( self::merge( self::defaults(), $from ) ) !== $strip( self::merge( self::defaults(), $to ) );
+	}
+
+	/**
+	 * Key order differs between a stored option and a fresh merge; lists keep theirs.
+	 *
+	 * @param array<mixed> $value Settings subtree.
+	 * @return array<mixed>
+	 */
+	private static function sortKeys( array $value ): array {
+		foreach ( $value as $key => $child ) {
+			if ( is_array( $child ) ) {
+				$value[ $key ] = self::sortKeys( $child );
+			}
+		}
+		if ( ! array_is_list( $value ) ) {
+			ksort( $value );
+		}
+		return $value;
 	}
 
 	/**

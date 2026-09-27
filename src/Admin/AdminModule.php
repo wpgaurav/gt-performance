@@ -349,9 +349,6 @@ final class AdminModule implements Module {
 			return;
 		}
 
-		// `generation` is part of the cache key and Settings::sanitize() bumps it on
-		// every save, so any save makes every stored entry unreachable. Nothing else
-		// ever deletes them, so without this each save leaks the whole store to disk.
 		// uninstall.php runs after the plugin's classes are gone, so it can only read a
 		// plain option. This mirror is the thing that makes its gate reachable at all:
 		// before this, the option was never written and uninstall silently did nothing.
@@ -367,9 +364,9 @@ final class AdminModule implements Module {
 			ScriptClasses::requestScan();
 		}
 
-		$generationChanged = (int) ( $old['generation'] ?? 0 ) !== (int) ( $new['generation'] ?? 0 );
-
-		if ( $generationChanged || ( $old['cdn'] ?? array() ) !== ( $new['cdn'] ?? array() ) ) {
+		// Settings::sanitize() advances the generation only when a change reaches
+		// cached pages, so saving a credential or a cleanup schedule purges nothing.
+		if ( (int) ( $old['generation'] ?? 0 ) !== (int) ( $new['generation'] ?? 0 ) ) {
 			( new Purger() )->purgeAll();
 		}
 	}

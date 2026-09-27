@@ -244,7 +244,7 @@ When content changes, the automatic purge still clears the same related pages as
 - Commerce price and stock changes purge shop pages and product grids as well as the product page.
 - Renaming a term purges its old and new archive URLs.
 
-Pages that recorded nothing affected stay cached. Records belong to the current settings generation and are pruned in bounded batches; a page not rendered since the last settings save simply has none, and the related-page purge still covers it. Related URLs on another host (an author link to a personal site, for example) are now left out of both local and edge purges. Only the "post and related pages" purge policy adds recorded dependents.
+Pages that recorded nothing affected stay cached. Records belong to the current settings generation and are pruned in bounded batches; a page not rendered since the last cache-relevant settings change simply has none, and the related-page purge still covers it. Related URLs on another host (an author link to a personal site, for example) are now left out of both local and edge purges. Only the "post and related pages" purge policy adds recorded dependents.
 
 ```sh
 wp gt-performance cache preview --post=123              # a content edit

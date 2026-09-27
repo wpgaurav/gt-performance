@@ -2,8 +2,8 @@
 /**
  * Bounded reclamation of everything the plugin writes to disk.
  *
- * Nothing ever deleted a cache entry. Settings::sanitize() bumps `generation` on
- * every save and `generation` is part of the cache key, so one settings change
+ * Nothing ever deleted a cache entry. `generation` is part of the cache key and
+ * Settings::sanitize() advances it on a cache-relevant change, so one such change
  * made the entire store unreachable and it stayed on disk forever. Measured on a
  * live 5,000-page site: 2,162 files and 285 MB, of which 33 files were reachable.
  *

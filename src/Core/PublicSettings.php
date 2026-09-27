@@ -86,7 +86,7 @@ final class PublicSettings {
 
 	/**
 	 * Changes with any exposed value or the settings generation, which advances
-	 * on every save. It covers only the projection, so it reveals nothing about
+	 * whenever a save changes what cached pages contain. It covers only the projection, so it reveals nothing about
 	 * the credentials it leaves out.
 	 *
 	 * @param array<string, mixed> $view Projection from view().
