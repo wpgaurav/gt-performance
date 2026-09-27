@@ -38,6 +38,9 @@ Development happens in the open on [GitHub](https://github.com/wpgaurav/gt-perfo
 
 = Links =
 
+* [GT Performance Home](https://gauravtiwari.org/product/gt-performance/) - features, setup guides, and answers to common questions.
+* [Changelog](https://products.gatilab.com/changelogs/gt-performance/) - every release with its fixes and upgrade notes.
+* [Roadmap](https://products.gatilab.com/roadmaps/gt-performance/) - what is planned next.
 * [GT Performance Community](https://gauravtiwari.org/portal/) - ask questions and get setup help from other users.
 * [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/) - other plugins by Gaurav Tiwari.
 
@@ -145,6 +148,8 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+The complete release history is on the [GT Performance changelog](https://products.gatilab.com/changelogs/gt-performance/), and planned work is on the [roadmap](https://products.gatilab.com/roadmaps/gt-performance/).
 
 = 1.1.0 =
 * Cache warming resumes across background batches instead of stopping after 20 child sitemaps, reads chosen sitemaps or the WordPress sitemap plus robots.txt, warms recent pages first, respects the cache size budget, and records whether each page was actually stored.
