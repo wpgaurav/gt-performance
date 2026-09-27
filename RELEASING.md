@@ -14,6 +14,14 @@ Before tagging, update every version surface:
 - `GTPERF_VERSION` in `tests/phpstan-bootstrap.php`
 - a dated top section in `CHANGELOG.md`
 
+Regenerate the translation template after the version bump, so its strings and `Project-Id-Version` match the release:
+
+```bash
+wp i18n make-pot . languages/gt-performance.pot --domain=gt-performance --skip-js \
+  --exclude=vendor,tests,__work,__release-1.0.1,docs,build,dist,distribution-assets,bin \
+  --headers='{"Report-Msgid-Bugs-To":"https://github.com/wpgaurav/gt-performance/issues"}'
+```
+
 Then run:
 
 ```bash

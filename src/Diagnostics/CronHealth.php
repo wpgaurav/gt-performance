@@ -16,11 +16,11 @@ final class CronHealth {
 	 * @param array<int|string, mixed>|null $cron Scheduled event array.
 	 * @return array{check: string, value: string, status: string}
 	 */
-	public function check( ?array $cron = null, ?int $now = null ): array {
+	public function check( ?array $cron = null, ?int $now = null, bool $withCommand = true ): array {
 		if ( ! defined( 'DISABLE_WP_CRON' ) || true !== (bool) DISABLE_WP_CRON ) {
 			return array(
 				'check'  => 'WP-Cron',
-				'value'  => 'WordPress request spawning is enabled.',
+				'value'  => __( 'WordPress request spawning is enabled.', 'gt-performance' ),
 				'status' => 'pass',
 			);
 		}
@@ -46,7 +46,7 @@ final class CronHealth {
 		if ( null === $oldest ) {
 			return array(
 				'check'  => 'WP-Cron',
-				'value'  => 'Request spawning is disabled; no events are more than 15 minutes overdue.',
+				'value'  => __( 'Request spawning is disabled; no events are more than 15 minutes overdue.', 'gt-performance' ),
 				'status' => 'pass',
 			);
 		}
@@ -56,11 +56,19 @@ final class CronHealth {
 		return array(
 			'check'  => 'WP-Cron',
 			'value'  => sprintf(
-				'%d event(s) overdue; oldest is %d minutes late. Install this five-minute runner: %s',
+				/* translators: 1: number of overdue cron events, 2: minutes the oldest is late. */
+				_n( '%1$d event overdue; oldest is %2$d minutes late.', '%1$d events overdue; oldest is %2$d minutes late.', $eventCount, 'gt-performance' ),
 				$eventCount,
-				$minutes,
-				$this->runnerCommand()
-			),
+				$minutes
+			) . ' ' . ( $withCommand
+				? sprintf(
+					/* translators: %s: crontab line. */
+					__( 'Install this five-minute runner: %s', 'gt-performance' ),
+					$this->runnerCommand()
+				)
+				// The runner carries an absolute server path, which reports shared
+				// outside wp-admin must not include.
+				: __( '`wp gt-performance doctor` prints a five-minute server runner command.', 'gt-performance' ) ),
 			'status' => 'warning',
 		);
 	}

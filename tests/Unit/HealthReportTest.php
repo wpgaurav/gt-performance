@@ -96,7 +96,7 @@ final class HealthReportTest extends TestCase {
 		);
 
 		self::assertSame( 'warning', $checks['queue']['status'] );
-		self::assertStringContainsString( 'optional work paused', $checks['queue']['value'] );
+		self::assertStringContainsString( 'Optional work is paused.', $checks['queue']['value'] );
 		self::assertStringContainsString( '16m', $checks['queue']['value'] );
 		self::assertSame( 'warning', $checks['queue_heartbeat']['status'] );
 		self::assertSame( self::NOW - 20 * 60, $checks['queue_heartbeat']['observed_at'] );

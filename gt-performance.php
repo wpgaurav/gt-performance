@@ -9,6 +9,7 @@ Requires PHP: 8.1
 Author: Gaurav Tiwari
 Author URI: https://gauravtiwari.org/
 Text Domain: gt-performance
+Domain Path: /languages
 License: GPL-2.0-or-later
 Update URI: false
 */

@@ -106,23 +106,24 @@ final class HealthReport {
 		$queue  = (array) $evidence['queue'];
 
 		if ( ! $queue['ready'] ) {
-			$checks[] = self::check( 'queue', 'Background queue', 'warning', 'Schema upgrade pending; new jobs wait until an administrator screen or WP-CLI completes it.', 'live', $now );
+			$checks[] = self::check( 'queue', __( 'Background queue', 'gt-performance' ), 'warning', __( 'Schema upgrade pending; new jobs wait until an administrator screen or WP-CLI completes it.', 'gt-performance' ), 'live', $now );
 		} else {
 			$age      = (int) $queue['oldest_due_age'];
 			$status   = (int) $queue['failed'] > 0 || $age > self::STALE_SECONDS ? 'warning' : 'pass';
 			$checks[] = self::check(
 				'queue',
-				'Background queue',
+				__( 'Background queue', 'gt-performance' ),
 				$status,
 				sprintf(
-					'%d pending, %d running, %d failed%s; oldest due job waited %s.%s',
+					/* translators: 1: pending jobs, 2: running jobs, 3: failed jobs, 4: how long the oldest due job waited, e.g. 5m. */
+					__( '%1$d pending, %2$d running, %3$d failed; oldest due job waited %4$s.', 'gt-performance' ),
 					(int) $queue['pending'],
 					(int) $queue['running'],
 					(int) $queue['failed'],
-					$queue['paused'] ? ', optional work paused' : '',
-					self::duration( $age ),
-					(int) $queue['failed'] > 0 ? ' Retry or cancel failed jobs in Tools.' : ''
-				),
+					self::duration( $age )
+				)
+				. ( $queue['paused'] ? ' ' . __( 'Optional work is paused.', 'gt-performance' ) : '' )
+				. ( (int) $queue['failed'] > 0 ? ' ' . __( 'Retry or cancel failed jobs in Tools.', 'gt-performance' ) : '' ),
 				'live',
 				$now
 			);
@@ -130,24 +131,25 @@ final class HealthReport {
 
 		$beat     = (int) $evidence['heartbeat'];
 		$checks[] = 0 === $beat
-			? self::check( 'queue_heartbeat', 'Queue runner', 'warning', 'No scheduled queue run has been recorded yet.', 'saved', 0 )
+			? self::check( 'queue_heartbeat', __( 'Queue runner', 'gt-performance' ), 'warning', __( 'No scheduled queue run has been recorded yet.', 'gt-performance' ), 'saved', 0 )
 			: self::check(
 				'queue_heartbeat',
-				'Queue runner',
+				__( 'Queue runner', 'gt-performance' ),
 				$now - $beat > self::STALE_SECONDS ? 'warning' : 'pass',
-				'Last scheduled run ' . self::duration( max( 0, $now - $beat ) ) . ' ago.',
+				/* translators: %s: time since the last run, e.g. 5m. */
+				sprintf( __( 'Last scheduled run %s ago.', 'gt-performance' ), self::duration( max( 0, $now - $beat ) ) ),
 				'saved',
 				$beat
 			);
 
 		$cron     = (array) $evidence['cron'];
-		$checks[] = self::check( 'cron', 'WP-Cron', 'pass' === $cron['status'] ? 'pass' : 'warning', (string) $cron['value'], 'live', $now );
+		$checks[] = self::check( 'cron', __( 'WP-Cron', 'gt-performance' ), 'pass' === $cron['status'] ? 'pass' : 'warning', (string) $cron['value'], 'live', $now );
 
 		$checks[] = self::check(
 			'storage',
-			'Cache storage',
+			__( 'Cache storage', 'gt-performance' ),
 			$evidence['storage_writable'] ? 'pass' : 'fail',
-			$evidence['storage_writable'] ? 'Cache directory is writable.' : 'Cache directory is not writable; pages and generated assets cannot be stored.',
+			$evidence['storage_writable'] ? __( 'Cache directory is writable.', 'gt-performance' ) : __( 'Cache directory is not writable; pages and generated assets cannot be stored.', 'gt-performance' ),
 			'live',
 			$now
 		);
@@ -158,42 +160,45 @@ final class HealthReport {
 		$ready    = 'owned' === $dropin && 'enabled' === $wpCache;
 		$checks[] = self::check(
 			'page_dropin',
-			'Page-cache drop-in',
+			__( 'Page-cache drop-in', 'gt-performance' ),
 			! $cache ? 'info' : ( $ready ? 'pass' : ( 'conflict' === $dropin ? 'fail' : 'warning' ) ),
-			! $cache ? 'Origin page cache is disabled.' : sprintf( 'Drop-in %s; WP_CACHE %s.', $dropin, $wpCache ),
+			/* translators: 1: drop-in state such as owned or missing, 2: WP_CACHE state such as enabled. */
+			! $cache ? __( 'Origin page cache is disabled.', 'gt-performance' ) : sprintf( __( 'Drop-in %1$s; WP_CACHE %2$s.', 'gt-performance' ), $dropin, $wpCache ),
 			'live',
 			$now
 		);
 
 		if ( $evidence['redis_enabled'] ) {
 			$redis    = (string) $evidence['redis_dropin'];
-			$checks[] = self::check( 'object_cache_dropin', 'Object-cache drop-in', 'owned' === $redis ? 'pass' : 'warning', 'Drop-in ' . $redis . '.', 'live', $now );
+			/* translators: %s: drop-in state such as owned or missing. */
+			$checks[] = self::check( 'object_cache_dropin', __( 'Object-cache drop-in', 'gt-performance' ), 'owned' === $redis ? 'pass' : 'warning', sprintf( __( 'Drop-in %s.', 'gt-performance' ), $redis ), 'live', $now );
 		}
 
 		if ( $evidence['edge_conflict'] ) {
-			$checks[] = self::check( 'edge_ownership', 'Edge ownership', 'warning', 'xCloud and direct Cloudflare integration both claim the edge cache. Use one owner.', 'saved', $now );
+			$checks[] = self::check( 'edge_ownership', __( 'Edge ownership', 'gt-performance' ), 'warning', __( 'xCloud and direct Cloudflare integration both claim the edge cache. Use one owner.', 'gt-performance' ), 'saved', $now );
 		}
 
 		$checks[] = self::check(
 			'configuration',
-			'Runtime configuration',
+			__( 'Runtime configuration', 'gt-performance' ),
 			$evidence['config_error'] ? 'fail' : 'pass',
-			$evidence['config_error'] ? 'The last settings save could not be published to the runtime cache; earlier settings may still apply.' : 'Saved settings are published to the runtime cache.',
+			$evidence['config_error'] ? __( 'The last settings save could not be published to the runtime cache; earlier settings may still apply.', 'gt-performance' ) : __( 'Saved settings are published to the runtime cache.', 'gt-performance' ),
 			'saved',
 			$now
 		);
 
 		$receipts = (array) $evidence['purges'];
 		if ( array() === $receipts ) {
-			$checks[] = self::check( 'purge_verification', 'Purge verification', 'info', 'No purge verification has been run.', 'saved', 0 );
+			$checks[] = self::check( 'purge_verification', __( 'Purge verification', 'gt-performance' ), 'info', __( 'No purge verification has been run.', 'gt-performance' ), 'saved', 0 );
 		} else {
 			$latest   = (array) $receipts[0];
 			$warnings = count( array_filter( $receipts, static fn ( $receipt ): bool => 'verified' !== ( is_array( $receipt ) ? ( $receipt['status'] ?? '' ) : '' ) ) );
 			$checks[] = self::check(
 				'purge_verification',
-				'Purge verification',
+				__( 'Purge verification', 'gt-performance' ),
 				'verified' === ( $latest['status'] ?? '' ) ? 'pass' : 'warning',
-				sprintf( 'Latest result: %s. %d of the last %d need attention.', (string) ( $latest['status'] ?? 'unknown' ), $warnings, count( $receipts ) ),
+				/* translators: 1: latest result such as verified, 2: results needing attention, 3: results checked. */
+				sprintf( __( 'Latest result: %1$s. %2$d of the last %3$d need attention.', 'gt-performance' ), (string) ( $latest['status'] ?? 'unknown' ), $warnings, count( $receipts ) ),
 				'saved',
 				self::timestamp( (string) ( $latest['created_at'] ?? '' ) )
 			);
@@ -203,9 +208,10 @@ final class HealthReport {
 			$css      = (array) $evidence['css'];
 			$checks[] = self::check(
 				'css_reports',
-				'Unused CSS reports',
+				__( 'Unused CSS reports', 'gt-performance' ),
 				(int) ( $css['failed'] ?? 0 ) > 0 ? 'warning' : 'pass',
-				sprintf( 'Of the %d most recent reports: %d ready, %d queued or processing, %d failed.', (int) ( $css['sampled'] ?? 0 ), (int) ( $css['ready'] ?? 0 ), (int) ( $css['queued'] ?? 0 ) + (int) ( $css['processing'] ?? 0 ), (int) ( $css['failed'] ?? 0 ) ),
+				/* translators: 1: reports sampled, 2: ready, 3: queued or processing, 4: failed. */
+				sprintf( __( 'Of the %1$d most recent reports: %2$d ready, %3$d queued or processing, %4$d failed.', 'gt-performance' ), (int) ( $css['sampled'] ?? 0 ), (int) ( $css['ready'] ?? 0 ), (int) ( $css['queued'] ?? 0 ) + (int) ( $css['processing'] ?? 0 ), (int) ( $css['failed'] ?? 0 ) ),
 				'saved',
 				$now
 			);
@@ -215,9 +221,13 @@ final class HealthReport {
 		if ( $varying ) {
 			$checks[] = self::check(
 				'visitor_variation',
-				'Language and currency plugins',
+				__( 'Language and currency plugins', 'gt-performance' ),
 				'warning',
-				implode( ', ', $varying ) . ' can show different pages at the same URL. Cached pages are shared per URL; see Integrations for what to set so visitors are not served another visitor\'s language or prices.',
+				sprintf(
+					/* translators: %s: comma-separated plugin names. */
+					__( '%s can show different pages at the same URL. Cached pages are shared per URL; see Integrations for what to set so visitors are not served another visitor\'s language or prices.', 'gt-performance' ),
+					implode( ', ', $varying )
+				),
 				'live',
 				$now
 			);
@@ -234,7 +244,7 @@ final class HealthReport {
 	 */
 	private static function warming( ?array $run, int $now ): array {
 		if ( null === $run ) {
-			return self::check( 'warming', 'Cache warming', 'info', 'No warm run has been recorded.', 'saved', 0 );
+			return self::check( 'warming', __( 'Cache warming', 'gt-performance' ), 'info', __( 'No warm run has been recorded.', 'gt-performance' ), 'saved', 0 );
 		}
 
 		$urls     = (array) ( $run['targets']['url'] ?? array() );
@@ -243,7 +253,8 @@ final class HealthReport {
 		$stalled  = in_array( $state, array( 'discovering', 'warming' ), true ) && $now - (int) $run['updated_at'] > 2 * self::STALE_SECONDS;
 		$status   = $stalled || in_array( $state, array( 'partial', 'capacity_limited' ), true ) || (int) ( $urls['failed'] ?? 0 ) > 0 ? 'warning' : 'pass';
 		$value    = sprintf(
-			'Latest run %s: %d origin ready, %d edge observed, %d requested, %d queued, %d pending, %d skipped, %d failed; %d sitemap(s) read, %d failed.',
+			/* translators: 1: run state, 2-8: URL counts by outcome, 9: sitemaps read, 10: sitemaps that failed. */
+			__( 'Latest run %1$s: %2$d origin ready, %3$d edge observed, %4$d requested, %5$d queued, %6$d pending, %7$d skipped, %8$d failed; %9$d sitemaps read, %10$d failed.', 'gt-performance' ),
 			str_replace( '_', ' ', $state ),
 			(int) ( $urls['origin_ready'] ?? 0 ),
 			(int) ( $urls['edge_observed'] ?? 0 ),
@@ -256,13 +267,15 @@ final class HealthReport {
 			(int) ( $sitemaps['failed'] ?? 0 )
 		);
 		if ( $stalled ) {
-			$value .= ' No progress for ' . self::duration( $now - (int) $run['updated_at'] ) . '; check the queue for cancelled or failed warm jobs, or start a new run.';
+			/* translators: %s: time without progress, e.g. 40m. */
+			$value .= ' ' . sprintf( __( 'No progress for %s; check the queue for cancelled or failed warm jobs, or start a new run.', 'gt-performance' ), self::duration( $now - (int) $run['updated_at'] ) );
 		}
 		if ( array() !== (array) $run['warnings'] ) {
-			$value .= ' Warnings: ' . implode( ', ', array_map( 'strval', (array) $run['warnings'] ) ) . '.';
+			/* translators: %s: comma-separated warning codes. */
+			$value .= ' ' . sprintf( __( 'Warnings: %s.', 'gt-performance' ), implode( ', ', array_map( 'strval', (array) $run['warnings'] ) ) );
 		}
 
-		return self::check( 'warming', 'Cache warming', $status, $value, 'saved', (int) $run['updated_at'] );
+		return self::check( 'warming', __( 'Cache warming', 'gt-performance' ), $status, $value, 'saved', (int) $run['updated_at'] );
 	}
 
 	/**
@@ -280,9 +293,7 @@ final class HealthReport {
 		$queue['ready']          = $ready;
 		$queue['oldest_due_age'] = $ready ? $jobs->oldestDueAge() : 0;
 
-		$cron = ( new CronHealth() )->check();
-		// The runner command carries an absolute server path; doctor prints it.
-		$cron['value'] = str_replace( 'Install this five-minute runner: ' . ( new CronHealth() )->runnerCommand(), '`wp gt-performance doctor` prints a five-minute server runner command.', (string) $cron['value'] );
+		$cron = ( new CronHealth() )->check( null, null, false );
 
 		$css = array( 'sampled' => 0 );
 		if ( (bool) Settings::get( 'css.enabled', false ) ) {

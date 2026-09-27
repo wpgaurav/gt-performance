@@ -35,8 +35,12 @@ final class CronHealthTest extends TestCase {
 		);
 
 		self::assertSame( 'warning', $check['status'] );
-		self::assertStringContainsString( '1 event(s) overdue', $check['value'] );
+		self::assertStringContainsString( '1 event overdue', $check['value'] );
 		self::assertStringContainsString( '*/5 * * * * flock -n', $check['value'] );
 		self::assertStringContainsString( ABSPATH . 'wp-cron.php', $check['value'] );
+
+		$shared = ( new CronHealth() )->check( array( 8000 => array( 'site_maintenance_refresh' => array( 'instance' => array() ) ) ), 10000, false );
+		self::assertStringNotContainsString( ABSPATH, $shared['value'], 'The health report is exported; it must not carry the server path.' );
+		self::assertStringContainsString( 'wp gt-performance doctor', $shared['value'] );
 	}
 }

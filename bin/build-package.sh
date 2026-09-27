@@ -115,7 +115,7 @@ build_channel() {
 	# the repo root shipped into a production install and served 531 KB of internal
 	# audit notes over HTTP before this check existed. Allowlist the top level instead,
 	# so anything new has to be named here before it can ever be packaged.
-	local allowed=' assets dropins src vendor LICENSE composer.json gt-performance.php readme.txt uninstall.php '
+	local allowed=' assets dropins languages src vendor LICENSE composer.json gt-performance.php readme.txt uninstall.php '
 	local unexpected=''
 	local entry
 	for entry in "${plugin_dir}"/* "${plugin_dir}"/.[!.]*; do
