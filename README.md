@@ -331,7 +331,7 @@ Two more read abilities accompany operations: `preview-purge` (what an update to
 | `gt-performance/preload-urls` | Queues preloads for up to 20 URLs |
 | `gt-performance/regenerate-css` | Queues an unused-CSS rebuild for one URL |
 | `gt-performance/retry-job` | Retries one failed preload, warming, CSS, or image job |
-| `gt-performance/propose-settings` | Records a proposal for warming, JavaScript defer/delay, critical images, CSS rollout, or safelist changes; an administrator applies it in Tools or `wp gt-performance operations apply <id>` within 15 minutes |
+| `gt-performance/propose-settings` | Records a proposal for warming, JavaScript defer/delay, critical images, CSS rollout, or safelist changes; an administrator applies it on the **AI & MCP** tab or with `wp gt-performance operations apply <id>` within 15 minutes |
 
 Operations run in the background queue and return an operation ID immediately. Before starting, a queued operation re-checks that access is still "operate" and that its requester is still an administrator; otherwise it is cancelled. Limits: 60 submissions a minute per user and 100 outstanding operations per site. There is no full-site or zone purge, settings apply, credential change, or raw database access.
 
