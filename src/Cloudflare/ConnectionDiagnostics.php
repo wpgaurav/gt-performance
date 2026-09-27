@@ -164,6 +164,9 @@ final class ConnectionDiagnostics {
 			)
 		);
 
+		$steps[] = $this->proxyStep( $client, $zoneId );
+		$steps[] = $this->apoStep( $client, $zoneId );
+
 		$entrypoint = $client->request( 'GET', 'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint' );
 		$status     = is_wp_error( $entrypoint ) ? (int) ( ( (array) $entrypoint->get_error_data() )['status'] ?? 0 ) : 200;
 		if ( is_wp_error( $entrypoint ) && 404 !== $status ) {
@@ -210,6 +213,79 @@ final class ConnectionDiagnostics {
 		$steps[] = $this->writeProbe( $client, $zoneId, $rulesetId, $managed );
 
 		return $steps;
+	}
+
+	/**
+	 * A DNS-only ("grey cloud") record sends visitors straight to the origin, so the
+	 * cache rule and every purge act on a cache nobody is served from.
+	 *
+	 * The recommended token has no DNS permission, so when the record cannot be
+	 * read the site's own public response is checked for Cloudflare's CF-Ray header.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function proxyStep( ApiClient $client, string $zoneId ): array {
+		$label = __( 'Traffic through Cloudflare', 'gt-performance' );
+		$host  = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+
+		$records = $client->request( 'GET', 'zones/' . rawurlencode( $zoneId ) . '/dns_records?name=' . rawurlencode( $host ) );
+		if ( ! is_wp_error( $records ) ) {
+			$routable = array_values(
+				array_filter(
+					(array) ( $records['result'] ?? array() ),
+					static fn ( $record ): bool => is_array( $record ) && in_array( (string) ( $record['type'] ?? '' ), array( 'A', 'AAAA', 'CNAME' ), true )
+				)
+			);
+			if ( $routable ) {
+				$proxied = array_filter( $routable, static fn ( array $record ): bool => ! empty( $record['proxied'] ) );
+
+				return count( $proxied ) === count( $routable )
+					? $this->step( 'proxied', $label, self::PASS, sprintf( /* translators: %s: hostname. */ __( 'The DNS records for %s are proxied, so visitors reach the Cloudflare cache.', 'gt-performance' ), $host ) )
+					: $this->step( 'proxied', $label, self::WARN, sprintf( /* translators: %s: hostname. */ __( 'A DNS record for %s is DNS only (grey cloud), so visitors go straight to your server and the Cloudflare cache rule and purges have no effect. Turn on the proxy (orange cloud) for it in Cloudflare DNS.', 'gt-performance' ), $host ) );
+			}
+		}
+
+		$response = wp_remote_get(
+			home_url( '/' ),
+			array(
+				'timeout'             => 10,
+				'redirection'         => 2,
+				'limit_response_size' => 1024,
+			)
+		);
+		if ( ! is_wp_error( $response ) && '' !== (string) wp_remote_retrieve_header( $response, 'cf-ray' ) ) {
+			return $this->step( 'proxied', $label, self::PASS, __( 'The home page answers with Cloudflare\'s CF-Ray header, so visitors reach the Cloudflare cache.', 'gt-performance' ) );
+		}
+
+		return $this->step(
+			'proxied',
+			$label,
+			self::WARN,
+			sprintf(
+				/* translators: %s: hostname. */
+				__( 'Could not confirm that %s is proxied: the token cannot read DNS, and the home page did not return a CF-Ray header when this server requested it (a server that resolves its own name locally skips Cloudflare). Check that the record has the orange cloud in Cloudflare DNS.', 'gt-performance' ),
+				$host
+			)
+		);
+	}
+
+	/**
+	 * Automatic Platform Optimization caches HTML with its own rules and purges
+	 * through Cloudflare's own plugin, so two HTML caches would sit at the edge and
+	 * GT Performance's purges would not reach APO's copies.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function apoStep( ApiClient $client, string $zoneId ): array {
+		$label   = __( 'Automatic Platform Optimization', 'gt-performance' );
+		$setting = $client->request( 'GET', 'zones/' . rawurlencode( $zoneId ) . '/settings/automatic_platform_optimization' );
+		if ( is_wp_error( $setting ) ) {
+			return $this->step( 'apo', $label, self::SKIP, __( 'This token cannot read the APO setting. If APO is on for this zone, turn it off or turn off the Cloudflare integration here: both cache HTML, and GT Performance cannot purge APO\'s copies.', 'gt-performance' ) );
+		}
+
+		return empty( $setting['result']['value']['enabled'] )
+			? $this->step( 'apo', $label, self::PASS, __( 'APO is off, so the managed cache rule is the only thing caching HTML at Cloudflare.', 'gt-performance' ) )
+			: $this->step( 'apo', $label, self::WARN, __( 'APO is on for this zone. It caches HTML with its own rules and purges through Cloudflare\'s plugin, so GT Performance\'s purges do not clear APO\'s copies and visitors can get stale pages. Turn APO off in Cloudflare (Speed → Optimization), or turn off the Cloudflare integration here and let APO own the edge.', 'gt-performance' ) );
 	}
 
 	/**
@@ -301,7 +377,15 @@ final class ConnectionDiagnostics {
 	private function summarize( array $steps ): string {
 		$failed = $this->firstFailure( $steps );
 		if ( null === $failed ) {
-			return __( 'Cloudflare is reachable and GT Performance can read and write cache rules.', 'gt-performance' );
+			$warnings = count( array_filter( $steps, static fn ( array $step ): bool => self::WARN === ( $step['status'] ?? '' ) ) );
+
+			return $warnings
+				? sprintf(
+					/* translators: %d: number of stages with a warning. */
+					_n( 'Cloudflare is reachable and GT Performance can read and write cache rules, but %d stage needs attention.', 'Cloudflare is reachable and GT Performance can read and write cache rules, but %d stages need attention.', $warnings, 'gt-performance' ),
+					$warnings
+				)
+				: __( 'Cloudflare is reachable and GT Performance can read and write cache rules.', 'gt-performance' );
 		}
 
 		return sprintf(

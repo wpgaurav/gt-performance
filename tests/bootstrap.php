@@ -119,6 +119,12 @@ if ( ! function_exists( '__' ) ) {
 	}
 }
 
+if ( ! function_exists( '_n' ) ) {
+	function _n( string $single, string $plural, int $number ): string {
+		return 1 === $number ? $single : $plural;
+	}
+}
+
 if ( ! function_exists( 'wp_mkdir_p' ) ) {
 	function wp_mkdir_p( string $target ): bool {
 		return is_dir( $target ) || mkdir( $target, 0o777, true );

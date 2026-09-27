@@ -1291,7 +1291,7 @@ final class AdminModule implements Module {
 			<div class="gtp-panel__header">
 				<div>
 					<h3><?php esc_html_e( 'Connection check', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Walks credentials, authentication, zone lookup, and cache-rule read and write in order, and reports the exact stage and reason for any failure. The write stage rewrites the managed rule with its own current contents, so it changes nothing.', 'gt-performance' ); ?></p>
+					<p><?php esc_html_e( 'Walks credentials, authentication, zone lookup, whether visitors actually pass through Cloudflare, whether APO is also caching HTML, and cache-rule read and write in order, and reports the exact stage and reason for any failure. The write stage rewrites the managed rule with its own current contents, so it changes nothing.', 'gt-performance' ); ?></p>
 				</div>
 				<?php $this->actionButton( 'gtperf_cloudflare_diagnose', __( 'Run connection check', 'gt-performance' ) ); ?>
 			</div>
