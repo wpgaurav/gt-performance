@@ -102,7 +102,7 @@ final class PageCacheModule implements Module {
 			SharedCacheHeaders::noStore();
 			if ( (bool) Settings::get( 'debug', false ) ) {
 				header( 'X-GT-Cache: BYPASS' );
-				header( 'X-GT-Cache-Reason: ' . sanitize_key( $this->decision->reason ) );
+				header( 'X-GT-Cache-Reason: ' . DropinRuntime::reasonHeader( $this->decision->reason ) );
 			}
 			return;
 		}
@@ -163,7 +163,7 @@ final class PageCacheModule implements Module {
 				SharedCacheHeaders::noStore();
 				if ( (bool) Settings::get( 'debug', false ) ) {
 					header( 'X-GT-Cache: DYNAMIC' );
-					header( 'X-GT-Cache-Reason: ' . sanitize_key( $decision->reason ) );
+					header( 'X-GT-Cache-Reason: ' . DropinRuntime::reasonHeader( $decision->reason ) );
 				}
 			}
 			$this->logger->log( 'debug', 'Response not cached', array( 'reason' => $decision->reason ) );
@@ -187,6 +187,7 @@ final class PageCacheModule implements Module {
 				'stale_until' => $now + max( 0, (int) $config['fresh_ttl'] ) + max( 0, (int) $config['stale_ttl'] ),
 				'url'         => $this->request->scheme . '://' . $this->request->host . $this->request->path,
 				'generation'  => (int) $config['generation'],
+				'headers'     => DropinRuntime::replayableHeaders( headers_list() ),
 			)
 		);
 

@@ -30,7 +30,7 @@ final class FileStore {
 	}
 
 	/**
-	 * @param array<string, int|string> $metadata Metadata.
+	 * @param array<string, int|string|list<string>> $metadata Metadata; `headers` holds the lines a hit replays.
 	 */
 	public function write( string $hash, string $html, array $metadata ): bool {
 		$directory = dirname( $this->pagePath( $hash ) );

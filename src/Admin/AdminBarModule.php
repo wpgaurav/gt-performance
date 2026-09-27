@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\Admin;
 
+use GTPerformance\Cache\DropinRuntime;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Contracts\Module;
 use GTPerformance\Diagnostics\PurgeVerifier;
@@ -184,7 +185,7 @@ final class AdminBarModule implements Module {
 			array(
 				'timeout'     => 15,
 				'redirection' => 3,
-				'headers'     => array( 'X-GT-Preload' => '1' ),
+				'headers'     => array( 'X-GT-Preload' => DropinRuntime::preloadToken( time() ) ),
 				'user-agent'  => 'GT-Performance-Admin-Bar/' . GTPERF_VERSION,
 			)
 		);

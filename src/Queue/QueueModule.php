@@ -139,9 +139,9 @@ final class QueueModule implements Module {
 	 *
 	 * The drop-in serves a stale entry and exits, so nothing regenerates it
 	 * inside the stale window; without this the body a visitor gets can be as
-	 * old as fresh_ttl + stale_ttl. Preload requests carry X-GT-Preload, which
-	 * the drop-in treats as a miss when the entry is stale, so each queued job
-	 * rebuilds one page.
+	 * old as fresh_ttl + stale_ttl. Preload requests carry a signed X-GT-Preload
+	 * token, which the drop-in treats as a miss when the entry is stale, so each
+	 * queued job rebuilds one page.
 	 *
 	 * Batches are small and debounced: the sweep walks the cache directory, and
 	 * on a large site that should happen at a steady trickle rather than in one

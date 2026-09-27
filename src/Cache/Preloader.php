@@ -50,7 +50,7 @@ final class Preloader {
 			array(
 				'timeout'     => 15,
 				'redirection' => 0,
-				'headers'     => array( 'X-GT-Preload' => '1' ) + JobLease::headers(),
+				'headers'     => array( 'X-GT-Preload' => DropinRuntime::preloadToken( time() ) ) + JobLease::headers(),
 				'user-agent'  => $agent,
 			)
 		);
