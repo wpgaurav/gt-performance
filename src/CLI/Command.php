@@ -14,6 +14,7 @@ use GTPerformance\Cache\DropinInstaller;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\WpCacheConstant;
 use GTPerformance\Cloudflare\ClientFactory;
+use GTPerformance\Cloudflare\Disconnector;
 use GTPerformance\Cloudflare\RuleManager;
 use GTPerformance\Core\Paths;
 use GTPerformance\Core\Settings;
@@ -677,21 +678,43 @@ final class Command {
 	 * ## OPTIONS
 	 *
 	 * [<action>]
-	 * : status, plan, sync, or purge. Defaults to status.
+	 * : status, plan, sync, purge, or disconnect. Defaults to status.
 	 *
 	 * [--page-url=<url>]
 	 * : Purge one exact URL instead of the entire Cloudflare zone cache.
+	 *
+	 * [--forget]
+	 * : With disconnect, also delete the saved Cloudflare credentials and Zone ID.
+	 *
+	 * `disconnect` deletes the cache rule GT Performance manages (no other rule),
+	 * purges the zone, and turns the integration off.
 	 *
 	 * @param list<string>          $args      Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.
 	 */
 	public function cloudflare( array $args, array $assocArgs ): void {
-		$action = $this->action( $args, 'status', array( 'status', 'plan', 'sync', 'purge' ), 'Cloudflare' );
+		$action = $this->action( $args, 'status', array( 'status', 'plan', 'sync', 'purge', 'disconnect' ), 'Cloudflare' );
 		if ( null === $action ) {
+			return;
+		}
+		if ( isset( $assocArgs['forget'] ) && 'disconnect' !== $action ) {
+			\WP_CLI::error( '--forget is supported only by cloudflare disconnect.' );
 			return;
 		}
 		if ( $this->pageUrlRequested( $assocArgs ) && 'purge' !== $action ) {
 			\WP_CLI::error( '--page-url is supported only by cloudflare purge.' );
+			return;
+		}
+		if ( 'disconnect' === $action ) {
+			$result = ( new Disconnector() )->disconnect( isset( $assocArgs['forget'] ) );
+			if ( is_wp_error( $result ) ) {
+				\WP_CLI::error( $result->get_error_message() );
+				return;
+			}
+			if ( ! $result['purged'] ) {
+				\WP_CLI::warning( 'The zone purge failed. Pages Cloudflare already stored stay until they expire; purge them in the Cloudflare dashboard.' );
+			}
+			\WP_CLI::success( 'removed' === $result['rule'] ? 'Cloudflare disconnected; the managed cache rule was deleted.' : 'Cloudflare disconnected; there was no managed cache rule to delete.' );
 			return;
 		}
 

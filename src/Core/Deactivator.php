@@ -12,6 +12,16 @@ namespace GTPerformance\Core;
 final class Deactivator {
 	public static function deactivate(): void {
 		$settings = Settings::all();
+
+		// Best effort: a zone that cannot be reached must not block deactivation.
+		// Failures leave the rule in place, and `cloudflare disconnect` can finish it.
+		if ( \GTPerformance\Cloudflare\Disconnector::applies( $settings ) ) {
+			$detached = ( new \GTPerformance\Cloudflare\Disconnector() )->detach( $settings );
+			if ( ! is_wp_error( $detached ) && 'removed' === $detached['rule'] ) {
+				update_option( \GTPerformance\Cloudflare\RuleManager::REMOVED_OPTION, time(), false );
+			}
+		}
+
 		if ( isset( $settings['cache'] ) && is_array( $settings['cache'] ) ) {
 			$settings['cache']['enabled'] = false;
 			Settings::compile( $settings );

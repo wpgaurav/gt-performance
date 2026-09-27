@@ -286,7 +286,7 @@ final class CommandTest extends TestCase {
 				static function ( Command $command ): void {
 					$command->cloudflare( array( 'typo' ), array() );
 				},
-				'Unknown Cloudflare action. Use status, plan, sync, or purge.',
+				'Unknown Cloudflare action. Use status, plan, sync, purge, or disconnect.',
 			),
 			'xcloud' => array(
 				static function ( Command $command ): void {

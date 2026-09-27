@@ -40,6 +40,7 @@ delete_option( 'gt_performance_cloudflare_plan' );
 delete_option( 'gt_performance_cloudflare_query_key_fallback' );
 delete_option( 'gt_performance_cloudflare_diagnostics' );
 delete_option( 'gt_performance_cloudflare_last_purge' );
+delete_option( 'gt_performance_cloudflare_rule_removed' );
 delete_option( 'gt_performance_wp_cache_constant_ownership' );
 delete_option( 'gt_performance_commerce_policy_hash' );
 delete_option( 'gt_performance_commerce_safety_runs' );

@@ -15,6 +15,7 @@ use GTPerformance\Cache\WpCacheConstant;
 use GTPerformance\Cloudflare\ApiClient;
 use GTPerformance\Cloudflare\ClientFactory;
 use GTPerformance\Cloudflare\ConnectionDiagnostics;
+use GTPerformance\Cloudflare\Disconnector;
 use GTPerformance\Cloudflare\RuleManager;
 use GTPerformance\Cloudflare\TokenProvisioner;
 use GTPerformance\Cloudflare\TokenCipher;
@@ -106,6 +107,7 @@ final class AdminModule implements Module {
 		add_action( 'admin_post_gtperf_cloudflare_preview', array( $this, 'cloudflarePreview' ) );
 		add_action( 'admin_post_gtperf_cloudflare_diagnose', array( $this, 'cloudflareDiagnose' ) );
 		add_action( 'admin_post_gtperf_cloudflare_token', array( $this, 'cloudflareProvisionToken' ) );
+		add_action( 'admin_post_gtperf_cloudflare_disconnect', array( $this, 'cloudflareDisconnect' ) );
 		add_action( 'admin_post_gtperf_purge_verify', array( $this, 'purgeVerify' ) );
 		add_action( 'admin_post_gtperf_database_clean', array( $this, 'databaseClean' ) );
 		add_action( 'admin_post_gtperf_database_stop', array( $this, 'databaseStop' ) );
@@ -594,6 +596,20 @@ final class AdminModule implements Module {
 		$this->guard( 'gtperf_cloudflare_diagnose' );
 		$report = ( new ConnectionDiagnostics() )->run();
 		$this->redirect( empty( $report['ok'] ) ? 'cloudflare-diagnosed-fail' : 'cloudflare-diagnosed-ok', 'cloudflare' );
+	}
+
+	/**
+	 * Delete the managed rule, purge the zone, and turn the integration off.
+	 * Credentials stay saved, so reconnecting is one sync.
+	 */
+	public function cloudflareDisconnect(): void {
+		$this->guard( 'gtperf_cloudflare_disconnect' );
+		$result = ( new Disconnector() )->disconnect( false );
+		if ( is_wp_error( $result ) ) {
+			$this->redirectError( $result, 'cloudflare' );
+		}
+
+		$this->redirect( $result['purged'] ? 'cloudflare-disconnected' : 'cloudflare-disconnected-unpurged', 'cloudflare' );
 	}
 
 	/**
@@ -1096,6 +1112,19 @@ final class AdminModule implements Module {
 	 */
 	private function renderCloudflare( array $settings ): void {
 		$this->pageIntro( __( 'Cloudflare Free', 'gt-performance' ), __( 'Synchronize one cache rule and targeted purges without requiring APO, Workers, Argo, or a paid Cloudflare plan.', 'gt-performance' ) );
+		$removedAt = (int) get_option( RuleManager::REMOVED_OPTION, 0 );
+		if ( $removedAt > 0 && ! empty( $settings['cloudflare']['enabled'] ) ) {
+			printf(
+				'<div class="notice notice-warning inline"><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %s: date and time the plugin was deactivated. */
+						__( 'GT Performance deleted its Cloudflare cache rule when it was deactivated on %s, so Cloudflare is not caching pages for this site. Use Connect/sync Cloudflare below to restore it.', 'gt-performance' ),
+						wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $removedAt )
+					)
+				)
+			);
+		}
 		$this->settingsFormOpen();
 		$this->panelOpen( __( 'Connection', 'gt-performance' ), __( 'A scoped token is safer. Global API Key authentication remains available for legacy accounts.', 'gt-performance' ) );
 		$this->checkbox( 'cloudflare', 'enabled', __( 'Enable Cloudflare integration', 'gt-performance' ), __( 'Allow GT Performance to purge and maintain its managed cache rule.', 'gt-performance' ), $settings );
@@ -1155,6 +1184,15 @@ final class AdminModule implements Module {
 			</div>
 			<?php $this->actionButton( 'gtperf_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
 		</section>
+		<?php if ( ! empty( $settings['cloudflare']['enabled'] ) ) : ?>
+			<section class="gtp-panel gtp-operation-panel">
+				<div>
+					<h3><?php esc_html_e( 'Disconnect', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Deletes the cache rule GT Performance manages, purges the zone so no page stored under it lingers, and turns the integration off. Your other rules and the saved credentials stay. Deactivating the plugin does the same, except the integration stays on for when you reactivate.', 'gt-performance' ); ?></p>
+				</div>
+				<?php $this->actionButton( 'gtperf_cloudflare_disconnect', __( 'Disconnect Cloudflare', 'gt-performance' ) ); ?>
+			</section>
+		<?php endif; ?>
 		<?php $this->renderCloudflareToken( $settings ); ?>
 		<?php $this->renderCloudflareDiagnostics(); ?>
 		<?php $this->renderCloudflarePlan(); ?>
@@ -3540,6 +3578,8 @@ PHP;
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
 			'cache-purge-partial'       => array( __( 'The local page cache was cleared, but Cloudflare could not finish its purge. Review the latest Cloudflare purge below.', 'gt-performance' ), 'error' ),
 			'cloudflare-synced'         => array( __( 'Cloudflare connected and the managed cache rule was synchronized.', 'gt-performance' ), 'success' ),
+			'cloudflare-disconnected'   => array( __( 'Cloudflare disconnected. The managed cache rule is gone and the zone was purged.', 'gt-performance' ), 'success' ),
+			'cloudflare-disconnected-unpurged' => array( __( 'Cloudflare disconnected and the managed cache rule is gone, but the zone purge failed. Purge the zone in the Cloudflare dashboard, or pages it stored stay until they expire.', 'gt-performance' ), 'warning' ),
 			'cloudflare-previewed'      => array( __( 'The live Cloudflare rule plan was checked without changing it.', 'gt-performance' ), 'success' ),
 			'cloudflare-diagnosed-ok'   => array( __( 'Every Cloudflare connection stage passed, including writing cache rules.', 'gt-performance' ), 'success' ),
 			'cloudflare-token-created'  => array( __( 'A zone-scoped Cloudflare API token was created and saved. The Global API Key is no longer needed here and can be cleared.', 'gt-performance' ), 'success' ),

@@ -18,6 +18,12 @@ final class RuleManager {
 	 */
 	public const QUERY_KEY_FALLBACK_OPTION = 'gt_performance_cloudflare_query_key_fallback';
 
+	/**
+	 * When deactivation removed the managed rule. Reactivating leaves the rule
+	 * missing until the next sync, so the Cloudflare tab says so until then.
+	 */
+	public const REMOVED_OPTION = 'gt_performance_cloudflare_rule_removed';
+
 	public function __construct(
 		private readonly ApiClient $client,
 		private readonly RuleCompiler $compiler = new RuleCompiler(),
@@ -62,6 +68,53 @@ final class RuleManager {
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	public function sync( string $zoneId, string $host, array $cache ): array|\WP_Error {
+		$result = $this->write( $zoneId, $host, $cache );
+		if ( ! is_wp_error( $result ) ) {
+			delete_option( self::REMOVED_OPTION );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Delete only the rule this plugin owns, identified by its ref. Restoring a
+	 * ruleset saved before the first sync would also undo every rule the site owner
+	 * changed since, so the managed rule is the only thing touched.
+	 *
+	 * @return string|\WP_Error `removed`, or `absent` when there was no managed rule.
+	 */
+	public function remove( string $zoneId ): string|\WP_Error {
+		$entrypoint = $this->client->request(
+			'GET',
+			'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint'
+		);
+		if ( is_wp_error( $entrypoint ) ) {
+			$errorData = $entrypoint->get_error_data();
+			return 404 === ( is_array( $errorData ) ? (int) ( $errorData['status'] ?? 0 ) : 0 ) ? 'absent' : $entrypoint;
+		}
+
+		$ruleset   = (array) ( $entrypoint['result'] ?? array() );
+		$rulesetId = (string) ( $ruleset['id'] ?? '' );
+		foreach ( (array) ( $ruleset['rules'] ?? array() ) as $rule ) {
+			if ( ! is_array( $rule ) || RuleCompiler::MANAGED_RULE_REF !== ( $rule['ref'] ?? '' ) || '' === (string) ( $rule['id'] ?? '' ) || '' === $rulesetId ) {
+				continue;
+			}
+			$deleted = $this->client->request(
+				'DELETE',
+				'zones/' . rawurlencode( $zoneId ) . '/rulesets/' . rawurlencode( $rulesetId ) . '/rules/' . rawurlencode( (string) $rule['id'] )
+			);
+
+			return is_wp_error( $deleted ) ? $deleted : 'removed';
+		}
+
+		return 'absent';
+	}
+
+	/**
+	 * @param array<string, mixed> $cache Cache policy.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	private function write( string $zoneId, string $host, array $cache ): array|\WP_Error {
 		$entrypoint = $this->client->request(
 			'GET',
 			'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint'
@@ -97,7 +150,6 @@ final class RuleManager {
 			return new \WP_Error( 'gtperf_cloudflare_ruleset', __( 'Cloudflare did not return a cache ruleset ID.', 'gt-performance' ) );
 		}
 
-		update_option( 'gt_performance_cloudflare_backup', $ruleset, false );
 		$rules = array_values( array_filter( (array) ( $ruleset['rules'] ?? array() ), 'is_array' ) );
 		$plan  = $this->compiler->plan( $host, $cache, $rules, RuleCompiler::FREE_RULE_LIMIT, $this->edgeTtl(), ! $this->customKeyRejected() );
 		if ( ! (bool) $plan['within_budget'] ) {

@@ -193,6 +193,13 @@ if ( ! class_exists( 'WP_CLI' ) ) {
 			self::$logs[] = $message;
 		}
 
+		/** @var list<string> */
+		public static array $warnings = array();
+
+		public static function warning( string $message ): void {
+			self::$warnings[] = $message;
+		}
+
 		/** Exit status a command asked for, or null when it finished normally. */
 		public static ?int $halted = null;
 
@@ -293,6 +300,12 @@ if ( ! function_exists( 'wp_schedule_single_event' ) ) {
 	}
 	function wp_next_scheduled( string $hook, array $args = array() ): int|false {
 		return $GLOBALS['gtperf_test_cron'][ $hook ][ md5( serialize( $args ) ) ]['when'] ?? false;
+	}
+	function wp_clear_scheduled_hook( string $hook, array $args = array() ): int {
+		$key   = md5( serialize( $args ) );
+		$found = isset( $GLOBALS['gtperf_test_cron'][ $hook ][ $key ] ) ? 1 : 0;
+		unset( $GLOBALS['gtperf_test_cron'][ $hook ][ $key ] );
+		return $found;
 	}
 	function wp_unschedule_hook( string $hook ): int {
 		$count = count( $GLOBALS['gtperf_test_cron'][ $hook ] ?? array() );
