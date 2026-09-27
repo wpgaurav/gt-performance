@@ -437,8 +437,6 @@ final class Settings {
 			array( 'commerce', 'fluentcart' ),
 			array( 'commerce', 'edd' ),
 			array( 'commerce', 'woocommerce' ),
-			array( 'fleet', 'enabled' ),
-			array( 'fleet', 'allow_imports' ),
 			array( 'integrations', 'auto_protection' ),
 			array( 'integrations', 'akismet' ),
 			array( 'integrations', 'jetpack' ),
@@ -474,13 +472,6 @@ final class Settings {
 		$safelist                                  = array_map( 'sanitize_text_field', $safelist );
 		$merged['css']['safelist']                 = ( new \GTPerformance\Optimization\Css\SelectorSafelist() )->validate( $safelist )['valid'];
 		$merged['css']['excluded_stylesheets']    = self::sanitizeList( $merged['css']['excluded_stylesheets'] ?? array() );
-		$merged['fleet']['signing_secret']         = (string) ( $merged['fleet']['signing_secret'] ?? '' );
-		$merged['fleet']['policy_modules']         = array_values(
-			array_intersect(
-				self::sanitizeList( $merged['fleet']['policy_modules'] ?? array() ),
-				array_keys( $defaults )
-			)
-		);
 		return self::merge( $defaults, $merged );
 	}
 
@@ -651,7 +642,7 @@ final class Settings {
 		foreach ( $values as $key => $value ) {
 			// Ignore obsolete or foreign keys. Keeping only the declared schema stops
 			// removed controls from surviving forever in the saved option and prevents
-			// unsupported settings from being imported through fleet policy bundles.
+			// unsupported settings from being imported.
 			if ( ! array_key_exists( $key, $defaults ) ) {
 				continue;
 			}

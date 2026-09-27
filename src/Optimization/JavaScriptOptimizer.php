@@ -19,9 +19,6 @@ final class JavaScriptOptimizer {
 	/** Sources whose names signal checkout or payment code. */
 	private const COMMERCE = array( 'checkout', 'payment', 'cart' );
 
-	/** @var array<string, array{action:string,reason:string}> */
-	private array $lastPlan = array();
-
 	public function optimize( string $html ): string {
 		$override = PageOverrides::javascript();
 		$defer    = (bool) Settings::get( 'javascript.defer', false ) && 'off' !== $override;
@@ -37,9 +34,8 @@ final class JavaScriptOptimizer {
 		$selected   = fn ( string $src ): bool => $this->matches( $src, $patterns );
 		$plan       = ScriptPlan::build( self::registry(), $defer, $delay, $excluded, $selected );
 
-		$this->lastPlan = $plan;
-		$processor      = new \WP_HTML_Tag_Processor( $html );
-		$hasDelayed     = false;
+		$processor  = new \WP_HTML_Tag_Processor( $html );
+		$hasDelayed = false;
 		$unregistered   = 0;
 
 		while ( $processor->next_tag( array( 'tag_name' => 'SCRIPT' ) ) ) {
@@ -90,15 +86,6 @@ final class JavaScriptOptimizer {
 		}
 
 		return $output;
-	}
-
-	/**
-	 * The last decisions made, for diagnostics.
-	 *
-	 * @return array<string, array{action:string,reason:string}>
-	 */
-	public function lastPlan(): array {
-		return $this->lastPlan;
 	}
 
 	/**

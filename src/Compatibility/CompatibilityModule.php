@@ -126,7 +126,7 @@ final class CompatibilityModule implements Module {
 	/**
 	 * Keep client-rendered commerce application styles outside server-side
 	 * pruning. Their modal, cart, validation, and checkout states do not all
-	 * exist in the initial HTML and cannot be exercised safely during training.
+	 * exist in the initial HTML, so pruning would remove styles they need later.
 	 *
 	 * @param list<string> $exclusions Stylesheet URL fragments.
 	 * @return list<string>

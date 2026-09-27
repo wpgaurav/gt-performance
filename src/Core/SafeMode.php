@@ -73,12 +73,4 @@ final class SafeMode {
 	public static function url( string $url ): string {
 		return add_query_arg( self::PARAMETER, wp_create_nonce( self::PARAMETER ), $url );
 	}
-
-	/**
-	 * The parameter must never split the cache: a safe-mode response is not stored,
-	 * and the parameter is ignored when computing a key so it cannot mint entries.
-	 */
-	public static function parameter(): string {
-		return self::PARAMETER;
-	}
 }

@@ -1782,6 +1782,7 @@ PHP;
 						</dd></div>
 					<?php endif; ?>
 				</dl>
+				<div class="gtp-inline-link"><a href="<?php echo esc_url( \GTPerformance\Core\SafeMode::url( (string) $report['url'] ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open this page with every optimization off', 'gt-performance' ); ?> <span aria-hidden="true">&rarr;</span></a></div>
 			<?php endif; ?>
 		</section>
 		<?php

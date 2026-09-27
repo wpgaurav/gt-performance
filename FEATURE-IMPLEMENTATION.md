@@ -40,4 +40,4 @@ On WordPress 6.9+, seven read-only abilities (`get-status`, `explain-url`, `get-
 - M6 frontend. `ScriptPlan` decides defer and delay from the script registry, including src-less aliases, with core's deferral rule and delay chains. `HeroRules`, `PageOverrides`, and the editor box add declared heroes and responsive preload. `SpeculationPolicy` adds bypass-path exclusions to core speculation rules, with core, conservative, and off modes.
 - M7 adviser. `EvidenceBuilder` (redacted, 24 KB), `RecommendationValidator` (evidence IDs, measurements, allowlisted suggestions, plain text), and `Advisor` (two-step prepare/send, WordPress AI Client, per-site lock, daily quota, history, proposal hand-off).
 
-Font-localization jobs can still exceed the runner's between-job time budget. Remaining gaps are listed in the roadmap. including dependency tracking, configuration history, Abilities/MCP, frontend improvements, and the AI adviser, remain unimplemented. No release or production deployment is implied by these source changes.
+Font-localization jobs can still exceed the runner's between-job time budget. Remaining gaps and planned work are tracked in [ROADMAP.md](ROADMAP.md).

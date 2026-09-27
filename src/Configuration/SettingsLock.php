@@ -80,8 +80,4 @@ final class SettingsLock {
 			self::release();
 		}
 	}
-
-	public static function held(): bool {
-		return self::$depth > 0;
-	}
 }
