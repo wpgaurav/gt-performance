@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, woocommerce, database
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,9 @@ GT Performance stores script hostname patterns such as `connect.facebook.net`, `
 
 == Upgrade Notice ==
 
+= 1.1.1 =
+Safe mode now stops the drop-in too, cached pages keep their security headers, and signed-out purges reach Cloudflare and xCloud. Purge the cache once after updating so every cached page picks up its headers.
+
 = 1.1.0 =
 Resumable warming, dependency-aware purging, settings history, a health report, queue controls, and safer, faster unused CSS. The first wp-admin visit (or WP-CLI command) after updating upgrades the plugin's tables in small batches.
 
@@ -150,6 +153,21 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 == Changelog ==
 
 The complete release history is on the [GT Performance changelog](https://products.gatilab.com/changelogs/gt-performance/), and planned work is on the [roadmap](https://products.gatilab.com/roadmaps/gt-performance/).
+
+= 1.1.1 =
+* Safe mode (`GTPERF_SAFE_MODE`) now also stops the page-cache drop-in from serving stored pages, so nothing is served from the cache while it is on.
+* Cached pages keep the security and indexing headers WordPress and other plugins send: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, cross-origin policies, X-Robots-Tag, Content-Language, and Link.
+* Preload requests carry a short-lived signed token, so visitors can no longer force stale pages to rebuild.
+* Cloudflare and xCloud now purge when the purge starts from a signed-out request, such as a visitor's approved comment or a checkout that changes stock.
+* WordPress core, plugin, and theme updates purge the page cache, so cached pages no longer point at replaced asset versions.
+* New: Tools → Explain this page shows why a URL is or is not cached, what the origin holds, and whether Cloudflare agrees. The admin bar links straight to it, with a link to view the page with every optimization off.
+* `wp gt-performance database run` keeps your "Scheduled revisions to retain". Add `--all-revisions` to delete every revision, as the Run cleanup button does.
+* `wp gt-performance doctor` and `health` exit with status 1 when a check fails. Warnings still exit 0.
+* `--page-url` must be on this site for cache purge, explain, and verify, and for cloudflare purge.
+* The autosave interval setting now takes effect.
+* Settings export, read-only abilities, and proposals include "Disable password strength meter".
+* `X-GT-Cache-Reason` keeps paths such as `path:/cart/`.
+* Corrected the Diagnostic logging and Purge GT cache descriptions, and removed unused code.
 
 = 1.1.0 =
 * Cache warming resumes across background batches instead of stopping after 20 child sitemaps, reads chosen sitemaps or the WordPress sitemap plus robots.txt, warms recent pages first, respects the cache size budget, and records whether each page was actually stored.

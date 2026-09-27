@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.1 - 2026-09-27
+
+Fixes found while verifying the documentation against the 1.1.0 code. Each one was reproduced before it was fixed.
+
+Cache serving
+
+- The page-cache drop-in never read `GTPERF_SAFE_MODE`, so already-cached pages kept being served with safe mode on. It now falls through to WordPress, which reports `X-GT-Cache: SAFE-MODE`.
+- A cache hit sent only six fixed headers. CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, the cross-origin policies, X-Robots-Tag, Content-Language, and Link headers set in PHP disappeared from cached pages, including a `noindex` X-Robots-Tag. Capture stores an allowlist of them (at most 20 lines of 8 KB) and the drop-in replays them after re-validating each line. Pages cached before this release get their headers when they are rebuilt; purge once to refresh them all.
+- Any client could send `X-GT-Preload` and turn every stale page into a full WordPress render. Preload requests now carry a ten-minute HMAC token derived from `AUTH_KEY`, which the drop-in verifies without a database.
+- `X-GT-Cache-Reason` uses one sanitizer in the drop-in and in WordPress, so `path:/cart/` no longer arrives as `pathcart` or `path:cart`.
+
+Purging
+
+- The edge modules load only for admin, cron, AJAX, REST, CLI, and signed-in requests, so a purge from an anonymous request (a visitor's auto-approved comment, a classic WooCommerce checkout that sells a product out) cleared the origin while Cloudflare and xCloud kept serving the old page. The plugin now loads them the moment a purge fires.
+- WordPress core, plugin, and theme updates purge the cache. Translation updates and plugin installs do not.
+- `--page-url` for `cache purge|explain|verify` and `cloudflare purge` must be on one of the site's canonical hosts. `verify` fetched any URL, and purges handed foreign URLs to the edge.
+
+Administration and WP-CLI
+
+- Tools → Explain this page is new: wp-admin had no view for it, and the admin-bar link opened Tools with a URL nothing read. The panel shows the decision and reason, the origin copy's state and times, the cache key, and whether Cloudflare agrees, with a link to the page in per-request safe mode. The admin-bar link now encodes the URL and jumps to the panel.
+- `wp gt-performance database run` ignored "Scheduled revisions to retain" and deleted every revision, which is how a server cron calling it behaved. It now keeps them; `--all-revisions` matches the Run cleanup button.
+- `wp gt-performance doctor` and `health` exit 1 when a check fails. Warnings, such as an integration that is not in use, exit 0.
+- The autosave interval setting never took effect: WordPress defines `AUTOSAVE_INTERVAL` right after `plugins_loaded`, and the plugin defined it on `init`.
+- The credential-name guard dropped `bloat.disable_password_strength_meter` from settings exports, read-only abilities, and proposals. A reviewed exception keeps it; any new credential-like key is still hidden.
+- Corrected the Diagnostic logging description (entries are kept in the database, not a log directory) and the Purge GT cache description (it removes stored pages, not generated assets).
+
+Removed
+
+- `Commerce\PolicyAudit`, `Optimization\Css\SelectorObservation`, and uncalled methods left from removed features.
+
 ## 1.1.0 - 2026-09-27
 
 The first feature release in the WordPress.org plugin directory. It contains the work prepared as 1.0.15, which was never published, and the unused CSS fixes and start-up speed-up below.

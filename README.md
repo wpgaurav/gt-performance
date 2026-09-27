@@ -6,7 +6,7 @@ GT Performance is an independent WordPress performance plugin for safe page cach
 
 [Try it in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wpgaurav/gt-performance/main/distribution-assets/wordpress-org/blueprints/blueprint.json) · [GT Performance Community](https://gauravtiwari.org/portal/) · [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/)
 
-The current release is `1.1.0`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.1.1`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -221,6 +221,8 @@ wp gt-performance cache warm-status
 wp gt-performance health
 wp gt-performance health --format=json
 ```
+
+`doctor` and `health` exit with status 1 when any check fails, so monitoring and CI can act on them; warnings exit 0. **Tools → Explain this page** (also linked from the admin bar) shows why one URL is or is not cached, what the origin holds for it, and whether Cloudflare agrees, with a link to open the page with every optimization off.
 
 Schema version 5 adds the warm-targets table through the same locked admin/CLI upgrade.
 
