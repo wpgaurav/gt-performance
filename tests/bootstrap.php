@@ -404,6 +404,29 @@ if ( ! function_exists( 'wp_generate_password' ) ) {
 	}
 }
 
+// Post meta: $GLOBALS['gtperf_test_post_meta'][ post id ][ key ] = value.
+if ( ! function_exists( 'get_post_meta' ) ) {
+	function get_post_meta( int $post_id, string $key = '', bool $single = false ): mixed {
+		$value = $GLOBALS['gtperf_test_post_meta'][ $post_id ][ $key ] ?? '';
+		return $single ? $value : ( '' === $value ? array() : array( $value ) );
+	}
+	function update_post_meta( int $post_id, string $key, mixed $value ): bool {
+		$GLOBALS['gtperf_test_post_meta'][ $post_id ][ $key ] = $value;
+		return true;
+	}
+	function delete_post_meta( int $post_id, string $key ): bool {
+		unset( $GLOBALS['gtperf_test_post_meta'][ $post_id ][ $key ] );
+		return true;
+	}
+}
+
+// URL to post id: $GLOBALS['gtperf_test_url_posts'][ url ] = id.
+if ( ! function_exists( 'url_to_postid' ) ) {
+	function url_to_postid( string $url ): int {
+		return (int) ( $GLOBALS['gtperf_test_url_posts'][ $url ] ?? 0 );
+	}
+}
+
 // The main query: set $GLOBALS['gtperf_test_singular'] to a post type to render one.
 if ( ! function_exists( 'is_singular' ) ) {
 	function is_singular(): bool {

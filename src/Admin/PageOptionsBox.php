@@ -35,6 +35,14 @@ final class PageOptionsBox {
 		wp_nonce_field( self::NONCE, self::NONCE );
 		?>
 		<p>
+			<label><input type="checkbox" name="gtperf_no_cache" value="1" <?php checked( PageOverrides::noCache( $post->ID ) ); ?>> <?php esc_html_e( 'Don\'t cache this page', 'gt-performance' ); ?></label><br>
+			<small><?php esc_html_e( 'Every visit renders fresh and is sent as no-store, so Cloudflare does not keep it either unless its edge lifetime overrides the origin.', 'gt-performance' ); ?></small>
+		</p>
+		<p>
+			<label><input type="checkbox" name="gtperf_original_css" value="1" <?php checked( '1', (string) get_post_meta( $post->ID, PageOverrides::CSS_META, true ) ); ?>> <?php esc_html_e( 'Use original CSS', 'gt-performance' ); ?></label><br>
+			<small><?php esc_html_e( 'Serve this page\'s full stylesheets instead of the unused-CSS build.', 'gt-performance' ); ?></small>
+		</p>
+		<p>
 			<label for="gtperf-js-mode"><strong><?php esc_html_e( 'JavaScript on this page', 'gt-performance' ); ?></strong></label><br>
 			<select id="gtperf-js-mode" name="gtperf_javascript">
 				<option value="" <?php selected( $mode, '' ); ?>><?php esc_html_e( 'Site settings', 'gt-performance' ); ?></option>
@@ -63,6 +71,14 @@ final class PageOptionsBox {
 		in_array( $mode, PageOverrides::JS_MODES, true ) && '' !== $mode
 			? update_post_meta( $postId, PageOverrides::JS_META, $mode )
 			: delete_post_meta( $postId, PageOverrides::JS_META );
+		foreach ( array(
+			'gtperf_no_cache' => PageOverrides::CACHE_META,
+			'gtperf_original_css' => PageOverrides::CSS_META,
+		) as $field => $meta ) {
+			empty( $_POST[ $field ] )
+				? delete_post_meta( $postId, $meta )
+				: update_post_meta( $postId, $meta, '1' );
+		}
 		null !== HeroRules::parseLine( '* => ' . $hero )
 			? update_post_meta( $postId, PageOverrides::HERO_META, $hero )
 			: delete_post_meta( $postId, PageOverrides::HERO_META );

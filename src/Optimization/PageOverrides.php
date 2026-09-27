@@ -10,8 +10,10 @@ declare(strict_types=1);
 namespace GTPerformance\Optimization;
 
 final class PageOverrides {
-	public const JS_META   = '_gtperf_javascript';
-	public const HERO_META = '_gtperf_hero';
+	public const JS_META    = '_gtperf_javascript';
+	public const HERO_META  = '_gtperf_hero';
+	public const CACHE_META = '_gtperf_no_cache';
+	public const CSS_META   = '_gtperf_original_css';
 
 	/** @var list<string> */
 	public const JS_MODES = array( '', 'no_delay', 'off' );
@@ -27,6 +29,24 @@ final class PageOverrides {
 		$mode = (string) get_post_meta( $id, self::JS_META, true );
 
 		return in_array( $mode, self::JS_MODES, true ) ? $mode : '';
+	}
+
+	/**
+	 * Whether the post being viewed, or the given post, opted out of the page cache.
+	 */
+	public static function noCache( ?int $postId = null ): bool {
+		$id = $postId ?? self::postId();
+
+		return $id > 0 && '1' === (string) get_post_meta( $id, self::CACHE_META, true );
+	}
+
+	/**
+	 * Whether the post being viewed keeps its original stylesheets.
+	 */
+	public static function originalCss(): bool {
+		$id = self::postId();
+
+		return $id > 0 && '1' === (string) get_post_meta( $id, self::CSS_META, true );
 	}
 
 	/**

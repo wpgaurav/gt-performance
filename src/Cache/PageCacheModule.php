@@ -158,6 +158,9 @@ final class PageCacheModule implements Module {
 		if ( $decision->cacheable && defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) {
 			$decision = Decision::deny( 'donotcachepage' );
 		}
+		if ( $decision->cacheable && \GTPerformance\Optimization\PageOverrides::noCache() ) {
+			$decision = Decision::deny( 'page-option' );
+		}
 
 		if ( ! $decision->cacheable ) {
 			if ( ! headers_sent() ) {

@@ -69,7 +69,7 @@ final class UnusedCssOptimizer {
 	private static bool $claimed = false;
 
 	public function optimize( string $html ): string {
-		if ( ! self::available() ) {
+		if ( ! self::available() || \GTPerformance\Optimization\PageOverrides::originalCss() ) {
 			return $html;
 		}
 

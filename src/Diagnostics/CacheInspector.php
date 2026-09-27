@@ -41,6 +41,9 @@ final class CacheInspector {
 		$cachePolicy['hosts']      = Settings::canonicalHosts();
 		$cachePolicy               = apply_filters( 'gt_performance_cache_policy', $cachePolicy );
 		$decision                  = ( new Eligibility() )->decide( $request, $cachePolicy );
+		if ( $decision->cacheable && \GTPerformance\Optimization\PageOverrides::noCache( (int) url_to_postid( $url ) ) ) {
+			$decision = \GTPerformance\Cache\Decision::deny( 'page-option' );
+		}
 		$key                       = ( new CacheKey() )->make( $request, $cachePolicy );
 		$hash                      = ( new CacheKey() )->hash( $key );
 		$metadata                  = $this->store->metadata( $hash );
