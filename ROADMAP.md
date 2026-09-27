@@ -31,9 +31,11 @@ These carry forward from PRODUCT-PLAN.md, adjusted for a free WordPress.org plug
 - **No compatibility layers.** Breaking changes ship clean with an upgrade note. A migration that is genuinely needed ships as a separate one-off snippet, not as code carried in the plugin.
 - **Shared hosting is the reference environment.** Features must behave on a small plan with WP-Cron, no root, and no worker.
 
-## 1.1.1: Fix what the audit found (Next)
+## 1.1.1: Fix what the audit found (In Progress: built and verified, awaiting release)
 
 These surfaced on 2026-09-27 while the wiki was verified against the code. Each is small, and several break promises the readme or wiki already make.
+
+Status 2026-09-27: every item is fixed with a behavior test, and the built package was verified on a Studio site and passes Plugin Check with no errors or warnings. Differences from the plan: the Cloudflare rule backup and the test-only `installedVersion()` helpers were kept (1.2.0 uses the backup; the installer tests use the helpers); the anonymous-purge fix turned out broader than comments (a classic WooCommerce checkout that sells a product out had the same gap); wp-admin had no Explain view at all, so 1.1.1 adds one on Tools; and `SafeMode::url()` got a caller instead of being deleted. Remaining before release: push, tag `v1.1.1`, then update the wiki pages that warn about these bugs.
 
 | Item | Why it matters | Size | Evidence |
 |---|---|---|---|
