@@ -77,6 +77,15 @@ final class Plugin {
 		// would purge the origin but never the edge. Load them at REST init too.
 		add_action( 'rest_api_init', array( $this, 'loadManagementModules' ), 0 );
 
+		// An anonymous request can still purge: a visitor's auto-approved comment,
+		// or a classic WooCommerce checkout that sells a product out. Without the
+		// edge modules that purge cleared the origin copy while Cloudflare and
+		// xCloud kept serving the old page. Load them the moment a purge fires;
+		// WordPress runs callbacks added for a priority it has not reached yet, so
+		// the edge modules still receive this purge.
+		add_action( 'gt_performance_purged_urls', array( $this, 'loadManagementModules' ), 0, 0 );
+		add_action( 'gt_performance_purged_all', array( $this, 'loadManagementModules' ), 0, 0 );
+
 		if ( self::needsManagementModules() ) {
 			array_push( $this->modules, ...self::managementModules( $logger ) );
 			$this->managementLoaded = true;

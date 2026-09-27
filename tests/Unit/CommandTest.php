@@ -84,6 +84,25 @@ final class CommandTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 
+	public function testPageUrlOnAnotherSiteIsRefusedBeforeAnyRequest(): void {
+		foreach ( array( 'cloudflare', 'cache' ) as $command ) {
+			try {
+				( new Command() )->{$command}( array( 'purge' ), array( 'page-url' => 'https://attacker.example/article/' ) );
+				self::fail( $command . ' purge accepted a URL on another site.' );
+			} catch ( RuntimeException $exception ) {
+				self::assertStringStartsWith( '--page-url must be on this site (example.com)', $exception->getMessage() );
+			}
+		}
+
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
+	}
+
+	public function testPageUrlHostMatchingIgnoresCase(): void {
+		( new Command() )->cloudflare( array( 'purge' ), array( 'page-url' => 'https://EXAMPLE.com/article/' ) );
+
+		self::assertSame( array( 'Cloudflare URL purge completed.' ), \WP_CLI::$successes );
+	}
+
 	public function testActionSpecificOptionsCannotBeSilentlyIgnored(): void {
 		$cases = array(
 			static function ( Command $command ): void {

@@ -47,6 +47,7 @@ final class PageCacheModule implements Module {
 		add_action( 'wp_update_nav_menu', array( $this, 'purgeAll' ), 20 );
 		add_action( 'switch_theme', array( $this, 'purgeAll' ), 20 );
 		add_action( 'customize_save_after', array( $this, 'purgeAll' ), 20 );
+		add_action( 'upgrader_process_complete', array( $this, 'purgeAfterUpgrade' ), 20, 2 );
 	}
 
 	public function startCapture(): void {
@@ -369,6 +370,27 @@ final class PageCacheModule implements Module {
 
 	public function purgeAll(): void {
 		( new Purger( $this->store ) )->purgeAll();
+	}
+
+	/**
+	 * Purge after WordPress, a theme, or a plugin is updated.
+	 *
+	 * Updated code ships new asset versions and often new markup, so cached pages
+	 * kept pointing at stylesheets and scripts that no longer match. Translation
+	 * updates change neither, and installing something new changes nothing until
+	 * it is activated.
+	 *
+	 * @param mixed $upgrader WP_Upgrader instance; unused.
+	 * @param mixed $extra    What was upgraded, as passed by WordPress.
+	 */
+	public function purgeAfterUpgrade( mixed $upgrader, mixed $extra = array() ): void {
+		unset( $upgrader );
+		if ( ! is_array( $extra ) || 'update' !== ( $extra['action'] ?? '' ) ) {
+			return;
+		}
+		if ( in_array( $extra['type'] ?? '', array( 'core', 'plugin', 'theme' ), true ) ) {
+			$this->purgeAll();
+		}
 	}
 
 	/**

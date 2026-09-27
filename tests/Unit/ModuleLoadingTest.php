@@ -76,4 +76,31 @@ final class ModuleLoadingTest extends TestCase {
 			);
 		}
 	}
+
+	/**
+	 * An anonymous request that purges (a visitor's auto-approved comment, a
+	 * classic checkout that sells a product out) cleared the origin copy while
+	 * the edge kept serving the old page, because the edge modules only load for
+	 * admin, cron, AJAX, REST, CLI, and signed-in requests.
+	 */
+	public function test_an_origin_purge_loads_the_edge_modules_on_an_anonymous_request(): void {
+		$GLOBALS['gtperf_test_registered_actions'] = array();
+		$class                                     = new \ReflectionClass( \GTPerformance\Core\Plugin::class );
+		$plugin                                    = $class->newInstanceWithoutConstructor();
+		$class->getConstructor()?->invoke( $plugin );
+
+		self::assertFalse( $class->getProperty( 'managementLoaded' )->getValue( $plugin ) );
+		foreach ( array( 'gt_performance_purged_urls', 'gt_performance_purged_all' ) as $hook ) {
+			self::assertContains( array( $plugin, 'loadManagementModules' ), $GLOBALS['gtperf_test_registered_actions'][ $hook ] ?? array(), $hook );
+		}
+
+		$plugin->loadManagementModules();
+
+		self::assertTrue( $class->getProperty( 'managementLoaded' )->getValue( $plugin ) );
+		$edgeListeners = array_filter(
+			$GLOBALS['gtperf_test_registered_actions']['gt_performance_purged_urls'],
+			static fn( mixed $callback ): bool => is_array( $callback ) && $callback[0] instanceof \GTPerformance\Cloudflare\CloudflareModule
+		);
+		self::assertCount( 1, $edgeListeners );
+	}
 }

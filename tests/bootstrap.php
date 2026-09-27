@@ -353,6 +353,25 @@ if ( ! function_exists( 'home_url' ) ) {
 	}
 }
 
+// Request context: an anonymous front-end request unless a test says otherwise.
+if ( ! function_exists( 'is_admin' ) ) {
+	function is_admin(): bool {
+		return (bool) ( $GLOBALS['gtperf_test_context']['admin'] ?? false );
+	}
+}
+
+if ( ! function_exists( 'wp_doing_ajax' ) ) {
+	function wp_doing_ajax(): bool {
+		return (bool) ( $GLOBALS['gtperf_test_context']['ajax'] ?? false );
+	}
+}
+
+if ( ! function_exists( 'wp_doing_cron' ) ) {
+	function wp_doing_cron(): bool {
+		return (bool) ( $GLOBALS['gtperf_test_context']['cron'] ?? false );
+	}
+}
+
 if ( ! function_exists( 'wp_generate_password' ) ) {
 	function wp_generate_password( int $length = 12, bool $special_chars = true, bool $extra_special_chars = false ): string {
 		return substr( bin2hex( random_bytes( $length ) ), 0, $length );

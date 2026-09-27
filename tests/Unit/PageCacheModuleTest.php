@@ -55,4 +55,46 @@ final class PageCacheModuleTest extends TestCase {
 
 		self::assertSame( '<html>original</html>', $module->capturePreview( '<html>original</html>' ) );
 	}
+
+	/**
+	 * @return list<string>
+	 */
+	private function purgeAllActions(): array {
+		return array_values(
+			array_filter(
+				array_map( static fn( array $action ): string => (string) $action['hook'], $GLOBALS['gtperf_test_actions'] ?? array() ),
+				static fn( string $hook ): bool => 'gt_performance_purged_all' === $hook
+			)
+		);
+	}
+
+	public function testCoreThemeAndPluginUpdatesPurgeTheCache(): void {
+		$module = new PageCacheModule( new Logger() );
+
+		foreach ( array( 'core', 'plugin', 'theme' ) as $type ) {
+			$GLOBALS['gtperf_test_actions'] = array();
+			$module->purgeAfterUpgrade( null, array( 'action' => 'update', 'type' => $type ) );
+
+			self::assertCount( 1, $this->purgeAllActions(), $type );
+		}
+	}
+
+	public function testTranslationUpdatesAndInstallsLeaveTheCacheAlone(): void {
+		$module                          = new PageCacheModule( new Logger() );
+		$GLOBALS['gtperf_test_actions'] = array();
+
+		$module->purgeAfterUpgrade( null, array( 'action' => 'update', 'type' => 'translation' ) );
+		$module->purgeAfterUpgrade( null, array( 'action' => 'install', 'type' => 'plugin' ) );
+		$module->purgeAfterUpgrade( null, 'unexpected' );
+
+		self::assertSame( array(), $this->purgeAllActions() );
+	}
+
+	public function testUpgradesAreHooked(): void {
+		$GLOBALS['gtperf_test_registered_actions'] = array();
+		$module                                    = new PageCacheModule( new Logger() );
+		$module->register();
+
+		self::assertContains( array( $module, 'purgeAfterUpgrade' ), $GLOBALS['gtperf_test_registered_actions']['upgrader_process_complete'] ?? array() );
+	}
 }

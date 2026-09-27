@@ -521,6 +521,14 @@ final class Command {
 			return null;
 		}
 
+		// Verify fetches the URL, and purges hand it to Cloudflare and xCloud, so an
+		// address on another site must never get that far.
+		$hosts = Settings::canonicalHosts();
+		if ( ! in_array( strtolower( $host ), $hosts, true ) ) {
+			\WP_CLI::error( sprintf( '--page-url must be on this site (%s). Add other hostnames with the gt_performance_canonical_hosts filter.', implode( ', ', $hosts ) ) );
+			return null;
+		}
+
 		return $value;
 	}
 
