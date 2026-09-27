@@ -1,0 +1,2 @@
+# Internal planning. Keep it out of `git archive` and GitHub source ZIPs.
+/ROADMAP.md export-ignore

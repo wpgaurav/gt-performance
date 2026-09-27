@@ -37,6 +37,7 @@ build_channel() {
 
 	local -a excludes=(
 		--exclude '.git'
+		--exclude '.gitattributes'
 		--exclude '.github'
 		--exclude '.claude'
 		--exclude '.DS_Store'
@@ -56,6 +57,7 @@ build_channel() {
 		--exclude 'phpunit.xml.dist'
 		--exclude '/README.md'
 		--exclude 'RELEASING.md'
+		--exclude '/ROADMAP.md'
 		--exclude 'task_plan.md'
 		--exclude 'tests'
 		--exclude 'VALIDATION.md'
