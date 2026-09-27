@@ -10,6 +10,9 @@ declare(strict_types=1);
 namespace GTPerformance\Cache;
 
 final class Eligibility {
+	/** Longest value a "cache separately" parameter may carry and still be cached. */
+	public const MAX_VARY_VALUE = 100;
+
 	/**
 	 * @param array<string, mixed> $config Compiled cache configuration.
 	 */
@@ -57,15 +60,27 @@ final class Eligibility {
 
 		$bypass_query  = array_map( 'strtolower', (array) ( $config['bypass_query_params'] ?? array() ) );
 		$ignored_query = array_map( 'strtolower', (array) ( $config['ignored_query_params'] ?? array() ) );
-		foreach ( array_keys( $request->query ) as $parameter ) {
+		$vary_query    = array_map( 'strtolower', (array) ( $config['vary_query_params'] ?? array() ) );
+		foreach ( $request->query as $parameter => $value ) {
 			$parameter = strtolower( (string) $parameter );
 			if ( in_array( $parameter, $bypass_query, true ) ) {
 				return Decision::deny( 'query:' . $parameter );
 			}
 
-			if ( ! in_array( $parameter, $ignored_query, true ) ) {
-				return Decision::deny( 'unknown_query:' . $parameter );
+			if ( in_array( $parameter, $ignored_query, true ) ) {
+				continue;
 			}
+
+			// Each value is its own stored copy, so only short values qualify: long
+			// strings are how a crawler or an attacker mints keys.
+			if ( in_array( $parameter, $vary_query, true ) ) {
+				if ( strlen( (string) $value ) > self::MAX_VARY_VALUE ) {
+					return Decision::deny( 'query_value:' . $parameter );
+				}
+				continue;
+			}
+
+			return Decision::deny( 'unknown_query:' . $parameter );
 		}
 
 		foreach ( array_keys( $request->cookies ) as $cookie ) {

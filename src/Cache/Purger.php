@@ -42,6 +42,11 @@ final class Purger {
 			$valid[] = $url;
 			$hash    = $cacheKey->hash( $cacheKey->make( $request, $config ) );
 			$deleted += $this->store->delete( $hash ) ? 1 : 0;
+			// Sorted, filtered, and translated copies of the page are stored under
+			// their own keys and change whenever the page does, here and at the edge.
+			$variants = $this->store->purgeVariants( $request->scheme . '://' . $request->host . $request->path );
+			$deleted += count( $variants );
+			array_push( $valid, ...$variants );
 
 			if ( (bool) ( $config['separate_mobile'] ?? false ) ) {
 				$mobile = RequestContext::fromUrl( $url, array(), array(), 'GT Performance Mobile' );

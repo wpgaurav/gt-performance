@@ -14,16 +14,7 @@ final class CacheKey {
 	 * @param array<string, mixed> $config Compiled cache configuration.
 	 */
 	public function make( RequestContext $request, array $config ): string {
-		$query   = $request->query;
-		$ignored = array_map( 'strtolower', (array) ( $config['ignored_query_params'] ?? array() ) );
-
-		foreach ( array_keys( $query ) as $key ) {
-			if ( in_array( strtolower( (string) $key ), $ignored, true ) ) {
-				unset( $query[ $key ] );
-			}
-		}
-
-		ksort( $query );
+		$query = $this->keptQuery( $request, $config );
 
 		$variant = 'public';
 		if ( (bool) ( $config['separate_mobile'] ?? false ) && preg_match( '/Mobile|Android|iPhone|iPad/i', $request->userAgent ) ) {
@@ -41,6 +32,35 @@ final class CacheKey {
 				(string) ( $config['generation'] ?? 1 ),
 			)
 		);
+	}
+
+	/**
+	 * The query string that selects a separately cached copy: everything but the
+	 * ignored parameters, in a fixed order. Empty for the page's main copy.
+	 *
+	 * @param array<string, mixed> $config Compiled cache configuration.
+	 */
+	public function variant( RequestContext $request, array $config ): string {
+		return http_build_query( $this->keptQuery( $request, $config ), '', '&', PHP_QUERY_RFC3986 );
+	}
+
+	/**
+	 * @param array<string, mixed> $config Compiled cache configuration.
+	 * @return array<string, mixed>
+	 */
+	private function keptQuery( RequestContext $request, array $config ): array {
+		$query   = $request->query;
+		$ignored = array_map( 'strtolower', (array) ( $config['ignored_query_params'] ?? array() ) );
+
+		foreach ( array_keys( $query ) as $key ) {
+			if ( in_array( strtolower( (string) $key ), $ignored, true ) ) {
+				unset( $query[ $key ] );
+			}
+		}
+
+		ksort( $query );
+
+		return $query;
 	}
 
 	public function hash( string $key ): string {

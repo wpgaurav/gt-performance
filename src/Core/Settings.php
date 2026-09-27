@@ -62,6 +62,7 @@ final class Settings {
 					'gtperf_css_build',
 					'gtperf_js',
 				),
+				'vary_query_params'    => array(),
 				'bypass_paths'         => array(
 					'/wp-admin/',
 					'/wp-login.php',
@@ -346,7 +347,7 @@ final class Settings {
 			)
 		);
 
-		foreach ( array( 'ignored_query_params', 'bypass_query_params', 'bypass_paths', 'bypass_cookies' ) as $key ) {
+		foreach ( array( 'ignored_query_params', 'bypass_query_params', 'vary_query_params', 'bypass_paths', 'bypass_cookies' ) as $key ) {
 			$merged['cache'][ $key ] = self::sanitizeList( $merged['cache'][ $key ] ?? array() );
 		}
 

@@ -62,6 +62,98 @@ final class FileStore {
 	}
 
 	/**
+	 * Query variants one page may store. Each variant is a separate entry, so the
+	 * cap bounds how much of the store a page's parameters can claim, and keeps
+	 * random values from evicting other pages.
+	 */
+	public const MAX_VARIANTS = 100;
+
+	/**
+	 * Record a query variant of a page, so purging the page's URL finds it.
+	 *
+	 * A purge addresses a URL without its query, and a variant's key includes the
+	 * query, so without this index an edited product kept serving its sorted and
+	 * filtered listings until they expired, at the origin and at the edge.
+	 *
+	 * @param string $base scheme://host/path the variant belongs to.
+	 * @param string $url  The variant's full URL, for edge purges.
+	 * @return bool False when the page already has MAX_VARIANTS; the caller must not store another.
+	 */
+	public function addVariant( string $base, string $hash, string $url ): bool {
+		$path      = $this->variantPath( $base );
+		$directory = dirname( $path );
+		if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
+			return false;
+		}
+
+		$handle = @fopen( $path, 'c+' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A failure is reported by the return value.
+		if ( false === $handle ) {
+			return false;
+		}
+
+		try {
+			if ( ! flock( $handle, LOCK_EX ) ) {
+				return false;
+			}
+			$known = $this->decodeVariants( (string) stream_get_contents( $handle ) );
+			if ( isset( $known[ $hash ] ) ) {
+				return true;
+			}
+			if ( count( $known ) >= self::MAX_VARIANTS ) {
+				return false;
+			}
+			$known[ $hash ] = $url;
+			rewind( $handle );
+			ftruncate( $handle, 0 );
+
+			return false !== fwrite( $handle, (string) wp_json_encode( $known ) );
+		} finally {
+			flock( $handle, LOCK_UN );
+			fclose( $handle );
+		}
+	}
+
+	/**
+	 * Delete every recorded query variant of a page.
+	 *
+	 * @param string $base scheme://host/path.
+	 * @return list<string> URLs of the variants that were recorded, for edge purges.
+	 */
+	public function purgeVariants( string $base ): array {
+		$path = $this->variantPath( $base );
+		if ( ! is_file( $path ) ) {
+			return array();
+		}
+
+		$known = $this->decodeVariants( (string) @file_get_contents( $path ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent purge is expected, not exceptional.
+		@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent purge is expected, not exceptional.
+		foreach ( array_keys( $known ) as $hash ) {
+			$this->delete( $hash );
+		}
+
+		return array_values( array_unique( $known ) );
+	}
+
+	/**
+	 * @return array<string, string> Entry hash => variant URL.
+	 */
+	private function decodeVariants( string $raw ): array {
+		$decoded = json_decode( $raw, true );
+		$known   = array();
+		foreach ( is_array( $decoded ) ? $decoded : array() as $hash => $url ) {
+			if ( is_string( $hash ) && preg_match( '/^[a-f0-9]{64}$/', $hash ) && is_string( $url ) ) {
+				$known[ $hash ] = $url;
+			}
+		}
+
+		return $known;
+	}
+
+	private function variantPath( string $base ): string {
+		return Paths::pages() . '/variants/' . hash( 'sha256', $base ) . '.json';
+	}
+
+	/**
 	 * @return array<string, int|string>|null
 	 */
 	public function metadata( string $hash ): ?array {

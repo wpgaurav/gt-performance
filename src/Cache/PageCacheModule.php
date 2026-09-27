@@ -179,8 +179,21 @@ final class PageCacheModule implements Module {
 			$optimized = $html;
 		}
 
-		$config = $this->cacheConfig();
-		$hash   = ( new CacheKey() )->hash( ( new CacheKey() )->make( $this->request, $config ) );
+		$config  = $this->cacheConfig();
+		$hash    = ( new CacheKey() )->hash( ( new CacheKey() )->make( $this->request, $config ) );
+		$base    = $this->request->scheme . '://' . $this->request->host . $this->request->path;
+		$variant = ( new CacheKey() )->variant( $this->request, $config );
+
+		// A variant a purge of its page cannot find would outlive every edit, so a
+		// page that already holds the maximum is served fresh instead of stored.
+		if ( '' !== $variant && ! $this->store->addVariant( $base, $hash, $base . '?' . $variant ) ) {
+			if ( ! headers_sent() ) {
+				SharedCacheHeaders::noStore();
+			}
+			$this->logger->log( 'debug', 'Response not cached', array( 'reason' => 'variant_limit' ) );
+			return $optimized;
+		}
+
 		$now    = time();
 		$stored = $this->store->write(
 			$hash,
@@ -189,7 +202,8 @@ final class PageCacheModule implements Module {
 				'stored_at'   => $now,
 				'fresh_until' => $now + max( 0, (int) $config['fresh_ttl'] ),
 				'stale_until' => $now + max( 0, (int) $config['fresh_ttl'] ) + max( 0, (int) $config['stale_ttl'] ),
-				'url'         => $this->request->scheme . '://' . $this->request->host . $this->request->path,
+				// The preloader rebuilds a stale entry from this URL, so a variant keeps its query.
+				'url'         => '' === $variant ? $base : $base . '?' . $variant,
 				'generation'  => (int) $config['generation'],
 				'headers'     => DropinRuntime::replayableHeaders( headers_list() ),
 			)
