@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -222,6 +222,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.2.1 =
+In optimize-only mode, pages marked "Don't cache this page" are now sent no-store, so your host's cache can't keep them. Recommended for sites using optimize-only mode.
+
 = 1.2.0 =
 New Setup tab, optimize-only mode for hosts that already cache pages, per-page cache and CSS options, and cleaner Cloudflare deactivation. Existing settings keep working; run Setup once to verify your cache.
 
@@ -249,6 +252,12 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 == Changelog ==
 
 The complete release history is on the [GT Performance changelog](https://products.gatilab.com/changelogs/gt-performance/), and planned work is on the [roadmap](https://products.gatilab.com/roadmaps/gt-performance/).
+
+= 1.2.1 =
+* Optimize-only mode: pages marked "Don't cache this page", and pages a plugin marks with DONOTCACHEPAGE, are now sent no-store. Before, they skipped optimization but sent no cache headers, so a host cache such as LiteSpeed, Hostinger, or Kinsta could store them.
+* Unused CSS status no longer says "Needs cache setup" in optimize-only mode, where CSS builds run without the drop-in.
+* `wp gt-performance cache explain` and `cache verify` accept every hostname `--page-url` accepts, including ones added with the `gt_performance_canonical_hosts` filter. Explain this page in Tools accepts them too.
+* Language and currency plugin advice on Integrations names the "Cookie prefixes that bypass cache" field, and the `database --all-revisions` help names the "Run selected optimization" button.
 
 = 1.2.0 =
 * New: Setup tab. Six steps check this server, detect other page caches and your host's cache, choose the cache mode, connect Cloudflare, list store and language plugins, and verify a real cached page, with Cloudflare's answer shown beside it. The Dashboard points to it until verification passes.

@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.2.1 - Unreleased
+## 1.2.1 - 2026-09-28
+
+A fix for "Don't cache this page" in optimize-only mode, and admin and CLI text that now matches the screens it describes.
 
 Fixes
 
