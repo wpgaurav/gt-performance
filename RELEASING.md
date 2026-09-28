@@ -14,6 +14,12 @@ Before tagging, update every version surface:
 - `GTPERF_VERSION` in `tests/phpstan-bootstrap.php`
 - a dated top section in `CHANGELOG.md`
 
+Bumping `version` in `composer.json` changes its content hash, so refresh the lock file's hash (no package changes) or CI's strict validation fails every PHP job, as it did for 1.2.0's first push:
+
+```bash
+composer update --lock
+```
+
 Regenerate the translation template after the version bump, so its strings and `Project-Id-Version` match the release:
 
 ```bash
