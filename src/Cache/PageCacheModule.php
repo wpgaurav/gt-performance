@@ -246,7 +246,16 @@ final class PageCacheModule implements Module {
 		}
 
 		$decision = $this->validator->validate( $html, (int) http_response_code(), headers_list() );
-		if ( ! $decision->cacheable || ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) || \GTPerformance\Optimization\PageOverrides::noCache() ) {
+		if ( ! $decision->cacheable ) {
+			return $html;
+		}
+
+		// A page that asked not to be cached must say so to the host's cache too,
+		// or the host stores it for its own default lifetime.
+		if ( ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) || \GTPerformance\Optimization\PageOverrides::noCache() ) {
+			if ( ! headers_sent() ) {
+				SharedCacheHeaders::noStore();
+			}
 			return $html;
 		}
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.1 - Unreleased
+
+Fixes
+
+- In optimize-only mode, a page marked "Don't cache this page", or one that defines DONOTCACHEPAGE, is now sent no-store as 1.2.0 described. It was left unoptimized but sent no cache headers, so a host cache (LiteSpeed, Hostinger, Kinsta) could store it for its own default lifetime.
+- The CSS status panel no longer reports "Needs cache setup" in optimize-only mode. Unused-CSS builds run in that mode without the drop-in or WP_CACHE.
+- `cache explain` and `cache verify` accept every hostname `--page-url` accepts, including aliases added with the `gt_performance_canonical_hosts` filter. The page-url check let an alias through and the inspector then refused it as another site. The Diagnostics explainer and the explain ability accept the same hostnames.
+- The language and currency plugin advice names the "Cookie prefixes that bypass cache" field by its label, and the `database --all-revisions` help names the "Run selected optimization" button.
+
 ## 1.2.0 - 2026-09-28
 
 Works out of the box: a guided setup, optimization for sites whose host already caches pages, and a plugin that cleans up after itself.

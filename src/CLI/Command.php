@@ -890,7 +890,7 @@ final class Command {
 	 * : preview or run. Defaults to preview.
 	 *
 	 * [--all-revisions]
-	 * : With run, delete every revision, as the Run cleanup button does.
+	 * : With run, delete every revision, as the Run selected optimization button does.
 	 *
 	 * @param list<string>          $args      Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-28T03:23:55+00:00\n"
+"POT-Creation-Date: 2026-09-28T04:30:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: gt-performance\n"
@@ -4633,11 +4633,11 @@ msgid "Keeps analytics and advertising pixels out of JavaScript optimization and
 msgstr ""
 
 #: src/Compatibility/PluginDetector.php:175
-msgid "Each language is cached separately when it has its own URL (a directory, subdomain, or domain). If the language comes from a ?lang= parameter, add lang under Cache each value separately. If it is detected from a cookie or the browser, turn that redirect off or add its cookie under Never cache cookies, or visitors can get a page in another language."
+msgid "Each language is cached separately when it has its own URL (a directory, subdomain, or domain). If the language comes from a ?lang= parameter, add lang under Cache each value separately. If it is detected from a cookie or the browser, turn that redirect off or add its cookie under Cookie prefixes that bypass cache, or visitors can get a page in another language."
 msgstr ""
 
 #: src/Compatibility/PluginDetector.php:176
-msgid "Remembers each visitor's currency, usually in a cookie, while the page cache keeps one copy per URL, so a cached page can show another visitor's prices. Add the switcher's currency cookie under Never cache cookies so visitors who switch get fresh pages, or check that it converts prices in the browser."
+msgid "Remembers each visitor's currency, usually in a cookie, while the page cache keeps one copy per URL, so a cached page can show another visitor's prices. Add the switcher's currency cookie under Cookie prefixes that bypass cache so visitors who switch get fresh pages, or check that it converts prices in the browser."
 msgstr ""
 
 #: src/Compatibility/PluginDetector.php:233

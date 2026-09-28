@@ -172,8 +172,8 @@ final class PluginDetector {
 	 * @return array<string, array{name:string,files:list<string>,group:string,protection:string}>
 	 */
 	public static function visitorVariation(): array {
-		$language = __( 'Each language is cached separately when it has its own URL (a directory, subdomain, or domain). If the language comes from a ?lang= parameter, add lang under Cache each value separately. If it is detected from a cookie or the browser, turn that redirect off or add its cookie under Never cache cookies, or visitors can get a page in another language.', 'gt-performance' );
-		$currency = __( 'Remembers each visitor\'s currency, usually in a cookie, while the page cache keeps one copy per URL, so a cached page can show another visitor\'s prices. Add the switcher\'s currency cookie under Never cache cookies so visitors who switch get fresh pages, or check that it converts prices in the browser.', 'gt-performance' );
+		$language = __( 'Each language is cached separately when it has its own URL (a directory, subdomain, or domain). If the language comes from a ?lang= parameter, add lang under Cache each value separately. If it is detected from a cookie or the browser, turn that redirect off or add its cookie under Cookie prefixes that bypass cache, or visitors can get a page in another language.', 'gt-performance' );
+		$currency = __( 'Remembers each visitor\'s currency, usually in a cookie, while the page cache keeps one copy per URL, so a cached page can show another visitor\'s prices. Add the switcher\'s currency cookie under Cookie prefixes that bypass cache so visitors who switch get fresh pages, or check that it converts prices in the browser.', 'gt-performance' );
 
 		$entries = array(
 			'wpml'              => array( 'WPML', array( 'sitepress-multilingual-cms/sitepress.php' ), $language ),

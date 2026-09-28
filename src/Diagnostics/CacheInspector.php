@@ -114,11 +114,14 @@ final class CacheInspector {
 		);
 	}
 
+	/**
+	 * Accept the same hostnames the cache policy and `--page-url` accept, so an
+	 * alias added with gt_performance_canonical_hosts can be explained too.
+	 */
 	private function sameSite( string $url ): bool {
-		$host     = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-		$homeHost = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
-		$scheme   = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		$host   = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$scheme = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
 
-		return '' !== $host && hash_equals( $homeHost, $host ) && in_array( $scheme, array( 'http', 'https' ), true );
+		return '' !== $host && in_array( $host, Settings::canonicalHosts(), true ) && in_array( $scheme, array( 'http', 'https' ), true );
 	}
 }

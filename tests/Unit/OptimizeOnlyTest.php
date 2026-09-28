@@ -41,7 +41,7 @@ final class OptimizeOnlyTest extends TestCase {
 	protected function tearDown(): void {
 		$_SERVER = $this->server;
 		( new FileStore() )->purgeAll();
-		unset( $GLOBALS['gtperf_test_options'], $GLOBALS['gtperf_test_filters'], $GLOBALS['gtperf_test_post_meta'], $GLOBALS['gtperf_test_singular'] );
+		unset( $GLOBALS['gtperf_test_options'], $GLOBALS['gtperf_test_filters'], $GLOBALS['gtperf_test_post_meta'], $GLOBALS['gtperf_test_singular'], $GLOBALS['gtperf_test_cache_headers'] );
 		$GLOBALS['gtperf_test_actions'] = array();
 	}
 
@@ -93,6 +93,24 @@ final class OptimizeOnlyTest extends TestCase {
 		$GLOBALS['gtperf_test_singular'] = 'page';
 		update_post_meta( 1, PageOverrides::CACHE_META, '1' );
 		self::assertSame( self::PAGE, $module->captureOptimizeOnly( self::PAGE ), 'A page that opted out of caching is left alone too.' );
+	}
+
+	public function test_a_page_that_opted_out_of_caching_is_sent_no_store(): void {
+		$module = new PageCacheModule( new Logger() );
+		( new \ReflectionProperty( $module, 'request' ) )->setValue( $module, \GTPerformance\Cache\RequestContext::fromUrl( 'https://example.com/about/' ) );
+
+		$GLOBALS['gtperf_test_cache_headers'] = array();
+		$module->captureOptimizeOnly( self::PAGE );
+		self::assertNotContains( 'Cache-Control: no-store, private, max-age=0', $GLOBALS['gtperf_test_cache_headers'], 'Cache headers for an eligible page are left to the host.' );
+
+		$GLOBALS['gtperf_test_singular'] = 'page';
+		update_post_meta( 1, PageOverrides::CACHE_META, '1' );
+		$GLOBALS['gtperf_test_cache_headers'] = array();
+		$module->captureOptimizeOnly( self::PAGE );
+
+		self::assertContains( 'Cache-Control: no-store, private, max-age=0', $GLOBALS['gtperf_test_cache_headers'], "Don't cache this page must keep the host's cache from storing it." );
+		self::assertContains( 'CDN-Cache-Control: no-store', $GLOBALS['gtperf_test_cache_headers'] );
+		self::assertContains( 'Cloudflare-CDN-Cache-Control: no-store', $GLOBALS['gtperf_test_cache_headers'] );
 	}
 
 	public function test_the_drop_in_never_serves_in_optimize_only_mode(): void {

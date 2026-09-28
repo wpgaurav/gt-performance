@@ -817,3 +817,5 @@ if ( ! function_exists( 'remove_query_arg' ) ) {
 require_once __DIR__ . '/wordpress-assets.php';
 
 require_once __DIR__ . '/wp-cli-utils.php';
+
+require_once __DIR__ . '/cache-headers.php';

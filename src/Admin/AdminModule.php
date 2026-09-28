@@ -3054,7 +3054,7 @@ PHP;
 		$removed    = $stats['original_bytes'] - $stats['generated_bytes'];
 		$percent    = $stats['original_bytes'] > 0 ? 100 * $removed / $stats['original_bytes'] : 0;
 		$next       = wp_next_scheduled( 'gt_performance_run_queue' );
-		$cacheReady = defined( 'WP_CACHE' ) && WP_CACHE && 'owned' === ( new DropinInstaller() )->status();
+		$cacheReady = Settings::optimizeOnly() || ( defined( 'WP_CACHE' ) && WP_CACHE && 'owned' === ( new DropinInstaller() )->status() );
 		$modes      = array(
 			'file'   => __( 'Generated file', 'gt-performance' ),
 			'inline' => __( 'Inline all used CSS', 'gt-performance' ),
