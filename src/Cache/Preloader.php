@@ -82,6 +82,17 @@ final class Preloader {
 	 * @return array{status:string,detail:string,http:int}
 	 */
 	public static function classify( int $http, string $edge, string $origin, ?array $metadata, int $started, int $now ): array {
+		// A redirect or a client error is the page's answer, not a hiccup: a
+		// sitemap that still lists a moved post gets the same 301 on every retry.
+		// On gatilab.com those retried three times each and filled the queue's
+		// failed list. Only server errors and transport failures are worth retrying.
+		if ( $http >= 300 && $http < 500 ) {
+			return array(
+				'status' => 'skipped',
+				'detail' => ( $http < 400 ? 'redirect_' : 'http_' ) . $http,
+				'http'   => $http,
+			);
+		}
 		if ( 200 !== $http ) {
 			return array(
 				'status' => 'failed',

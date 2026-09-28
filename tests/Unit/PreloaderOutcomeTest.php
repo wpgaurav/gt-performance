@@ -15,8 +15,10 @@ use PHPUnit\Framework\TestCase;
 final class PreloaderOutcomeTest extends TestCase {
 	private const NOW = 1_800_000_000;
 
-	public function test_non_200_is_a_failure(): void {
-		self::assertSame( array( 'status' => 'failed', 'detail' => 'http_301', 'http' => 301 ), Preloader::classify( 301, '', '', null, self::NOW, self::NOW ) );
+	public function test_redirects_and_client_errors_are_skipped_and_only_server_errors_fail(): void {
+		self::assertSame( array( 'status' => 'skipped', 'detail' => 'redirect_301', 'http' => 301 ), Preloader::classify( 301, '', '', null, self::NOW, self::NOW ), 'A moved page answers the same on every retry.' );
+		self::assertSame( array( 'status' => 'skipped', 'detail' => 'http_404', 'http' => 404 ), Preloader::classify( 404, '', '', null, self::NOW, self::NOW ) );
+		self::assertSame( array( 'status' => 'failed', 'detail' => 'http_503', 'http' => 503 ), Preloader::classify( 503, '', '', null, self::NOW, self::NOW ), 'A server error may pass on retry.' );
 	}
 
 	public function test_fresh_origin_entry_is_ready_and_says_whether_it_was_rebuilt(): void {
