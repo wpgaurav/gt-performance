@@ -1,6 +1,6 @@
 === GT Performance ===
 Contributors: gauravtiwari
-Tags: cache, performance, cloudflare, woocommerce, database
+Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
@@ -8,56 +8,158 @@ Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Safe page caching, server-side CSS optimization, Cloudflare and custom CDN delivery, and commerce-aware performance controls.
+Page caching, unused CSS removal, and Cloudflare Free edge caching that never caches a cart or checkout. Everything runs on your own server.
 
 == Description ==
 
-GT Performance combines an atomic origin page cache with server-side CSS and frontend optimization. It can synchronize a narrowly scoped Cloudflare Cache Rule and purge exact URLs on Cloudflare Free. It also detects xCloud's separate Cloudflare Enterprise add-on, reports its edge traffic, and prevents duplicate edge ownership.
+### What is GT Performance?
 
-An optional origin-pull CDN can rewrite selected same-site static-file URLs to a separate HTTPS hostname while Cloudflare continues to cache eligible HTML independently.
+GT Performance is a free WordPress performance plugin that speeds up every step between your server and your visitor's screen. It caches finished pages on your server, trims the CSS and JavaScript each page sends, and lets Cloudflare's free plan serve your HTML from its edge network. One plugin does all three, and every step knows about the others.
 
-FluentCart, Easy Digital Downloads, and WooCommerce adapters protect cart, checkout, account, receipt, session-cookie, and transactional query state from public caching.
+Most sites get fast by combining a page cache plugin, an unused CSS service, a script optimizer, and a Cloudflare add-on. Each tool guesses at what the others are doing, and when a post changes, not all of them notice. In GT Performance one set of rules decides what is cached at your server and at Cloudflare, what is left out of both, and what gets purged when content changes.
 
-Unused CSS can be delivered as an immutable file, fully inline, or as critical CSS inline with the remaining CSS in a file.
+It works in three layers:
 
-Perfmatters ownership coordination, Akismet and Jetpack safeguards, automatic analytics-plugin script protection, Redis credentials, and administrator-bar cache actions are built in.
+* **On your server**: An `advanced-cache.php` drop-in serves stored pages before WordPress loads. Redis object caching and background database cleanup reduce the work WordPress does when a page isn't cached.
+* **In the page**: Unused CSS is removed per page, JavaScript is deferred or delayed without breaking dependencies, Google Fonts are hosted locally, hero images can be preloaded, and YouTube embeds load the player only after a click.
+* **At the edge**: A single managed Cloudflare Cache Rule lets the Free plan cache your HTML, and edits are purged URL by URL. An optional origin-pull CDN serves the static file types you choose.
 
-Explain This Page, verified purge receipts, a Cloudflare Free rule compiler, and staged unused-CSS rollout help administrators inspect cache behavior and control optimization changes.
+Speed doesn't matter if the site breaks, so safety comes first. WooCommerce, Easy Digital Downloads, and FluentCart carts, checkouts, accounts, and session cookies are never cached at your server or at Cloudflare. Cached pages keep their security headers. Riskier optimizations are off until you turn them on, and one `wp-config.php` constant switches everything off if something looks wrong.
 
-Cache warming reads your sitemaps in resumable background batches, starts with the pages that changed recently, stops at your cache size budget, and reports for each page whether it was actually stored. Purges follow what each cached page was built from, so query loops, reusable blocks, and shop listings refresh when their content changes while unrelated pages stay cached.
+It also shows its work. Explain this page tells you why any URL is or isn't cached. Each purge comes with a receipt showing whether it actually reached Cloudflare, the health report lists what needs attention, and settings history lets you roll back a change.
 
-A health report (also shown in Site Health), a background queue you can pause, retry, and cancel, and settings history with restore, export, and import cover day-to-day operations.
+GT Performance suits blogs, content sites, online stores, and anyone who manages sites from WP-CLI or deploy scripts. Everything runs on your own WordPress server. There's no account to create, no telemetry, and the plugin never contacts servers of its own.
 
-JavaScript defer follows WordPress's own script dependencies, so inline jQuery code keeps working. Hero image rules choose the image that loads first, and speculative loading stays away from cart, checkout, and account pages.
+### Feature highlights
 
-On WordPress 6.9 or later, administrators can optionally let an external AI assistant read cache and health information, and with separate permission purge or preload URLs and propose settings for approval. This works through the WordPress REST API or the official WordPress MCP Adapter plugin. On WordPress 7.0 or later, an optional adviser can explain diagnostics using the AI provider you configured in WordPress. Everything AI-related is off by default.
+* **Page cache**: Pages are served from an `advanced-cache.php` drop-in before WordPress loads. Files are written atomically, so a visitor never gets a half-written page, and stale pages rebuild in the background.
+* **Unused CSS removal**: Each page gets only the CSS it uses, built on your server. On one measured page, CSS dropped from 320 KB to 101 KB.
+* **Cloudflare edge caching on the Free plan**: One narrowly scoped Cache Rule and exact-URL purges. No Workers, no APO subscription.
+* **Safe for stores**: WooCommerce, Easy Digital Downloads, and FluentCart carts, checkouts, accounts, receipts, and session cookies are kept out of both the origin cache and Cloudflare.
+* **Purges that follow your content**: Updating a post also clears the listings, query loops, widgets, reusable blocks, and shop pages that showed it. Unrelated pages stay cached.
+* **Cache warming**: Reads your sitemaps in resumable background batches, warms recently changed pages first, and stops at your cache size budget.
+* **JavaScript defer and delay**: Defer follows WordPress's own script dependencies, so inline jQuery keeps working. Analytics plugin scripts are protected automatically.
+* **Explain this page**: Shows why any URL is or isn't cached, what your server holds, and whether Cloudflare agrees.
+* **Safe mode**: One constant in `wp-config.php` switches off every optimization and cache read without touching a setting.
 
-Origin caching uses the maximum-impact lifetime profile by default but does not become active until its owned drop-in is installed. Riskier frontend transformations remain opt-in and should be tested on staging before production use.
+### Page caching
 
-Development happens in the open on [GitHub](https://github.com/wpgaurav/gt-performance), where bug reports and pull requests are welcome.
+* Atomic origin cache served before WordPress loads.
+* Stale pages rebuild in the background instead of in a visitor's page load.
+* Security and indexing headers survive caching: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, Referrer-Policy, Permissions-Policy, X-Robots-Tag, and more.
+* Optional separate caches for desktop, mobile, and tablet, purged together.
+* Hourly cleanup of expired entries, with a configurable cap on cached entries.
+* Core, plugin, and theme updates purge the cache, so cached pages never point at replaced asset files.
+* Every purge produces a verified receipt, including partial failures.
 
-= Links =
+### Unused CSS, built on your server
+
+Stylesheet collection, selector analysis, and pruning all happen on your WordPress server. Nothing is sent to an outside service.
+
+* Three delivery modes: a generated file, all used CSS inline, or critical CSS inline with the rest in a file.
+* Built in the background and reused across pages that share a template.
+* Page builder state styles are kept for Elementor, Bricks, Divi, Beaver Builder, Oxygen, Breakdance, WPBakery, Brizy, Kadence Blocks, Spectra, GenerateBlocks, and SiteOrigin: open menus, active tabs, sticky headers, popups, sliders, and animations.
+* Fetch important CSS classes checks sample pages in your browser and keeps styles that JavaScript adds later, such as tables of contents, ads, and sliders.
+* Keeps `:focus-visible` rules, Tailwind's escaped class names, inline SVG, and non-Latin text intact. Stylesheets it can't safely analyze pass through untouched.
+* CSS Status shows savings, build timings, and failures in plain language, with per-URL and full regeneration.
+
+### Cloudflare and CDN
+
+* Compiles and syncs one managed Cache Rule on Cloudflare Free. Your other Cloudflare rules are left alone.
+* Purges exact URLs, retries temporary failures up to three times, and honors Retry-After.
+* Connects with a scoped API token or a Global API Key with account email.
+* Detects xCloud's Cloudflare Enterprise add-on, reports its edge traffic, and avoids two systems owning the same edge cache.
+* Optional origin-pull CDN for static files. You pick the exact file extensions it serves, and HTML, API responses, and third-party URLs stay unchanged.
+
+### Built for stores
+
+* Dynamic paths, session cookies, and transactional query parameters from WooCommerce, Easy Digital Downloads, and FluentCart are compiled into both the origin and Cloudflare bypass rules.
+* Product pages and shop listings clear when price or stock changes through the store's own tools, not only when the product is saved.
+* Speculative loading stays away from cart, checkout, and account pages.
+
+### Frontend optimization
+
+* JavaScript defer that respects script dependencies and inline code.
+* JavaScript delay until first interaction or five seconds. Off by default.
+* Opt-in JavaScript minification, with a fallback to the original script.
+* Hero image rules with optional responsive preload, plus per-page script and hero options in the editor.
+* Local hosting for Google Fonts your theme or plugins already load.
+* Lightweight YouTube embeds that load the player from youtube-nocookie.com only after a click.
+* Separate controls for the main feed and secondary feeds.
+
+### Database and object cache
+
+* Database cleanup runs in the background with live progress and a stop button, and keeps the number of revisions you choose.
+* Redis object cache with encrypted credentials. Reads the same `WP_REDIS_*` constants as Redis Object Cache.
+
+### See what your cache is doing
+
+* **Explain this page** in Tools and the admin bar, with a link to view any page with every optimization off.
+* **Health report** in Tools and Site Health, with a redacted export for support requests.
+* **Background queue** you can pause, retry, and cancel from Tools or WP-CLI.
+* **Settings history** keeps your last 20 saves for 90 days, with restore and JSON export and import. Credentials are never stored in history.
+* **WP-CLI** commands for cache, Cloudflare, database, and health. `wp gt-performance doctor` exits with status 1 when a check fails, so it fits deploy scripts.
+
+### Optional AI assistant access
+
+Off by default. On WordPress 6.9 or later, an administrator can let an external AI assistant read cache and health information and, with separate permission, purge or preload URLs and propose settings for approval. It works through the WordPress REST API or the official WordPress MCP Adapter plugin.
+
+On WordPress 7.0 or later, an optional adviser explains diagnostics using the AI provider you configured in WordPress. It shows exactly what will be sent before anything leaves your site.
+
+### Works with
+
+* WooCommerce, Easy Digital Downloads, and FluentCart
+* Cloudflare Free and xCloud, including xCloud's Cloudflare Enterprise add-on
+* Elementor, Bricks, Divi, Beaver Builder, Oxygen, Breakdance, WPBakery, Brizy, Kadence Blocks, Spectra, GenerateBlocks, SiteOrigin, GT Page Blocks Builder, and Thrive Architect
+* Perfmatters, with coordination over which plugin owns each overlapping optimization
+* Akismet and Jetpack
+* Site Kit by Google and PixelYourSite, whose scripts are never deferred or delayed
+* Redis Object Cache `wp-config.php` constants
+* WordPress Studio and WordPress Playground (SQLite)
+
+### Before you turn it on
+
+* Page caching doesn't start until you install its drop-in from the Page Cache tab.
+* Riskier optimizations such as unused CSS removal and JavaScript delay are off by default. Test them on staging first.
+* GT Performance runs on single sites. It won't activate on multisite.
+
+### Privacy
+
+GT Performance collects no data and has no telemetry. It contacts a third-party service only after you turn on an integration that needs one. Each service, what it receives, and when is listed under External Services below.
+
+### Links
 
 * [GT Performance Home](https://gauravtiwari.org/product/gt-performance/) - features, setup guides, and answers to common questions.
 * [Changelog](https://products.gatilab.com/changelogs/gt-performance/) - every release with its fixes and upgrade notes.
 * [Roadmap](https://products.gatilab.com/roadmaps/gt-performance/) - what is planned next.
 * [GT Performance Community](https://gauravtiwari.org/portal/) - ask questions and get setup help from other users.
+* [GitHub](https://github.com/wpgaurav/gt-performance) - bug reports and pull requests are welcome.
 * [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/) - other plugins by Gaurav Tiwari.
 
 == Installation ==
 
-1. Upload and activate GT Performance.
+1. Install and activate GT Performance from Plugins → Add New.
 2. Open GT Performance in the main WordPress admin menu.
-3. Install the page-cache drop-in.
-4. Enable only the modules you have tested for your theme and plugins.
-5. Optionally connect a scoped Cloudflare API token or a legacy Global API Key with account email, then synchronize the managed cache rule.
-6. Optionally configure an origin-pull asset CDN and choose the exact file extensions it should serve.
+3. Install the page-cache drop-in from the Page Cache tab. Caching starts here.
+4. Turn on optimization modules one at a time, and check your theme and plugins after each.
+5. Optional: connect a scoped Cloudflare API token, or a Global API Key with account email, then sync the managed cache rule.
+6. Optional: set up an origin-pull CDN and choose the exact file extensions it should serve.
+
+Requires WordPress 6.6 or later and PHP 8.1 or later.
 
 == Frequently Asked Questions ==
 
+= Will it cache my cart or checkout? =
+
+No. GT Performance compiles the dynamic paths, session cookies, and query parameters from active WooCommerce, Easy Digital Downloads, and FluentCart adapters into both the origin and Cloudflare bypass rules.
+
 = Does Cloudflare require a paid plan? =
 
-No. The baseline uses Cache Rules and targeted purge available on Cloudflare Free. No Worker or APO subscription is required.
+No. The baseline uses Cache Rules and targeted purge, both available on Cloudflare Free. No Worker or APO subscription is required.
+
+= Something looks wrong. How do I switch everything off fast? =
+
+Add `define( 'GTPERF_SAFE_MODE', true );` to `wp-config.php`. Every HTML transformation stops and no page is served from or written to the cache. Your settings stay as they are. Remove the line to turn everything back on.
 
 = Does unused CSS work with page builders? =
 
@@ -65,23 +167,19 @@ Yes. When Elementor, Bricks, Divi, Beaver Builder, Oxygen, Breakdance, WPBakery,
 
 = Is unused CSS processed by an external service? =
 
-No. Stylesheet collection, selector analysis, pruning, and artifact creation run on the WordPress server.
-
-= Can I use another CDN alongside Cloudflare? =
-
-Yes. Configure its HTTPS origin-pull URL on the CDN tab and select the static-file extensions it should serve. GT Performance rewrites only same-site assets with those extensions; third-party URLs, HTML routes, API responses, and unselected file types remain unchanged.
+No. Stylesheet collection, selector analysis, pruning, and file creation run on your WordPress server.
 
 = Can used CSS be inlined? =
 
-Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining file. Hybrid mode falls back to a generated file if the critical segment exceeds its inline budget.
+Yes. Choose Generated file, Inline all used CSS, or Critical inline + remaining file. Hybrid mode falls back to a generated file if the critical part exceeds its inline budget.
 
-= Are checkout pages cached? =
+= Can I use another CDN alongside Cloudflare? =
 
-GT Performance compiles dynamic paths, session cookies, and query parameters from active FluentCart, EDD, and WooCommerce adapters into both origin and Cloudflare bypass policies.
+Yes. Enter its HTTPS origin-pull URL on the CDN tab and select the static-file extensions it should serve. GT Performance rewrites only same-site assets with those extensions. Third-party URLs, HTML routes, API responses, and unselected file types stay unchanged.
 
-= Does GT Performance send my site data to an AI service? =
+= Does it work on multisite? =
 
-Only when you ask it to. The optional abilities answer requests from an assistant you connect yourself, using an Application Password you create; they are off by default, require an administrator account, and never include credentials. The optional adviser (off by default) sends a redacted diagnostic report to the AI provider configured in WordPress only after you review exactly what will be sent and press Send. Nothing is sent automatically, from visitors, or from scheduled tasks.
+No. A network shares one compiled configuration and cache directory, so one site's settings would decide another site's cache behavior. GT Performance won't activate on multisite.
 
 = Can I undo a settings change? =
 
@@ -89,7 +187,11 @@ Yes. Tools → Settings history keeps the last 20 saves for up to 90 days and re
 
 = Can Redis credentials be configured in wp-config.php? =
 
-Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss Redis Object Cache. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence. The Object Cache screen provides a copy-ready example.
+Yes. GT Performance reads the `WP_REDIS_HOST`, port, socket path, scheme, database, ACL password array, prefix, timeout, read-timeout, and disable constants used by Till Krüss's Redis Object Cache. Existing `GTPERF_REDIS_*` constants remain supported and take highest precedence. The Object Cache screen provides a copy-ready example.
+
+= Does GT Performance send my site data to an AI service? =
+
+Only when you ask it to. The optional abilities answer requests from an assistant you connect yourself, using an Application Password you create. They're off by default, require an administrator account, and never include credentials. The optional adviser (also off by default) sends a redacted diagnostic report to the AI provider configured in WordPress only after you review exactly what will be sent and press Send. Nothing is sent automatically, from visitors, or from scheduled tasks.
 
 == Third-party libraries ==
 
@@ -103,29 +205,14 @@ The full GPL-2.0 text this plugin is licensed under ships as `LICENSE` in the pl
 
 == External Services ==
 
-GT Performance works entirely on your server by default and sends no data anywhere. Each integration below contacts a third-party service only after you enable it and, where credentials are involved, only with credentials you supply. There is no telemetry, no account requirement, and the plugin never contacts servers of its own.
+GT Performance sends no data anywhere by default. Each service below is contacted only after you turn on the feature that needs it, and only with credentials you supply.
 
-= Cloudflare API (api.cloudflare.com) =
+* **Cloudflare API** (api.cloudflare.com): Used when you connect your Cloudflare account. Sends your API token or key, zone, the managed cache rule, and the URLs being purged. [Terms](https://www.cloudflare.com/terms/), [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
+* **xCloud API** (app.xcloud.host): Used when you connect an xCloud-hosted site. Sends your xCloud token and site domain to refresh the integration and purge host caches. [Privacy Policy](https://xcloud.host/privacy-policy/).
+* **Google Fonts** (fonts.googleapis.com, fonts.gstatic.com): Used when local font hosting is on. Your server downloads the fonts once, with no visitor data, and serves them from your domain. [Privacy Policy](https://policies.google.com/privacy).
+* **YouTube** (i.ytimg.com, www.youtube-nocookie.com): Used when lightweight embeds are on. The visitor's browser loads the thumbnail, and loads the player only after the visitor clicks play. [Terms](https://www.youtube.com/t/terms), [Privacy Policy](https://policies.google.com/privacy).
 
-Contacted only when you connect your own Cloudflare account to manage its cache rule and purge its cache. Requests carry the API token or Global API Key and account email you saved, your zone identifier or domain, the compiled cache-rule expression, and the exact URLs being purged. They are sent when you connect, synchronize, run diagnostics, or purge, and automatically when a content change requires an edge purge. Provider: Cloudflare, Inc. — [Terms of Service](https://www.cloudflare.com/terms/), [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
-
-= xCloud hosting API (app.xcloud.host) =
-
-Contacted only when you connect a site hosted on xCloud using your own xCloud API token. Requests carry that token and your site's domain or xCloud identifier, and are sent when you connect or refresh the integration and when host-level caches are purged. Provider: xCloud by WPDeveloper — [Privacy Policy](https://xcloud.host/privacy-policy/).
-
-= Google Fonts (fonts.googleapis.com, fonts.gstatic.com) =
-
-Contacted only when you enable local Google Fonts hosting on a site whose theme or plugins already load Google Fonts. Your server downloads the stylesheet and font files once and serves them from your own domain afterward. The download is a server-side request that carries no visitor data, and the feature removes visitors' browser requests to Google entirely. Provider: Google LLC — [Privacy Policy](https://policies.google.com/privacy), [Google Fonts privacy notes](https://developers.google.com/fonts/faq/privacy).
-
-= YouTube (i.ytimg.com, www.youtube-nocookie.com) =
-
-Involved only on pages where you have already embedded a YouTube video and the lightweight embed option is enabled. The visitor's browser loads the video thumbnail from i.ytimg.com, and the player loads from the privacy-enhanced youtube-nocookie.com domain only after the visitor clicks play. Your server sends nothing to YouTube; without this option the standard YouTube embed would contact YouTube earlier and more broadly. Provider: Google LLC — [Terms of Service](https://www.youtube.com/t/terms), [Privacy Policy](https://policies.google.com/privacy).
-
-GT Performance also sends requests to your own site's URLs for cache warming, CSS generation, and purge verification. Those requests never leave your domain.
-
-= Hostnames that are matched, not contacted =
-
-GT Performance stores script hostname patterns such as `connect.facebook.net`, `googletagmanager.com`, `google-analytics.com`, `clarity.ms`, and `hotjar.com`. These are matching rules, not connections. They are compared only against the script URLs your own site already loads. The default "Scripts to delay" list uses them to pick which third-party scripts wait for a visitor's first interaction or five seconds, and only after you turn on JavaScript delay, which is off by default. When a supported analytics plugin such as Site Kit by Google or PixelYourSite is active, its hostnames are also added to the exclusions, so those scripts are never deferred or delayed. GT Performance never contacts these hosts, sends them no data, and adds no script to your site that would.
+Cache warming, CSS generation, and purge verification request your own site's URLs only. Script hostnames such as `googletagmanager.com` are stored only as patterns for matching the scripts your site already loads. They are never contacted.
 
 == Upgrade Notice ==
 
