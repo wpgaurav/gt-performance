@@ -73,7 +73,7 @@ final class SetupReportTest extends TestCase {
 			array( 'status' => 200, 'headers' => array( 'x-gt-cache' => 'MISS' ) ),
 			array( 'status' => 200, 'headers' => array( 'x-gt-cache' => 'HIT' ) ),
 		);
-		$result = ( new SetupReport() )->verify();
+		$result = ( new SetupReport( 0 ) )->verify();
 
 		self::assertTrue( $result['passed'] );
 		self::assertSame( 'HIT', $result['origin'] );
@@ -84,7 +84,7 @@ final class SetupReportTest extends TestCase {
 	public function test_store_mode_with_cloudflare_needs_an_edge_hit(): void {
 		$this->set( 'cloudflare.enabled', true );
 		$this->responses = array( array( 'status' => 200, 'headers' => array( 'x-gt-cache' => 'HIT', 'cf-cache-status' => 'MISS' ) ) );
-		$result          = ( new SetupReport() )->verify();
+		$result          = ( new SetupReport( 0 ) )->verify();
 
 		self::assertFalse( $result['passed'] );
 		self::assertCount( 4, $GLOBALS['gtperf_test_http_requests'], 'Bounded: four attempts, then a result.' );
@@ -92,12 +92,12 @@ final class SetupReportTest extends TestCase {
 		self::assertFalse( get_option( SetupReport::COMPLETE_OPTION, false ) );
 
 		$this->responses = array( array( 'status' => 200, 'headers' => array( 'cf-cache-status' => 'HIT', 'age' => '30' ) ) );
-		self::assertTrue( ( new SetupReport() )->verify()['passed'], 'An edge HIT never reaches PHP, and proves the origin stored the page.' );
+		self::assertTrue( ( new SetupReport( 0 ) )->verify()['passed'], 'An edge HIT never reaches PHP, and proves the origin stored the page.' );
 	}
 
 	public function test_a_private_home_page_is_named_as_the_reason(): void {
 		$this->responses = array( array( 'status' => 200, 'headers' => array( 'cache-control' => 'private, no-cache', 'set-cookie' => 'session=1' ) ) );
-		$result          = ( new SetupReport() )->verify();
+		$result          = ( new SetupReport( 0 ) )->verify();
 
 		self::assertFalse( $result['passed'] );
 		self::assertStringContainsString( 'private or sets a cookie', $result['detail'] );
@@ -106,7 +106,7 @@ final class SetupReportTest extends TestCase {
 	public function test_optimize_only_passes_on_a_public_page_and_reports_the_host_cache(): void {
 		$this->set( 'cache.mode', 'optimize' );
 		$this->responses = array( array( 'status' => 200, 'headers' => array( 'x-litespeed-cache' => 'hit' ) ) );
-		$result          = ( new SetupReport() )->verify();
+		$result          = ( new SetupReport( 0 ) )->verify();
 
 		self::assertTrue( $result['passed'] );
 		self::assertSame( 'optimize', $result['mode'] );

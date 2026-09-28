@@ -27,6 +27,15 @@ final class SetupReport {
 	public const COMPLETE_OPTION = 'gt_performance_setup_completed';
 
 	/**
+	 * @param int $retrySeconds Pause between verification attempts. Right after a
+	 *                          purge, Cloudflare answered MISS to four back-to-back
+	 *                          requests on gatilab.com and HIT once they were a
+	 *                          couple of seconds apart.
+	 */
+	public function __construct( private readonly int $retrySeconds = 2 ) {
+	}
+
+	/**
 	 * Response headers that name a host page cache, and the cache they name.
 	 * Matching is on the header's presence, so a MISS still counts: the cache is
 	 * there, it just had not stored this page yet.
@@ -239,6 +248,9 @@ final class SetupReport {
 		// A cold page takes one request to store at the origin and another to fill
 		// the edge, so four attempts leave room for both without looping forever.
 		for ( $attempt = 0; $attempt < 4; $attempt++ ) {
+			if ( $attempt > 0 && $this->retrySeconds > 0 ) {
+				sleep( $this->retrySeconds );
+			}
 			$response = $this->fetchHome();
 			if ( is_wp_error( $response ) ) {
 				return $this->recordVerification( $optimize, false, '', '', $hostCaches, 0, $response->get_error_message() );
