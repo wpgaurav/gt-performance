@@ -16,6 +16,7 @@ Caching
 - Query parameters sent as arrays (`name[]=`) bypass the cache as `query_array:<name>` and are sent no-store, like never-cache parameters. parse_str() made them arrays and the request context kept only scalars, so `?preview[]=1` or `?s[]=x` was judged and keyed as the page with no query, in WordPress and in the drop-in.
 - A preload that gets a redirect or a 4xx is recorded as skipped (`redirect_301`, `http_404`) instead of failing and retrying three times. On gatilab.com, sitemap URLs of moved posts accounted for most of the queue's ~500 failed jobs. Server errors and transport failures still fail and retry.
 - A settings save advances the cache generation, which purges the origin and sends purge-everything to Cloudflare, only when a setting that reaches cached pages changed. Credentials, connection status, background work, and admin-only settings are listed as output-neutral; anything else, including any new setting, still purges.
+- Unused CSS kept a block theme's fluid font sizes. The bundled parser (Sabberworm 9.4 and 9.5) silently drops any declaration with a bare parenthesised group inside a math function, such as `clamp(1rem, 1rem + ((1vw - 0.2rem) * 0.196), 1.125rem)`, which is how WordPress writes every fluid font size; on Twenty Twenty-Five the page title fell from 43.8px to 16px. Such values are now hidden from the parser and restored byte for byte, and a stylesheet whose round trip loses any declaration is left untouched rather than pruned. Builds made before 1.2.0 are not reused after updating.
 
 Cloudflare
 

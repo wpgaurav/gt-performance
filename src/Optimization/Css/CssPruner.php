@@ -42,6 +42,11 @@ final class CssPruner {
 		}
 
 		$protected = $this->protectUnicodeEscapes( $layers['css'] );
+		$values    = $this->protectBareGroups( $protected['css'] );
+		$protected = array(
+			'css'     => $values['css'],
+			'escapes' => $protected['escapes'] + $values['escapes'],
+		);
 
 		try {
 			$stylesheet = ( new Parser( $protected['css'] ) )->parse();
@@ -124,7 +129,79 @@ final class CssPruner {
 			return false;
 		}
 
-		return substr_count( $this->withoutComments( $source ), '{' ) === substr_count( $rendered, '{' );
+		return substr_count( $this->withoutComments( $source ), '{' ) === substr_count( $rendered, '{' )
+			// A declaration the parser cannot read vanishes without an error and
+			// leaves its braces behind: Twenty Twenty-Five's fluid font sizes did,
+			// and every heading fell back to the body size.
+			&& $this->declarationCount( $this->withoutComments( $source ) ) === $this->declarationCount( $rendered );
+	}
+
+	/**
+	 * Declarations in innermost blocks, counted the same way for source and output.
+	 */
+	private function declarationCount( string $css ): int {
+		$count = 0;
+		if ( preg_match_all( '/\{([^{}]*)\}/', $css, $bodies ) ) {
+			foreach ( $bodies[1] as $body ) {
+				foreach ( explode( ';', $body ) as $declaration ) {
+					if ( preg_match( '/^\s*(?:--|-?[a-zA-Z_])[\w-]*\s*:/', $declaration ) ) {
+						++$count;
+					}
+				}
+			}
+		}
+
+		return $count;
+	}
+
+	/**
+	 * Hide declaration values that hold a bare parenthesised group while the
+	 * bundled parser runs.
+	 *
+	 * Sabberworm 9.4 and 9.5 drop any declaration with a group inside a math
+	 * function that is not itself a calc(), such as
+	 * `clamp(1rem, 1rem + ((1vw - 0.2rem) * 0.196), 1.125rem)`. That is the shape
+	 * WordPress generates for every fluid font size, so a pruned block-theme page
+	 * lost its type scale. Pruning only reads selectors, so the value can be
+	 * opaque in between and is restored byte for byte.
+	 *
+	 * @return array{css:string,escapes:array<string,string>}
+	 */
+	private function protectBareGroups( string $css ): array {
+		$prefix = '__GTPERF_CSS_VALUE_' . substr( hash( 'sha256', $css ), 0, 12 ) . '_';
+		while ( str_contains( $css, $prefix ) ) {
+			$prefix .= '_';
+		}
+
+		$values    = array();
+		$protected = preg_replace_callback(
+			'/\{([^{}]*)\}/',
+			static function ( array $block ) use ( &$values, $prefix ): string {
+				$declarations = explode( ';', $block[1] );
+				foreach ( $declarations as $index => $declaration ) {
+					if ( ! preg_match( '/^(\s*(?:--|-?[a-zA-Z_])[\w-]*\s*:)(.*)$/s', $declaration, $parts ) ) {
+						continue;
+					}
+					// `(` opening a group rather than a function's arguments: it follows
+					// the start of the value, a space, a comma, an operator, or another `(`.
+					if ( ! preg_match( '/(?:^|[\s,(+*\/-])\(/', $parts[2] ) ) {
+						continue;
+					}
+					$value                  = rtrim( $parts[2] );
+					$token                  = $prefix . count( $values ) . '__';
+					$values[ $token ]       = trim( $value );
+					$declarations[ $index ] = $parts[1] . $token . substr( $parts[2], strlen( $value ) );
+				}
+
+				return '{' . implode( ';', $declarations ) . '}';
+			},
+			$css
+		);
+
+		return array(
+			'css'     => is_string( $protected ) ? $protected : $css,
+			'escapes' => $values,
+		);
 	}
 
 	/**

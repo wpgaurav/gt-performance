@@ -309,4 +309,31 @@ final class CssPrunerTest extends TestCase {
 		self::assertStringContainsString( 'content:"\\f0e1"', $html );
 		self::assertStringNotContainsString( '&#', $html );
 	}
+
+	/**
+	 * Twenty Twenty-Five, as served on gtp-demo.gatilab.com: every fluid font size
+	 * is a clamp() with a bare group, which the bundled parser dropped, so pruned
+	 * headings fell back to the body size.
+	 */
+	public function test_fluid_type_scale_values_survive_byte_for_byte(): void {
+		$root = ':root{--wp--preset--font-size--small: 0.875rem;--wp--preset--font-size--medium: clamp(1rem, 1rem + ((1vw - 0.2rem) * 0.196), 1.125rem);--wp--preset--font-size--xx-large: clamp(2.15rem, 2.15rem + ((1vw - 0.2rem) * 1.333), 3rem);}';
+		$css  = $root . 'h1{font-size:var(--wp--preset--font-size--xx-large)}h2{font-size:clamp(1rem, (1vw - 2px) * 3, 3rem)}.w{width:calc(100% - var(--a, (2px)))}.unused{color:red}';
+		$doc  = new \DOMDocument();
+		@$doc->loadHTML( '<html><body><h1>Title</h1><h2>Sub</h2><p class="w">x</p></body></html>' );
+		$out = ( new \GTPerformance\Optimization\Css\CssPruner() )->prune( $css, $doc );
+
+		self::assertStringContainsString( '--wp--preset--font-size--xx-large:clamp(2.15rem, 2.15rem + ((1vw - 0.2rem) * 1.333), 3rem)', $out );
+		self::assertStringContainsString( '--wp--preset--font-size--medium:clamp(1rem, 1rem + ((1vw - 0.2rem) * 0.196), 1.125rem)', $out );
+		self::assertStringContainsString( 'font-size:clamp(1rem, (1vw - 2px) * 3, 3rem)', $out );
+		self::assertStringContainsString( 'width:calc(100% - var(--a, (2px)))', $out );
+		self::assertStringNotContainsString( '.unused', $out, 'Protecting values must not stop pruning.' );
+	}
+
+	public function test_a_stylesheet_that_would_lose_a_declaration_is_left_untouched(): void {
+		$css = '.used{margin:1px !ie}.unused{color:red}';
+		$doc = new \DOMDocument();
+		@$doc->loadHTML( '<html><body><p class="used">x</p></body></html>' );
+
+		self::assertSame( $css, ( new \GTPerformance\Optimization\Css\CssPruner() )->prune( $css, $doc ), 'The parser drops `!ie` silently; a partial round trip is not trusted.' );
+	}
 }
