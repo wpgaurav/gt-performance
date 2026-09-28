@@ -205,7 +205,7 @@ final class CloudflarePurgeTest extends TestCase {
 		self::assertTrue( ( new Purger() )->flushEdge() );
 		self::assertSame( array(), $this->jobs() );
 		self::assertCount( 2, $GLOBALS['gtperf_test_http_requests'] );
-		self::assertSame( array( 'purge_everything' => true ), json_decode( $GLOBALS['gtperf_test_http_requests'][1]['args']['body'], true ) );
+		self::assertSame( array( 'hosts' => array( 'example.com' ) ), json_decode( $GLOBALS['gtperf_test_http_requests'][1]['args']['body'], true ), 'A full purge covers this site\'s hostnames, not the whole zone.' );
 	}
 
 	public function test_full_purge_failure_retries_the_full_operation(): void {
@@ -242,7 +242,7 @@ final class CloudflarePurgeTest extends TestCase {
 					'id' => 'ruleset',
 					'rules' => array(
 						array( 'id' => 'unrelated', 'ref' => 'commerce-safety', 'action' => 'set_cache_settings', 'enabled' => true, 'expression' => 'true', 'action_parameters' => array( 'cache' => false ) ),
-						array( 'id' => 'managed', 'ref' => RuleCompiler::MANAGED_RULE_REF, 'expression' => '(http.request.method in {"GET" "HEAD"})' ),
+						array( 'id' => 'managed', 'ref' => RuleCompiler::managedRef( 'example.com' ), 'expression' => '(http.request.method in {"GET" "HEAD"})' ),
 					),
 				) ) ) );
 			}

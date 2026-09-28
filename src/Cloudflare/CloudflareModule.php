@@ -119,7 +119,7 @@ final class CloudflareModule implements Module {
 		} elseif ( is_wp_error( $client ) ) {
 			$result = $client;
 		} else {
-			$result = null === $files ? $client->purgeEverything( $zone ) : $client->purgeFiles( $zone, $files );
+			$result = null === $files ? $client->purgeHosts( $zone, Settings::canonicalHosts() ) : $client->purgeFiles( $zone, $files );
 		}
 
 		$nextRetry = 0;
@@ -147,7 +147,7 @@ final class CloudflareModule implements Module {
 			}
 			$this->logger->log( 'error', 'Cloudflare purge failed', array( 'error' => $result->get_error_message() ) );
 		} elseif ( null === $files ) {
-			// A confirmed zone purge supersedes every older URL retry in this site.
+			// A confirmed full purge of this site's hostnames supersedes every older URL retry.
 			$this->pendingUrls = array();
 			$this->lastError = null;
 			wp_unschedule_hook( self::RETRY_HOOK );

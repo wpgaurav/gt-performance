@@ -10,7 +10,14 @@ declare(strict_types=1);
 namespace GTPerformance\Cloudflare;
 
 final class RuleCompiler {
-	public const MANAGED_RULE_REF = 'gt-performance-free-html-cache';
+	/**
+	 * The one ref every site used before 1.2.0. Refs are unique within a ruleset
+	 * and cannot change once written, so two sites in one zone (example.com and
+	 * shop.example.com) could not both own a rule under it, and each overwrote or
+	 * deleted the other's. A rule under this ref still belongs to the site whose
+	 * host its expression names, and keeps the ref when it is updated.
+	 */
+	public const LEGACY_RULE_REF = 'gt-performance-free-html-cache';
 	public const FREE_RULE_LIMIT  = 10;
 
 	/**
@@ -55,7 +62,7 @@ final class RuleCompiler {
 		}
 
 		return array(
-			'ref'               => self::MANAGED_RULE_REF,
+			'ref'               => self::managedRef( $host ),
 			'description'       => 'GT Performance: cache eligible public HTML',
 			'expression'        => ( new RuleExpression() )->compile( $host, $cache, $edgeTtl > 0 ),
 			'action'            => 'set_cache_settings',
@@ -76,8 +83,10 @@ final class RuleCompiler {
 		$normalizedHost = preg_replace( '/:\d+$/', '', strtolower( $host ) );
 
 		foreach ( $existingRules as $rule ) {
-			if ( self::MANAGED_RULE_REF === (string) ( $rule['ref'] ?? '' ) ) {
+			if ( null === $managed && self::owns( $rule, $host ) ) {
 				$managed = $rule;
+				// An adopted legacy rule keeps its ref, so the ref is not drift.
+				$expected['ref'] = (string) $rule['ref'];
 				continue;
 			}
 
@@ -89,7 +98,8 @@ final class RuleCompiler {
 			// zone, so a catch-all such as "true" overlaps this site even though the
 			// hostname never appears in its expression.
 			$expression = (string) ( $rule['expression'] ?? '' );
-			$namesHost  = str_contains( $expression, (string) $normalizedHost );
+			// Quoted, so example.com does not match a rule for shop.example.com.
+			$namesHost  = str_contains( $expression, '"' . $normalizedHost . '"' );
 			$anyHost    = ! str_contains( $expression, 'http.host' );
 			if ( ! $namesHost && ! $anyHost ) {
 				continue;
@@ -127,6 +137,48 @@ final class RuleCompiler {
 			'conflicts'       => $conflicts,
 			'rule'            => $expected,
 		);
+	}
+
+	/**
+	 * The ref of the rule this host owns: one per hostname, so sites that share a
+	 * Cloudflare zone each keep their own rule.
+	 */
+	public static function managedRef( string $host ): string {
+		return 'gt-performance-html-' . substr( hash( 'sha256', self::normalizeHost( $host ) ), 0, 16 );
+	}
+
+	/**
+	 * Whether a live rule is the one this host manages: its own ref, or the
+	 * pre-1.2.0 shared ref on a rule whose expression names this host.
+	 *
+	 * @param array<string, mixed> $rule Live rule.
+	 */
+	public static function owns( array $rule, string $host ): bool {
+		$ref = (string) ( $rule['ref'] ?? '' );
+		if ( '' === (string) ( $rule['id'] ?? 'unsaved' ) ) {
+			return false;
+		}
+
+		return self::managedRef( $host ) === $ref
+			|| ( self::LEGACY_RULE_REF === $ref && str_starts_with( (string) ( $rule['expression'] ?? '' ), '(http.host eq "' . self::normalizeHost( $host ) . '")' ) );
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $rules Live rules.
+	 * @return array<string, mixed>|null
+	 */
+	public static function ownedRule( array $rules, string $host ): ?array {
+		foreach ( $rules as $rule ) {
+			if ( is_array( $rule ) && self::owns( $rule, $host ) ) {
+				return $rule;
+			}
+		}
+
+		return null;
+	}
+
+	private static function normalizeHost( string $host ): string {
+		return (string) preg_replace( '/:\d+$/', '', strtolower( $host ) );
 	}
 
 	/**

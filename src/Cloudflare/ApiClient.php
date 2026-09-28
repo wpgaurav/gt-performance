@@ -271,13 +271,28 @@ final class ApiClient {
 	 *
 	 * @return bool|\WP_Error
 	 */
-	public function purgeEverything( string $zoneId ): bool|\WP_Error {
-		$result = $this->request(
-			'POST',
-			'zones/' . rawurlencode( $zoneId ) . '/purge_cache',
-			array( 'purge_everything' => true )
-		);
+	/**
+	 * Purge everything Cloudflare holds for these hostnames, and nothing else.
+	 *
+	 * A zone often serves more than this site: a subdomain on another install, a
+	 * shop, a docs site. purge_everything cleared all of them on every settings
+	 * change here. Purge by hostname is available on every plan (Free allows five
+	 * such requests a minute).
+	 *
+	 * @param list<string> $hosts Hostnames.
+	 */
+	public function purgeHosts( string $zoneId, array $hosts ): bool|\WP_Error {
+		$hosts = array_values( array_unique( array_filter( array_map( 'strval', $hosts ) ) ) );
+		if ( array() === $hosts ) {
+			return new \WP_Error( 'gtperf_cloudflare_hosts', __( 'No hostname to purge was found for this site.', 'gt-performance' ) );
+		}
+		foreach ( array_chunk( $hosts, 25 ) as $batch ) {
+			$result = $this->request( 'POST', 'zones/' . rawurlencode( $zoneId ) . '/purge_cache', array( 'hosts' => $batch ) );
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+		}
 
-		return is_wp_error( $result ) ? $result : true;
+		return true;
 	}
 }

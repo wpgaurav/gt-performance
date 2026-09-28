@@ -190,11 +190,7 @@ final class ConnectionDiagnostics {
 			$rulesetId = (string) ( $entrypoint['result']['id'] ?? '' );
 			$rules     = array_values( array_filter( (array) ( $entrypoint['result']['rules'] ?? array() ), 'is_array' ) );
 			$total     = count( $rules );
-			foreach ( $rules as $rule ) {
-				if ( RuleCompiler::MANAGED_RULE_REF === (string) ( $rule['ref'] ?? '' ) ) {
-					$managed = $rule;
-				}
-			}
+			$managed = RuleCompiler::ownedRule( $rules, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 		}
 
 		$steps[] = $this->step(

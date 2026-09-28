@@ -650,7 +650,7 @@ final class AdminModule implements Module {
 	}
 
 	/**
-	 * Delete the managed rule, purge the zone, and turn the integration off.
+	 * Delete this site's managed rule, purge its hostnames, and turn the integration off.
 	 * Credentials stay saved, so reconnecting is one sync.
 	 */
 	public function cloudflareDisconnect(): void {
@@ -1441,7 +1441,7 @@ final class AdminModule implements Module {
 			<section class="gtp-panel gtp-operation-panel">
 				<div>
 					<h3><?php esc_html_e( 'Disconnect', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Deletes the cache rule GT Performance manages, purges the zone so no page stored under it lingers, and turns the integration off. Your other rules and the saved credentials stay. Deactivating the plugin does the same, except the integration stays on for when you reactivate.', 'gt-performance' ); ?></p>
+					<p><?php esc_html_e( 'Deletes the cache rule GT Performance manages, purges this site\'s hostnames at Cloudflare so no page stored under it lingers, and turns the integration off. Your other rules and the saved credentials stay. Deactivating the plugin does the same, except the integration stays on for when you reactivate.', 'gt-performance' ); ?></p>
 				</div>
 				<?php $this->actionButton( 'gtperf_cloudflare_disconnect', __( 'Disconnect Cloudflare', 'gt-performance' ) ); ?>
 			</section>
@@ -3840,8 +3840,8 @@ PHP;
 			'setup-optimize'            => array( __( 'Optimize-only mode is on. Your host\'s cache stores pages; purge it once so it keeps optimized copies.', 'gt-performance' ), 'success' ),
 			'setup-verified'            => array( __( 'Setup verified: the home page was served as expected.', 'gt-performance' ), 'success' ),
 			'setup-verify-failed'       => array( __( 'Verification did not pass. The result below says which layer did not answer.', 'gt-performance' ), 'warning' ),
-			'cloudflare-disconnected'   => array( __( 'Cloudflare disconnected. The managed cache rule is gone and the zone was purged.', 'gt-performance' ), 'success' ),
-			'cloudflare-disconnected-unpurged' => array( __( 'Cloudflare disconnected and the managed cache rule is gone, but the zone purge failed. Purge the zone in the Cloudflare dashboard, or pages it stored stay until they expire.', 'gt-performance' ), 'warning' ),
+			'cloudflare-disconnected'   => array( __( 'Cloudflare disconnected. The managed cache rule is gone and this site\'s pages were purged from Cloudflare.', 'gt-performance' ), 'success' ),
+			'cloudflare-disconnected-unpurged' => array( __( 'Cloudflare disconnected and the managed cache rule is gone, but the Cloudflare purge failed. Purge this site\'s pages in the Cloudflare dashboard, or pages it stored stay until they expire.', 'gt-performance' ), 'warning' ),
 			'cloudflare-previewed'      => array( __( 'The live Cloudflare rule plan was checked without changing it.', 'gt-performance' ), 'success' ),
 			'cloudflare-diagnosed-ok'   => array( __( 'Every Cloudflare connection stage passed, including writing cache rules.', 'gt-performance' ), 'success' ),
 			'cloudflare-token-created'  => array( __( 'A zone-scoped Cloudflare API token was created and saved. The Global API Key is no longer needed here and can be cleared.', 'gt-performance' ), 'success' ),

@@ -35,7 +35,7 @@ final class CommandTest extends TestCase {
 		$GLOBALS['gtperf_test_cli_items']  = array();
 	}
 
-	public function testCloudflarePurgeClearsTheEntireZone(): void {
+	public function testCloudflarePurgeClearsThisSitesHostnames(): void {
 		( new Command() )->cloudflare( array( 'purge' ), array() );
 
 		self::assertCount( 1, $GLOBALS['gtperf_test_http_requests'] );
@@ -44,10 +44,10 @@ final class CommandTest extends TestCase {
 			$GLOBALS['gtperf_test_http_requests'][0]['url']
 		);
 		self::assertSame(
-			array( 'purge_everything' => true ),
+			array( 'hosts' => array( 'example.com' ) ),
 			json_decode( (string) $GLOBALS['gtperf_test_http_requests'][0]['args']['body'], true )
 		);
-		self::assertSame( array( 'Cloudflare full purge completed.' ), \WP_CLI::$successes );
+		self::assertSame( array( 'Cloudflare purge of this site\'s hostnames completed.' ), \WP_CLI::$successes );
 	}
 
 	public function testCloudflarePurgeCanTargetOneExactUrl(): void {

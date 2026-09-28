@@ -77,13 +77,14 @@ final class RuleManager {
 	}
 
 	/**
-	 * Delete only the rule this plugin owns, identified by its ref. Restoring a
-	 * ruleset saved before the first sync would also undo every rule the site owner
-	 * changed since, so the managed rule is the only thing touched.
+	 * Delete only the rule this site owns. Restoring a ruleset saved before the
+	 * first sync would also undo every rule the site owner changed since, and
+	 * another site in the same zone may own a rule of its own, so this host's
+	 * managed rule is the only thing touched.
 	 *
 	 * @return string|\WP_Error `removed`, or `absent` when there was no managed rule.
 	 */
-	public function remove( string $zoneId ): string|\WP_Error {
+	public function remove( string $zoneId, string $host ): string|\WP_Error {
 		$entrypoint = $this->client->request(
 			'GET',
 			'zones/' . rawurlencode( $zoneId ) . '/rulesets/phases/http_request_cache_settings/entrypoint'
@@ -95,19 +96,16 @@ final class RuleManager {
 
 		$ruleset   = (array) ( $entrypoint['result'] ?? array() );
 		$rulesetId = (string) ( $ruleset['id'] ?? '' );
-		foreach ( (array) ( $ruleset['rules'] ?? array() ) as $rule ) {
-			if ( ! is_array( $rule ) || RuleCompiler::MANAGED_RULE_REF !== ( $rule['ref'] ?? '' ) || '' === (string) ( $rule['id'] ?? '' ) || '' === $rulesetId ) {
-				continue;
-			}
-			$deleted = $this->client->request(
-				'DELETE',
-				'zones/' . rawurlencode( $zoneId ) . '/rulesets/' . rawurlencode( $rulesetId ) . '/rules/' . rawurlencode( (string) $rule['id'] )
-			);
-
-			return is_wp_error( $deleted ) ? $deleted : 'removed';
+		$rule      = RuleCompiler::ownedRule( array_values( array_filter( (array) ( $ruleset['rules'] ?? array() ), 'is_array' ) ), $host );
+		if ( null === $rule || '' === $rulesetId ) {
+			return 'absent';
 		}
+		$deleted = $this->client->request(
+			'DELETE',
+			'zones/' . rawurlencode( $zoneId ) . '/rulesets/' . rawurlencode( $rulesetId ) . '/rules/' . rawurlencode( (string) $rule['id'] )
+		);
 
-		return 'absent';
+		return is_wp_error( $deleted ) ? $deleted : 'removed';
 	}
 
 	/**
@@ -159,19 +157,16 @@ final class RuleManager {
 			);
 		}
 
-		foreach ( $rules as $existing ) {
-			if ( RuleCompiler::MANAGED_RULE_REF === ( $existing['ref'] ?? '' ) ) {
-				$ruleId = (string) ( $existing['id'] ?? '' );
-				if ( '' === $ruleId ) {
-					break;
-				}
+		$existing = RuleCompiler::ownedRule( $rules, $host );
+		if ( null !== $existing ) {
+			// Cloudflare refuses to change a ref, so an adopted legacy rule keeps its own.
+			$rule['ref'] = (string) $existing['ref'];
 
-				return $this->requestWithFreeFallback(
-					'PATCH',
-					'zones/' . rawurlencode( $zoneId ) . '/rulesets/' . rawurlencode( $rulesetId ) . '/rules/' . rawurlencode( $ruleId ),
-					$rule
-				);
-			}
+			return $this->requestWithFreeFallback(
+				'PATCH',
+				'zones/' . rawurlencode( $zoneId ) . '/rulesets/' . rawurlencode( $rulesetId ) . '/rules/' . rawurlencode( (string) $existing['id'] ),
+				$rule
+			);
 		}
 
 		return $this->requestWithFreeFallback(

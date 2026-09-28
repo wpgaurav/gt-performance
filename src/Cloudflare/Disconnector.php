@@ -15,7 +15,7 @@ use GTPerformance\XCloud\EdgeOwnership;
 /**
  * The managed Cache Rule makes Cloudflare store HTML, and only this plugin purges
  * it. Left behind after deactivation, the zone keeps serving pages nothing will
- * ever refresh, so the rule goes and the zone is purged once on the way out.
+ * ever refresh, so the rule goes and the site's hostnames are purged on the way out.
  */
 final class Disconnector {
 	/**
@@ -30,7 +30,7 @@ final class Disconnector {
 	}
 
 	/**
-	 * Remove the managed rule, then purge the zone.
+	 * Remove this site's managed rule, then purge this site's hostnames.
 	 *
 	 * @param array<string, mixed>|null $settings Plugin settings.
 	 * @return array{rule: string, purged: bool}|\WP_Error
@@ -47,13 +47,13 @@ final class Disconnector {
 			return $client;
 		}
 
-		$rule = ( new RuleManager( $client ) )->remove( $zoneId );
+		$rule = ( new RuleManager( $client ) )->remove( $zoneId, (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 		if ( is_wp_error( $rule ) ) {
 			return $rule;
 		}
 
 		// Pages the rule already stored would otherwise be served until they expire.
-		$purge = $client->purgeEverything( $zoneId );
+		$purge = $client->purgeHosts( $zoneId, Settings::canonicalHosts() );
 		delete_option( 'gt_performance_cloudflare_plan' );
 
 		return array(

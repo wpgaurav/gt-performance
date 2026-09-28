@@ -38,7 +38,9 @@ final class CloudflareDisconnectTest extends TestCase {
 			'id'    => 'ruleset-9',
 			'rules' => array(
 				array( 'id' => 'owner-rule', 'ref' => 'site-owner-bypass', 'expression' => 'true' ),
-				array( 'id' => 'gt-rule', 'ref' => RuleCompiler::MANAGED_RULE_REF, 'expression' => 'true' ),
+				// Another install in the same zone, under the pre-1.2.0 shared ref.
+				array( 'id' => 'shop-rule', 'ref' => RuleCompiler::LEGACY_RULE_REF, 'expression' => '(http.host eq "shop.example.com") and (http.request.method in {"GET"})' ),
+				array( 'id' => 'gt-rule', 'ref' => RuleCompiler::managedRef( 'example.com' ), 'expression' => '(http.host eq "example.com") and (http.request.method in {"GET"})' ),
 			),
 		);
 		$GLOBALS['gtperf_test_http_callback'] = function ( string $url, array $args ): array {
@@ -73,16 +75,30 @@ final class CloudflareDisconnectTest extends TestCase {
 	}
 
 	public function test_only_the_managed_rule_is_deleted(): void {
-		self::assertSame( 'removed', ( new RuleManager( $this->client() ) )->remove( 'zone-1' ) );
-		self::assertSame( array( 'DELETE zones/zone-1/rulesets/ruleset-9/rules/gt-rule' ), $this->writes(), 'The site owner\'s own rule must survive.' );
+		self::assertSame( 'removed', ( new RuleManager( $this->client() ) )->remove( 'zone-1', 'example.com' ) );
+		self::assertSame( array( 'DELETE zones/zone-1/rulesets/ruleset-9/rules/gt-rule' ), $this->writes(), 'The owner\'s rule and another site\'s rule in the same zone must survive.' );
+	}
+
+	public function test_a_legacy_rule_naming_this_host_is_still_ours(): void {
+		$this->ruleset['rules'][2] = array( 'id' => 'legacy-own', 'ref' => RuleCompiler::LEGACY_RULE_REF, 'expression' => '(http.host eq "example.com") and (http.request.method in {"GET"})' );
+
+		self::assertSame( 'removed', ( new RuleManager( $this->client() ) )->remove( 'zone-1', 'example.com' ) );
+		self::assertSame( array( 'DELETE zones/zone-1/rulesets/ruleset-9/rules/legacy-own' ), $this->writes() );
+	}
+
+	public function test_the_purge_on_disconnect_covers_only_this_sites_hostnames(): void {
+		( new Disconnector() )->disconnect( false );
+		$purge = end( $GLOBALS['gtperf_test_http_requests'] );
+
+		self::assertSame( array( 'hosts' => array( 'example.com' ) ), json_decode( (string) $purge['args']['body'], true ), 'shop.example.com shares the zone and keeps its cache.' );
 	}
 
 	public function test_a_zone_without_the_managed_rule_is_left_alone(): void {
 		$this->ruleset = null;
-		self::assertSame( 'absent', ( new RuleManager( $this->client() ) )->remove( 'zone-1' ) );
+		self::assertSame( 'absent', ( new RuleManager( $this->client() ) )->remove( 'zone-1', 'example.com' ) );
 
 		$this->ruleset = array( 'id' => 'ruleset-9', 'rules' => array( array( 'id' => 'owner-rule', 'ref' => 'site-owner-bypass' ) ) );
-		self::assertSame( 'absent', ( new RuleManager( $this->client() ) )->remove( 'zone-1' ) );
+		self::assertSame( 'absent', ( new RuleManager( $this->client() ) )->remove( 'zone-1', 'example.com' ) );
 		self::assertSame( array(), $this->writes() );
 	}
 
@@ -137,5 +153,50 @@ final class CloudflareDisconnectTest extends TestCase {
 
 		self::assertIsArray( $result );
 		self::assertFalse( get_option( RuleManager::REMOVED_OPTION, false ) );
+	}
+
+	/** @return list<array{method:string,path:string,body:array<string,mixed>}> */
+	private function writeBodies(): array {
+		$calls = array();
+		foreach ( $GLOBALS['gtperf_test_http_requests'] as $request ) {
+			if ( 'GET' !== $request['args']['method'] ) {
+				$calls[] = array(
+					'method' => $request['args']['method'],
+					'path'   => str_replace( 'https://api.cloudflare.com/client/v4/', '', $request['url'] ),
+					'body'   => (array) json_decode( (string) ( $request['args']['body'] ?? '' ), true ),
+				);
+			}
+		}
+		return $calls;
+	}
+
+	public function test_a_site_sharing_the_zone_creates_its_own_rule_instead_of_taking_anothers(): void {
+		unset( $this->ruleset['rules'][2] ); // Only shop.example.com's legacy rule is left.
+		( new RuleManager( $this->client() ) )->sync( 'zone-1', 'example.com', Settings::defaults()['cache'] );
+		$writes = $this->writeBodies();
+
+		self::assertSame( 'POST', $writes[0]['method'], 'shop.example.com\'s rule is not patched.' );
+		self::assertSame( 'zones/zone-1/rulesets/ruleset-9/rules', $writes[0]['path'] );
+		self::assertSame( RuleCompiler::managedRef( 'example.com' ), $writes[0]['body']['ref'] );
+		self::assertStringStartsWith( '(http.host eq "example.com")', $writes[0]['body']['expression'] );
+	}
+
+	public function test_an_adopted_legacy_rule_is_updated_in_place_and_keeps_its_ref(): void {
+		$this->ruleset['rules'][2] = array( 'id' => 'legacy-own', 'ref' => RuleCompiler::LEGACY_RULE_REF, 'expression' => '(http.host eq "example.com") and (http.request.method in {"GET"})' );
+		( new RuleManager( $this->client() ) )->sync( 'zone-1', 'example.com', Settings::defaults()['cache'] );
+		$writes = $this->writeBodies();
+
+		self::assertSame( 'PATCH', $writes[0]['method'] );
+		self::assertSame( 'zones/zone-1/rulesets/ruleset-9/rules/legacy-own', $writes[0]['path'] );
+		self::assertSame( RuleCompiler::LEGACY_RULE_REF, $writes[0]['body']['ref'], 'Cloudflare rejects a ref change (error 20142).' );
+	}
+
+	public function test_the_plan_neither_claims_nor_flags_a_subdomain_sites_rule(): void {
+		unset( $this->ruleset['rules'][2] );
+		$plan = ( new RuleCompiler() )->plan( 'example.com', Settings::defaults()['cache'], array_values( $this->ruleset['rules'] ) );
+
+		self::assertFalse( $plan['managed_exists'] );
+		self::assertSame( 'create', $plan['operation'] );
+		self::assertNotContains( 'shop-rule', array_column( $plan['conflicts'], 'id' ), '"example.com" is a substring of "shop.example.com", not the same host.' );
 	}
 }

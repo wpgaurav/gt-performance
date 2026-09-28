@@ -692,7 +692,7 @@ final class Command {
 	 * : With disconnect, also delete the saved Cloudflare credentials and Zone ID.
 	 *
 	 * `disconnect` deletes the cache rule GT Performance manages (no other rule),
-	 * purges the zone, and turns the integration off.
+	 * purges this site's hostnames at Cloudflare, and turns the integration off.
 	 *
 	 * @param list<string>          $args      Positional arguments.
 	 * @param array<string, string> $assocArgs Named arguments.
@@ -717,7 +717,7 @@ final class Command {
 				return;
 			}
 			if ( ! $result['purged'] ) {
-				\WP_CLI::warning( 'The zone purge failed. Pages Cloudflare already stored stay until they expire; purge them in the Cloudflare dashboard.' );
+				\WP_CLI::warning( 'The Cloudflare purge failed. Pages it already stored for this site stay until they expire; purge them in the Cloudflare dashboard.' );
 			}
 			\WP_CLI::success( 'removed' === $result['rule'] ? 'Cloudflare disconnected; the managed cache rule was deleted.' : 'Cloudflare disconnected; there was no managed cache rule to delete.' );
 			return;
@@ -760,12 +760,12 @@ final class Command {
 			}
 			$result = '' !== $url
 				? $client->purgeUrls( $zoneId, array( $url ), (bool) $settings['cache']['separate_mobile'] )
-				: $client->purgeEverything( $zoneId );
+				: $client->purgeHosts( $zoneId, Settings::canonicalHosts() );
 			if ( is_wp_error( $result ) ) {
 				\WP_CLI::error( $result->get_error_message() );
 				return;
 			}
-			\WP_CLI::success( '' !== $url ? 'Cloudflare URL purge completed.' : 'Cloudflare full purge completed.' );
+			\WP_CLI::success( '' !== $url ? 'Cloudflare URL purge completed.' : 'Cloudflare purge of this site\'s hostnames completed.' );
 			return;
 		}
 

@@ -72,7 +72,7 @@ try {
     $purger->purgeAll();
     $check(true===$purger->flushEdge(),'Full purge completes synchronously');
     $check(!is_file($store->pagePath($control)),'Full purge removes remaining origin cache');
-    $check(['purge_everything'=>true]===end($requests)['body'],'Full purge uses Cloudflare purge_everything');
+    $check(['hosts'=>Settings::canonicalHosts()]===end($requests)['body'],'Full purge covers only this site\'s hostnames');
     $requests=[];$verified=(new PurgeVerifier())->verify($url);
     $check(is_array($verified)&&'verified'===$verified['status'],'Native verifier succeeds');
     $check(['purge','fetch','fetch']===array_column($requests,'kind'),'Native verifier HTTP order is purge then two reads');

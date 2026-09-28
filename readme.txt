@@ -72,7 +72,7 @@ Stylesheet collection, selector analysis, and pruning all happen on your WordPre
 * Purges exact URLs, retries temporary failures up to three times, and honors Retry-After.
 * Connects with a scoped API token or a Global API Key with account email.
 * The connection check also confirms that visitors actually pass through Cloudflare (proxied DNS) and that APO isn't caching HTML alongside the managed rule.
-* Deactivating the plugin, or `wp gt-performance cloudflare disconnect`, deletes the managed rule and purges the zone, so Cloudflare never keeps serving pages nothing will refresh.
+* Deactivating the plugin, or `wp gt-performance cloudflare disconnect`, deletes this site's managed rule and purges this site's pages, so Cloudflare never keeps serving pages nothing will refresh.
 * Detects xCloud's Cloudflare Enterprise add-on, reports its edge traffic, and avoids two systems owning the same edge cache.
 * Optional origin-pull CDN for static files. You pick the exact file extensions it serves, and HTML, API responses, and third-party URLs stay unchanged.
 
@@ -213,7 +213,7 @@ The full GPL-2.0 text this plugin is licensed under ships as `LICENSE` in the pl
 
 GT Performance sends no data anywhere by default. Each service below is contacted only after you turn on the feature that needs it, and only with credentials you supply.
 
-* **Cloudflare API** (api.cloudflare.com): Used when you connect your Cloudflare account. Sends your API token or key, zone, the managed cache rule, and the URLs being purged. [Terms](https://www.cloudflare.com/terms/), [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
+* **Cloudflare API** (api.cloudflare.com): Used when you connect your Cloudflare account. Sends your API token or key, zone, the managed cache rule, this site's hostname when the connection check looks up its DNS records, and the URLs or hostnames being purged. [Terms](https://www.cloudflare.com/terms/), [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
 * **xCloud API** (app.xcloud.host): Used when you connect an xCloud-hosted site. Sends your xCloud token and site domain to refresh the integration and purge host caches. [Privacy Policy](https://xcloud.host/privacy-policy/).
 * **Google Fonts** (fonts.googleapis.com, fonts.gstatic.com): Used when local font hosting is on. Your server downloads the fonts once, with no visitor data, and serves them from your domain. [Privacy Policy](https://policies.google.com/privacy).
 * **YouTube** (i.ytimg.com, www.youtube-nocookie.com): Used when lightweight embeds are on. The visitor's browser loads the thumbnail, and loads the player only after the visitor clicks play. [Terms](https://www.youtube.com/t/terms), [Privacy Policy](https://policies.google.com/privacy).
@@ -256,7 +256,8 @@ The complete release history is on the [GT Performance changelog](https://produc
 * New: "Don't cache this page" and "Use original CSS" in the editor's GT Performance box. Explain this page reports the first as `page-option`.
 * New: "Cache each value separately" query parameters. Pages like `?orderby=price` or `?lang=de` get their own cached copy (values up to 100 characters, up to 100 copies per page) instead of bypassing the cache, and purging the page clears every copy at the origin and at Cloudflare.
 * Saving settings purges the page cache and Cloudflare only when the change affects cached pages. Credentials, connection status, cleanup schedules, and preload limits no longer purge.
-* Deactivation deletes the managed Cloudflare rule, and only that rule, then purges the zone. `wp gt-performance cloudflare disconnect [--forget]` and a Disconnect button do the same and turn the integration off.
+* Deactivation deletes this site's managed Cloudflare rule, and only that rule, then purges this site's pages from Cloudflare. `wp gt-performance cloudflare disconnect [--forget]` and a Disconnect button do the same and turn the integration off.
+* Sites sharing a Cloudflare zone, such as example.com and shop.example.com on separate installs, each keep their own cache rule, and a full purge clears only the site's own hostnames instead of the whole zone.
 * The Cloudflare connection check warns about DNS-only (grey cloud) records and about APO caching HTML alongside the managed rule.
 * WPML, Polylang, TranslatePress, Weglot, and common WooCommerce currency switchers are detected, flagged on Integrations with what to set, and reported in the health report.
 * Query parameters sent as arrays, such as `?s[]=x`, now bypass the cache. They were read as the page with no query and could be stored under its key.
