@@ -35,6 +35,8 @@ final class SetupReport {
 		'x-litespeed-cache'         => 'LiteSpeed Cache',
 		'x-kinsta-cache'            => 'Kinsta',
 		'x-hcdn-cache-status'       => 'Hostinger CDN',
+		// Seen on gatilab.com: x-site-optimizer: 4.0 with x-cache-status HIT/STALE.
+		'x-site-optimizer'          => 'Hostinger Site Optimizer',
 		'x-proxy-cache'             => 'SiteGround Dynamic Cache',
 		'x-wpe-cached'              => 'WP Engine',
 		'x-cacheable'               => 'WP Engine',

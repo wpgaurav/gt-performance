@@ -46,6 +46,11 @@ final class SetupReportTest extends TestCase {
 		self::assertSame( array(), SetupReport::hostCachesFromHeaders( array( 'content-type' => 'text/html', 'cf-cache-status' => 'DYNAMIC' ) ), 'Cloudflare is not a host page cache.' );
 		self::assertSame( array( 'LiteSpeed Cache' ), SetupReport::hostCachesFromHeaders( array( 'X-LiteSpeed-Cache' => 'miss' ) ), 'A MISS still proves the cache is there.' );
 		self::assertSame( array( 'Hostinger' ), SetupReport::hostCachesFromHeaders( array( 'platform' => 'hostinger' ) ) );
+		self::assertSame(
+			array( 'Hostinger Site Optimizer' ),
+			SetupReport::hostCachesFromHeaders( array( 'server' => 'cloudflare', 'x-site-optimizer' => '4.0', 'x-cache-status' => 'STALE', 'x-turbo-charged-by' => 'LiteSpeed' ) ),
+			'The headers gatilab.com returns through Hostinger\'s layer.'
+		);
 		self::assertSame( array( 'WP Engine' ), SetupReport::hostCachesFromHeaders( array( 'x-cacheable' => 'SHORT', 'x-wpe-cached' => 'HIT' ) ) );
 	}
 
