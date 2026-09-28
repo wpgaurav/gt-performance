@@ -1058,7 +1058,9 @@ final class AdminModule implements Module {
 		$this->setupRow(
 			__( 'Cached home page', 'gt-performance' ),
 			$detail,
-			$passed ? __( 'Passed', 'gt-performance' ) : ( is_array( $verified ) ? __( 'Not yet', 'gt-performance' ) : __( 'Not run', 'gt-performance' ) ),
+			$passed
+				? ( 'store' === ( $verified['mode'] ?? '' ) && ! empty( $settings['cloudflare']['enabled'] ) && 'HIT' !== (string) $verified['edge'] ? __( 'Origin verified', 'gt-performance' ) : __( 'Passed', 'gt-performance' ) )
+				: ( is_array( $verified ) ? __( 'Not yet', 'gt-performance' ) : __( 'Not run', 'gt-performance' ) ),
 			$passed ? 'success' : ( is_array( $verified ) ? 'warning' : 'neutral' ),
 			'gtperf_setup_verify',
 			__( 'Verify', 'gt-performance' )

@@ -81,18 +81,27 @@ final class SetupReportTest extends TestCase {
 		self::assertGreaterThan( 0, (int) get_option( SetupReport::COMPLETE_OPTION, 0 ) );
 	}
 
-	public function test_store_mode_with_cloudflare_needs_an_edge_hit(): void {
+	public function test_with_cloudflare_an_edge_miss_is_reported_without_failing_a_working_origin(): void {
 		$this->set( 'cloudflare.enabled', true );
 		$this->responses = array( array( 'status' => 200, 'headers' => array( 'x-gt-cache' => 'HIT', 'cf-cache-status' => 'MISS' ) ) );
 		$result          = ( new SetupReport( 0 ) )->verify();
 
-		self::assertFalse( $result['passed'] );
-		self::assertCount( 4, $GLOBALS['gtperf_test_http_requests'], 'Bounded: four attempts, then a result.' );
-		self::assertStringContainsString( 'Cloudflare did not answer HIT', $result['detail'] );
-		self::assertFalse( get_option( SetupReport::COMPLETE_OPTION, false ) );
+		self::assertTrue( $result['passed'], 'gatilab.com: the edge answered MISS for a while after a full purge while the origin served HITs.' );
+		self::assertSame( 'MISS', $result['edge'] );
+		self::assertCount( 4, $GLOBALS['gtperf_test_http_requests'], 'It still gives the edge four chances, then reports.' );
+		self::assertStringContainsString( 'Cloudflare has not answered HIT yet', $result['detail'] );
 
 		$this->responses = array( array( 'status' => 200, 'headers' => array( 'cf-cache-status' => 'HIT', 'age' => '30' ) ) );
 		self::assertTrue( ( new SetupReport( 0 ) )->verify()['passed'], 'An edge HIT never reaches PHP, and proves the origin stored the page.' );
+	}
+
+	public function test_a_page_the_origin_never_serves_from_cache_fails(): void {
+		$this->responses = array( array( 'status' => 200, 'headers' => array( 'x-gt-cache' => 'MISS' ) ) );
+		$result          = ( new SetupReport( 0 ) )->verify();
+
+		self::assertFalse( $result['passed'] );
+		self::assertStringContainsString( 'not served from the origin cache', $result['detail'] );
+		self::assertFalse( get_option( SetupReport::COMPLETE_OPTION, false ) );
 	}
 
 	public function test_a_private_home_page_is_named_as_the_reason(): void {

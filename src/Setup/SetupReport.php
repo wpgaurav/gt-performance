@@ -232,9 +232,12 @@ final class SetupReport {
 	/**
 	 * Request the home page as a visitor until the cache answers, then record it.
 	 *
-	 * Store mode passes when GT Performance serves a HIT; with Cloudflare on, the
-	 * edge must also answer HIT. Optimize-only mode passes on a public 200, and
-	 * reports whether the host's cache answered.
+	 * Store mode passes when GT Performance serves a HIT. Cloudflare's answer is
+	 * reported next to it but does not decide the result: on gatilab.com, right
+	 * after a full purge, the edge kept answering MISS for longer than any
+	 * reasonable wait while the origin was already serving HITs, so failing on it
+	 * reported a broken setup that was working. Optimize-only mode passes on a
+	 * public 200, and reports whether the host's cache answered.
 	 *
 	 * @return array{checked_at:int,mode:string,passed:bool,origin:string,edge:string,host_caches:list<string>,status:int,detail:string}
 	 */
@@ -278,14 +281,14 @@ final class SetupReport {
 		} else {
 			// A cached edge copy never reaches PHP, so a Cloudflare HIT alone also
 			// proves the origin stored the page at some point.
-			$originHit = in_array( $origin, array( 'HIT', 'STALE' ), true ) || ( $cloudflare && 'HIT' === $edge );
-			$passed    = $originHit && ( ! $cloudflare || 'HIT' === $edge );
-			$detail    = match ( true ) {
-				$passed                  => __( 'Verified: the home page was served from the cache.', 'gt-performance' ),
+			$edgeHit = $cloudflare && 'HIT' === $edge;
+			$passed  = in_array( $origin, array( 'HIT', 'STALE' ), true ) || $edgeHit;
+			$detail  = match ( true ) {
+				$passed && ( ! $cloudflare || $edgeHit ) => __( 'Verified: the home page was served from the cache.', 'gt-performance' ),
+				$passed                  => __( 'Verified: GT Performance served the home page from its cache. Cloudflare has not answered HIT yet; right after a purge that can take a minute or two, so verify again shortly. If it never does, sync Cloudflare and check that the DNS record is proxied.', 'gt-performance' ),
 				200 !== $status          => __( 'The home page did not return 200, so it cannot be cached.', 'gt-performance' ),
 				(bool) ( $last['private'] ?? false ) => __( 'The home page is sent as private or sets a cookie, so it is never stored. Open Explain this page on Tools to see which rule applies.', 'gt-performance' ),
-				! $originHit             => __( 'The page was not served from the origin cache. Check that the drop-in and WP_CACHE are installed, then verify again.', 'gt-performance' ),
-				default                  => __( 'The origin cache works, but Cloudflare did not answer HIT. Sync Cloudflare and check that the DNS record is proxied, then verify again. A server that resolves its own domain locally never reaches Cloudflare; in that case, check cf-cache-status from your own browser.', 'gt-performance' ),
+				default                  => __( 'The page was not served from the origin cache. Check that the drop-in and WP_CACHE are installed, then verify again.', 'gt-performance' ),
 			};
 		}
 
