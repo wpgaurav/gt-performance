@@ -78,7 +78,7 @@ final class QueueModule implements Module {
 	 * stack redundant warm jobs.
 	 */
 	public function scheduleWarm(): void {
-		if ( ! (bool) Settings::get( 'cache.enabled', true ) || ! (bool) Settings::get( 'cache.preload', true ) ) {
+		if ( ! (bool) Settings::get( 'cache.enabled', true ) || ! (bool) Settings::get( 'cache.preload', true ) || Settings::optimizeOnly() ) {
 			return;
 		}
 
@@ -148,7 +148,7 @@ final class QueueModule implements Module {
 	 * burst per cron tick.
 	 */
 	public function revalidateStale(): void {
-		if ( ! (bool) Settings::get( 'cache.enabled', true ) || ! (bool) Settings::get( 'cache.preload', true ) ) {
+		if ( ! (bool) Settings::get( 'cache.enabled', true ) || ! (bool) Settings::get( 'cache.preload', true ) || Settings::optimizeOnly() ) {
 			return;
 		}
 

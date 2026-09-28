@@ -415,6 +415,10 @@ final class Command {
 				\WP_CLI::error( 'The queue schema upgrade is incomplete. Open GT Performance Tools or repeat this command to continue the migration.' );
 				return;
 			}
+			if ( Settings::optimizeOnly() ) {
+				\WP_CLI::error( 'Warming stores pages, and in optimize-only mode the host\'s page cache stores them instead. Nothing was queued.' );
+				return;
+			}
 			$job = ( new CacheWarmer( new \GTPerformance\Core\Logger() ) )->queue();
 			\WP_CLI::success( "Warm run queued as job {$job}. Discovery and preloads run through `wp gt-performance queue run` or cron; check progress with `wp gt-performance cache warm-status`." );
 			return;
@@ -514,6 +518,7 @@ final class Command {
 
 		if ( 'status' === $action ) {
 			\WP_CLI::log( 'enabled=' . ( Settings::get( 'cache.enabled', false ) ? 'yes' : 'no' ) );
+			\WP_CLI::log( 'mode=' . ( Settings::optimizeOnly() ? 'optimize-only' : 'store' ) );
 			\WP_CLI::log( 'dropin=' . ( new DropinInstaller() )->status() );
 			return;
 		}

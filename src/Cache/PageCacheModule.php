@@ -58,8 +58,10 @@ final class PageCacheModule implements Module {
 		// Nothing reads what capture() writes until the owned drop-in is in place and
 		// WP_CACHE is on, which is not the state a fresh activation leaves behind. Until
 		// then the buffer, the optimizer chain, the key hash and two file writes are all
-		// work whose only product is disk usage.
-		if ( ! self::storageActive() ) {
+		// work whose only product is disk usage. Optimize-only mode stores nothing, so
+		// it needs neither.
+		$optimizeOnly = Settings::optimizeOnly();
+		if ( ! $optimizeOnly && ! self::storageActive() ) {
 			return;
 		}
 
@@ -97,6 +99,16 @@ final class PageCacheModule implements Module {
 
 		$config         = $this->cacheConfig();
 		$this->decision = $this->eligibility->decide( $this->request, $config );
+
+		// The host's page cache decides what it stores and sends its own headers. A
+		// response the eligibility rules would never cache is left untouched, and one
+		// they would cache is optimized on its way to the host's cache.
+		if ( $optimizeOnly ) {
+			if ( $this->decision->cacheable ) {
+				OutputBuffer::start( array( $this, 'captureOptimizeOnly' ) );
+			}
+			return;
+		}
 
 		if ( ! $this->decision->cacheable ) {
 			nocache_headers();
@@ -216,6 +228,29 @@ final class PageCacheModule implements Module {
 		$this->sendCacheHeaders();
 
 		return $optimized;
+	}
+
+	/**
+	 * Optimize-only mode: run the pipeline on a response that passes the same body
+	 * and header checks a stored page must pass, and store nothing.
+	 */
+	public function captureOptimizeOnly( string $html ): string {
+		if ( null === $this->request ) {
+			return $html;
+		}
+
+		$decision = $this->validator->validate( $html, (int) http_response_code(), headers_list() );
+		if ( ! $decision->cacheable || ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) || \GTPerformance\Optimization\PageOverrides::noCache() ) {
+			return $html;
+		}
+
+		if ( ! headers_sent() && (bool) Settings::get( 'debug', false ) ) {
+			header( 'X-GT-Cache: OPTIMIZE-ONLY' );
+			// Replaces the idle drop-in's own debug reason.
+			header( 'X-GT-Cache-Reason: optimize-only' );
+		}
+
+		return $this->capturePreview( $html );
 	}
 
 	/**

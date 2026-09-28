@@ -189,6 +189,7 @@ final class ReadAbilities {
 				),
 				'modules'      => array(
 					'page_cache'       => (bool) Settings::get( 'cache.enabled', true ),
+					'optimize_only'    => Settings::optimizeOnly(),
 					'cache_warming'    => (bool) Settings::get( 'cache.preload', true ),
 					'separate_mobile'  => (bool) Settings::get( 'cache.separate_mobile', false ),
 					'unused_css'       => (bool) Settings::get( 'css.enabled', false ),

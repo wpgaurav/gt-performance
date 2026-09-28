@@ -32,6 +32,7 @@ final class Settings {
 			'generation' => 1,
 			'cache'      => array(
 				'enabled'              => true,
+				'mode'                 => 'store',
 				'post_publish_purge'   => 'related',
 				'fresh_ttl'            => 3600,
 				'stale_ttl'            => 86400,
@@ -306,6 +307,7 @@ final class Settings {
 		}
 
 		$merged['cache']['enabled']          = (bool) ( $merged['cache']['enabled'] ?? false );
+		$merged['cache']['mode']             = 'optimize' === ( $merged['cache']['mode'] ?? 'store' ) ? 'optimize' : 'store';
 		$merged['cache']['separate_mobile']  = (bool) ( $merged['cache']['separate_mobile'] ?? false );
 		$merged['cache']['preload']          = (bool) ( $merged['cache']['preload'] ?? true );
 		$merged['cache']['preload_max_urls'] = max( 0, min( 2000, (int) ( $merged['cache']['preload_max_urls'] ?? 200 ) ) );
@@ -655,7 +657,7 @@ final class Settings {
 			// The host allowlist lives inside the cache policy because that is the only
 			// slice advanced-cache.php receives, and the drop-in and the runtime must
 			// decide from a byte-identical policy or they disagree about what is cached.
-			'cache'      => array( 'hosts' => self::canonicalHosts() ) + (array) $settings['cache'],
+			'cache'      => self::compiledCache( (array) $settings['cache'] ),
 			'debug'      => (bool) $settings['debug'],
 			// The bundled advanced-cache.php drop-in carries no hard-coded paths.
 			// It reads this value to locate the runtime classes it loads, so the
@@ -689,6 +691,30 @@ final class Settings {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * The cache slice advanced-cache.php receives.
+	 *
+	 * In optimize-only mode the host's own cache serves pages, so the drop-in must
+	 * never answer a request from an entry left over from store mode.
+	 *
+	 * @param array<string, mixed> $cache Cache settings.
+	 * @return array<string, mixed>
+	 */
+	private static function compiledCache( array $cache ): array {
+		if ( 'optimize' === ( $cache['mode'] ?? 'store' ) ) {
+			$cache['enabled'] = false;
+		}
+
+		return array( 'hosts' => self::canonicalHosts() ) + $cache;
+	}
+
+	/**
+	 * Whether GT Performance optimizes pages that the host's own cache stores.
+	 */
+	public static function optimizeOnly(): bool {
+		return (bool) self::get( 'cache.enabled', true ) && 'optimize' === self::get( 'cache.mode', 'store' );
 	}
 
 	/**

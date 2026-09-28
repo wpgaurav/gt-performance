@@ -404,6 +404,30 @@ if ( ! function_exists( 'wp_generate_password' ) ) {
 	}
 }
 
+// Capabilities: $GLOBALS['gtperf_test_capabilities'] lists the ones the current user has.
+if ( ! function_exists( 'current_user_can' ) ) {
+	function current_user_can( string $capability, mixed ...$args ): bool {
+		return in_array( $capability, (array) ( $GLOBALS['gtperf_test_capabilities'] ?? array() ), true );
+	}
+}
+
+if ( ! function_exists( 'is_feed' ) ) {
+	function is_feed(): bool {
+		return false;
+	}
+}
+
+if ( ! function_exists( 'is_robots' ) ) {
+	function is_robots(): bool {
+		return false;
+	}
+}
+
+if ( ! function_exists( 'nocache_headers' ) ) {
+	function nocache_headers(): void {
+	}
+}
+
 // Post meta: $GLOBALS['gtperf_test_post_meta'][ post id ][ key ] = value.
 if ( ! function_exists( 'get_post_meta' ) ) {
 	function get_post_meta( int $post_id, string $key = '', bool $single = false ): mixed {

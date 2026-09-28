@@ -155,15 +155,18 @@ final class HealthReport {
 		);
 
 		$dropin   = (string) $evidence['page_dropin'];
+		$optimize = ! empty( $evidence['optimize_only'] );
 		$wpCache  = (string) $evidence['wp_cache'];
 		$cache    = (bool) $evidence['cache_enabled'];
 		$ready    = 'owned' === $dropin && 'enabled' === $wpCache;
 		$checks[] = self::check(
 			'page_dropin',
 			__( 'Page-cache drop-in', 'gt-performance' ),
-			! $cache ? 'info' : ( $ready ? 'pass' : ( 'conflict' === $dropin ? 'fail' : 'warning' ) ),
-			/* translators: 1: drop-in state such as owned or missing, 2: WP_CACHE state such as enabled. */
-			! $cache ? __( 'Origin page cache is disabled.', 'gt-performance' ) : sprintf( __( 'Drop-in %1$s; WP_CACHE %2$s.', 'gt-performance' ), $dropin, $wpCache ),
+			! $cache || $optimize ? 'info' : ( $ready ? 'pass' : ( 'conflict' === $dropin ? 'fail' : 'warning' ) ),
+			$optimize
+				? __( 'Optimize-only mode: the host\'s page cache stores pages, so the drop-in is not used.', 'gt-performance' )
+				/* translators: 1: drop-in state such as owned or missing, 2: WP_CACHE state such as enabled. */
+				: ( ! $cache ? __( 'Origin page cache is disabled.', 'gt-performance' ) : sprintf( __( 'Drop-in %1$s; WP_CACHE %2$s.', 'gt-performance' ), $dropin, $wpCache ) ),
 			'live',
 			$now
 		);
@@ -307,6 +310,7 @@ final class HealthReport {
 			'cron'             => $cron,
 			'storage_writable' => wp_is_writable( Paths::cacheRoot() ),
 			'cache_enabled'    => (bool) Settings::get( 'cache.enabled', true ),
+			'optimize_only'    => Settings::optimizeOnly(),
 			'page_dropin'      => ( new DropinInstaller() )->status(),
 			'wp_cache'         => ( new WpCacheConstant() )->status(),
 			'redis_enabled'    => (bool) Settings::get( 'redis.enabled', false ),

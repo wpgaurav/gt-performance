@@ -57,6 +57,11 @@ final class CacheWarmer {
 	 * Queue a new warm run. Returns the job ID, or 0 when the queue is not ready.
 	 */
 	public function queue(): int {
+		// Warming stores pages; in optimize-only mode nothing here stores them.
+		if ( Settings::optimizeOnly() ) {
+			return 0;
+		}
+
 		return $this->jobs->enqueue( self::START_JOB, array(), self::JOB_PRIORITY );
 	}
 

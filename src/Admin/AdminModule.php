@@ -811,7 +811,8 @@ final class AdminModule implements Module {
 		$redis      = ( new ObjectCacheInstaller() )->status();
 		$cssStats   = ( new ReportRepository() )->statistics( (string) ( $settings['css']['mode'] ?? 'file' ) );
 		$cssReady   = $cssStats['ready'];
-		$cacheReady = 'owned' === $dropin && 'enabled' === $wpCache && ! empty( $settings['cache']['enabled'] );
+		$optimizeOnly = Settings::optimizeOnly();
+		$cacheReady   = $optimizeOnly || ( 'owned' === $dropin && 'enabled' === $wpCache && ! empty( $settings['cache']['enabled'] ) );
 		?>
 		<div class="gtp-page-heading">
 			<div>
@@ -820,7 +821,7 @@ final class AdminModule implements Module {
 			</div>
 		</div>
 		<section class="gtp-stat-grid" aria-label="<?php esc_attr_e( 'Performance status', 'gt-performance' ); ?>">
-			<?php $this->stat( __( 'Page cache', 'gt-performance' ), $cacheReady ? __( 'Active', 'gt-performance' ) : __( 'Needs setup', 'gt-performance' ), $cacheReady ? 'success' : 'warning' ); ?>
+			<?php $this->stat( __( 'Page cache', 'gt-performance' ), $optimizeOnly ? __( 'Host cache, optimize only', 'gt-performance' ) : ( $cacheReady ? __( 'Active', 'gt-performance' ) : __( 'Needs setup', 'gt-performance' ) ), $cacheReady ? 'success' : 'warning' ); ?>
 			<?php $this->stat( __( 'Cloudflare', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? __( 'Connected', 'gt-performance' ) : __( 'Not connected', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? 'success' : 'neutral' ); ?>
 			<?php $this->stat( __( 'Unused CSS', 'gt-performance' ), UnusedCssOptimizer::available() ? __( 'Enabled', 'gt-performance' ) : __( 'Off', 'gt-performance' ), UnusedCssOptimizer::available() ? 'warning' : 'neutral' ); ?>
 			<?php $this->stat( __( 'CSS results ready', 'gt-performance' ), number_format_i18n( $cssReady ), $cssReady > 0 ? 'success' : 'neutral' ); ?>
@@ -834,6 +835,7 @@ final class AdminModule implements Module {
 					</div>
 				</div>
 				<dl class="gtp-definition-list">
+					<div><dt><?php esc_html_e( 'Cache mode', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $optimizeOnly ? __( 'Optimize only: your host stores pages', 'gt-performance' ) : __( 'Store pages', 'gt-performance' ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Fresh cache lifetime', 'gt-performance' ); ?></dt><dd><?php echo esc_html( human_time_diff( 0, (int) $settings['cache']['fresh_ttl'] ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Stale retention', 'gt-performance' ); ?></dt><dd><?php echo esc_html( human_time_diff( 0, (int) $settings['cache']['stale_ttl'] ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'CSS delivery', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $this->cssModeLabel( (string) $settings['css']['mode'] ) ); ?></dd></div>
@@ -851,6 +853,8 @@ final class AdminModule implements Module {
 				<?php if ( ! $cacheReady ) : ?>
 					<p><?php esc_html_e( 'Install the page-cache drop-in below, enable origin caching, then verify a public page before adding more optimizations.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cache' ) ); ?>"><?php esc_html_e( 'Open cache settings', 'gt-performance' ); ?></a>
+				<?php elseif ( $optimizeOnly && empty( $settings['cloudflare']['enabled'] ) ) : ?>
+					<p><?php esc_html_e( 'Pages your host caches are optimized on their way into its cache. After changing optimizations, purge your host\'s cache so it stores the new version.', 'gt-performance' ); ?></p>
 				<?php elseif ( empty( $settings['cloudflare']['enabled'] ) ) : ?>
 					<p><?php esc_html_e( 'Origin caching is ready. Connect Cloudflare Free to cache eligible HTML closer to visitors.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cloudflare' ) ); ?>"><?php esc_html_e( 'Configure Cloudflare', 'gt-performance' ); ?></a>
@@ -874,6 +878,18 @@ final class AdminModule implements Module {
 		$this->settingsFormOpen();
 		$this->panelOpen( __( 'Origin cache', 'gt-performance' ), __( 'Keep safe public HTML ready on disk so WordPress does less work.', 'gt-performance' ) );
 		$this->checkbox( 'cache', 'enabled', __( 'Enable origin page cache', 'gt-performance' ), __( 'Cache eligible public GET requests after WordPress renders them once.', 'gt-performance' ), $settings );
+		$this->select(
+			'cache',
+			'mode',
+			__( 'Cache mode', 'gt-performance' ),
+			__( 'Who stores the pages.', 'gt-performance' ),
+			$settings,
+			array(
+				'store'    => __( 'Store pages (GT Performance serves them)', 'gt-performance' ),
+				'optimize' => __( 'Optimize only (my host already caches pages)', 'gt-performance' ),
+			),
+			__( 'Choose optimize only on hosts with their own page cache, such as LiteSpeed, Hostinger, xCloud, or Kinsta. Pages that would be cached are optimized as WordPress sends them and your host stores the result; nothing is stored here, the drop-in is not used, and cache headers are left to your host. Purge your host\'s cache after changing optimizations.', 'gt-performance' )
+		);
 		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Store a separate copy for phones. Only needed if your site sends different HTML to them.', 'gt-performance' ), $settings, __( 'Leave this off for a normal responsive theme. It doubles everything that has to be stored and cleared.', 'gt-performance' ) );
 		$this->panelClose();
 
@@ -2455,7 +2471,7 @@ PHP;
 	public function startWarm(): never {
 		$this->guard( 'gtperf_warm_start' );
 		$queued = ( new \GTPerformance\Cache\CacheWarmer( new \GTPerformance\Core\Logger() ) )->queue();
-		$this->redirect( $queued > 0 ? 'warm-queued' : 'warm-unavailable', 'tools' );
+		$this->redirect( $queued > 0 ? 'warm-queued' : ( Settings::optimizeOnly() ? 'warm-optimize-only' : 'warm-unavailable' ), 'tools' );
 	}
 
 	public function exportHealth(): never {
@@ -3618,6 +3634,7 @@ PHP;
 			'gtperf_database_busy'     => array( __( 'A database cleanup is already running.', 'gt-performance' ), 'warning' ),
 			'gtperf_database_no_tasks' => array( __( 'Select at least one cleanup task.', 'gt-performance' ), 'error' ),
 			'warm-queued'              => array( __( 'Warm run queued. Discovery and preloads run in bounded background jobs.', 'gt-performance' ), 'success' ),
+			'warm-optimize-only'       => array( __( 'Warming stores pages, and in optimize-only mode your host\'s cache stores them instead. Nothing was queued.', 'gt-performance' ), 'warning' ),
 			'warm-unavailable'         => array( __( 'The warm run could not be queued. Check that the queue upgrade has finished.', 'gt-performance' ), 'error' ),
 			'queue-paused'             => array( __( 'Optional queue work is paused. Cache invalidation continues.', 'gt-performance' ), 'success' ),
 			'queue-resumed'            => array( __( 'The background queue is running again.', 'gt-performance' ), 'success' ),
