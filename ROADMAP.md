@@ -2,9 +2,9 @@
 
 Internal planning document. It never ships: `bin/build-package.sh` excludes it from every package, and `.gitattributes` keeps it out of `git archive` and GitHub's source ZIPs.
 
-- **Baseline:** 1.1.0, live on WordPress.org since 2026-09-27.
+- **Baseline:** 1.1.1, live on WordPress.org since 2026-09-27.
 - **Built from:** the 1.1.0 source, [PRODUCT-PLAN.md](PRODUCT-PLAN.md) (the original design), [FEATURE-IMPLEMENTATION.md](FEATURE-IMPLEMENTATION.md) (what shipped), and the 2026-09-27 verification of every wiki page against the code.
-- **Last reviewed:** 2026-09-27.
+- **Last reviewed:** 2026-09-28.
 - **Public view:** [products.gatilab.com/roadmaps/gt-performance](https://products.gatilab.com/roadmaps/gt-performance/) is empty today. Items move there when they reach **Next**.
 
 ## How to read this
@@ -31,7 +31,7 @@ These carry forward from PRODUCT-PLAN.md, adjusted for a free WordPress.org plug
 - **No compatibility layers.** Breaking changes ship clean with an upgrade note. A migration that is genuinely needed ships as a separate one-off snippet, not as code carried in the plugin.
 - **Shared hosting is the reference environment.** Features must behave on a small plan with WP-Cron, no root, and no worker.
 
-## 1.1.1: Fix what the audit found (In Progress: built and verified, awaiting release)
+## 1.1.1: Fix what the audit found (Released 2026-09-27)
 
 These surfaced on 2026-09-27 while the wiki was verified against the code. Each is small, and several break promises the readme or wiki already make.
 
@@ -57,7 +57,9 @@ Status 2026-09-27: every item is fixed with a behavior test, and the built packa
 
 **Exit gate:** each fix has a behavior test; Troubleshooting, Diagnostics, WP-CLI, Hooks Reference, and Tools wiki pages drop their warnings about these bugs.
 
-## 1.2.0: Works out of the box (Planned)
+## 1.2.0: Works out of the box (In Progress: built, testing on gatilab.com)
+
+Status 2026-09-28: every item below is built with behavior tests. Differences from the plan: the Cloudflare cleanup deletes only the managed rule instead of restoring the saved backup (restoring would undo the owner's later rule changes), and the backup is no longer written; per-page "Don't cache this page" is enforced where pages are stored and sent no-store rather than compiled into the edge rule; "Cache separately" parameters are bounded (100 characters, 100 variants per page) and purged through a per-page variant index. Also shipped: array-valued query parameters now bypass the cache. The exit gate's Cloudflare Free test from a fresh install is still to run.
 
 Today activation does nothing visible: every HTML optimization runs only on responses GT's own page cache stores, and the drop-in is a manual button. Sites behind a host page cache get no front-end optimization at all. This release makes the first ten minutes succeed, reaches those sites, and cleans up what the plugin leaves behind.
 

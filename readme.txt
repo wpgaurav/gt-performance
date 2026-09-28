@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ GT Performance suits blogs, content sites, online stores, and anyone who manages
 * Hourly cleanup of expired entries, with a configurable cap on cached entries.
 * Core, plugin, and theme updates purge the cache, so cached pages never point at replaced asset files.
 * Every purge produces a verified receipt, including partial failures.
+* Optimize-only mode for hosts that already cache pages, such as LiteSpeed, Hostinger, xCloud, and Kinsta: pages are optimized on their way into your host's cache, and nothing is stored twice.
+* Query parameters that change the page, such as `orderby` or `lang`, can get a cached copy per value instead of skipping the cache. Purging the page clears every copy.
+* Saving a setting purges only when the change affects cached pages, so a new API token or cleanup schedule leaves the cache and Cloudflare alone.
 
 ### Unused CSS, built on your server
 
@@ -68,6 +71,8 @@ Stylesheet collection, selector analysis, and pruning all happen on your WordPre
 * Compiles and syncs one managed Cache Rule on Cloudflare Free. Your other Cloudflare rules are left alone.
 * Purges exact URLs, retries temporary failures up to three times, and honors Retry-After.
 * Connects with a scoped API token or a Global API Key with account email.
+* The connection check also confirms that visitors actually pass through Cloudflare (proxied DNS) and that APO isn't caching HTML alongside the managed rule.
+* Deactivating the plugin, or `wp gt-performance cloudflare disconnect`, deletes the managed rule and purges the zone, so Cloudflare never keeps serving pages nothing will refresh.
 * Detects xCloud's Cloudflare Enterprise add-on, reports its edge traffic, and avoids two systems owning the same edge cache.
 * Optional origin-pull CDN for static files. You pick the exact file extensions it serves, and HTML, API responses, and third-party URLs stay unchanged.
 
@@ -82,7 +87,7 @@ Stylesheet collection, selector analysis, and pruning all happen on your WordPre
 * JavaScript defer that respects script dependencies and inline code.
 * JavaScript delay until first interaction or five seconds. Off by default.
 * Opt-in JavaScript minification, with a fallback to the original script.
-* Hero image rules with optional responsive preload, plus per-page script and hero options in the editor.
+* Hero image rules with optional responsive preload, plus per-page options in the editor: script handling, hero image, "Don't cache this page", and "Use original CSS".
 * Local hosting for Google Fonts your theme or plugins already load.
 * Lightweight YouTube embeds that load the player from youtube-nocookie.com only after a click.
 * Separate controls for the main feed and secondary feeds.
@@ -119,7 +124,8 @@ On WordPress 7.0 or later, an optional adviser explains diagnostics using the AI
 
 ### Before you turn it on
 
-* Page caching doesn't start until you install its drop-in from the Page Cache tab.
+* Page caching starts from the Setup tab, which checks your server, detects a host page cache, installs the drop-in (or switches to optimize-only mode), and confirms a real cached page.
+* Language and currency plugins such as WPML, Polylang, TranslatePress, Weglot, and WooCommerce currency switchers can show visitors different pages at the same URL. The Integrations tab says what to set for each.
 * Riskier optimizations such as unused CSS removal and JavaScript delay are off by default. Test them on staging first.
 * GT Performance runs on single sites. It won't activate on multisite.
 
@@ -140,7 +146,7 @@ GT Performance collects no data and has no telemetry. It contacts a third-party 
 
 1. Install and activate GT Performance from Plugins → Add New.
 2. Open GT Performance in the main WordPress admin menu.
-3. Install the page-cache drop-in from the Page Cache tab. Caching starts here.
+3. Open the Setup tab and follow its six steps. It detects whether your host already caches pages, installs the page-cache drop-in or switches to optimize-only mode, and verifies a cached page. Caching starts here.
 4. Turn on optimization modules one at a time, and check your theme and plugins after each.
 5. Optional: connect a scoped Cloudflare API token, or a Global API Key with account email, then sync the managed cache rule.
 6. Optional: set up an origin-pull CDN and choose the exact file extensions it should serve.
@@ -216,6 +222,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.2.0 =
+New Setup tab, optimize-only mode for hosts that already cache pages, per-page cache and CSS options, and cleaner Cloudflare deactivation. Existing settings keep working; run Setup once to verify your cache.
+
 = 1.1.1 =
 Safe mode now stops the drop-in too, cached pages keep their security headers, and signed-out purges reach Cloudflare and xCloud. Purge the cache once after updating so every cached page picks up its headers.
 
@@ -240,6 +249,18 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 == Changelog ==
 
 The complete release history is on the [GT Performance changelog](https://products.gatilab.com/changelogs/gt-performance/), and planned work is on the [roadmap](https://products.gatilab.com/roadmaps/gt-performance/).
+
+= 1.2.0 =
+* New: Setup tab. Six steps check this server, detect other page caches and your host's cache, choose the cache mode, connect Cloudflare, list store and language plugins, and verify a real cached page. The Dashboard points to it until verification passes.
+* New: optimize-only mode for hosts that already cache pages. Eligible pages are optimized as WordPress sends them and your host stores the result; nothing is stored twice, and cache headers are left to your host.
+* New: "Don't cache this page" and "Use original CSS" in the editor's GT Performance box. Explain this page reports the first as `page-option`.
+* New: "Cache each value separately" query parameters. Pages like `?orderby=price` or `?lang=de` get their own cached copy (values up to 100 characters, up to 100 copies per page) instead of bypassing the cache, and purging the page clears every copy at the origin and at Cloudflare.
+* Saving settings purges the page cache and Cloudflare only when the change affects cached pages. Credentials, connection status, cleanup schedules, and preload limits no longer purge.
+* Deactivation deletes the managed Cloudflare rule, and only that rule, then purges the zone. `wp gt-performance cloudflare disconnect [--forget]` and a Disconnect button do the same and turn the integration off.
+* The Cloudflare connection check warns about DNS-only (grey cloud) records and about APO caching HTML alongside the managed rule.
+* WPML, Polylang, TranslatePress, Weglot, and common WooCommerce currency switchers are detected, flagged on Integrations with what to set, and reported in the health report.
+* Query parameters sent as arrays, such as `?s[]=x`, now bypass the cache. They were read as the page with no query and could be stored under its key.
+* The health report and cron checks are translatable, and a translation template ships in `languages/`.
 
 = 1.1.1 =
 * Safe mode (`GTPERF_SAFE_MODE`) now also stops the page-cache drop-in from serving stored pages, so nothing is served from the cache while it is on.

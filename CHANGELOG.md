@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.2.0 - 2026-09-28
+
+Works out of the box: a guided setup, optimization for sites whose host already caches pages, and a plugin that cleans up after itself.
+
+Setup and cache modes
+
+- A Setup tab walks a fresh install to a verified cached page: AUTH_KEY, OpenSSL, the cache directory, and who owns advanced-cache.php; active page-cache plugins and host caches (from the environment, or from the home page's headers fetched once as a visitor: LiteSpeed, Kinsta, Hostinger, SiteGround, WP Engine, Varnish, Nginx, and others); the cache mode; Cloudflare; store and language plugins; and a verification that requests the home page until GT Performance answers HIT, and Cloudflare too when connected. Nothing runs until a button is pressed, and activation does not redirect. The Dashboard points to Setup until verification passes.
+- Optimize-only mode runs the optimization pipeline on responses the eligibility rules would cache and hands them to the host's cache without storing them. The drop-in is not required, and the compiled configuration tells an installed one never to serve. Bypassed requests start no output buffer. Responses must pass the same checks a stored page must, cache headers are left to the host, and warming and stale refresh are skipped. The mode is chosen in Setup or on the Cache tab and shown on the Dashboard, in the health report, `cache status`, and the site-status ability.
+
+Caching
+
+- "Cache each value separately" lists query parameters whose values each get their own stored copy, instead of bypassing the cache as unknown parameters. Values over 100 characters are not cached, and a page holds at most 100 variants; beyond that, new values are served uncached. Each variant is recorded in a per-page index, so purging the page removes every variant at the origin and passes their URLs to the edge purge.
+- The editor's GT Performance box adds "Don't cache this page" (never stored or optimized, sent no-store, reported by Explain as `page-option`) and "Use original CSS" (full stylesheets, no unused-CSS build queued).
+- Query parameters sent as arrays (`name[]=`) bypass the cache as `query_array:<name>`. parse_str() made them arrays and the request context kept only scalars, so `?preview[]=1` or `?s[]=x` was judged and keyed as the page with no query, in WordPress and in the drop-in.
+- A settings save advances the cache generation, which purges the origin and sends purge-everything to Cloudflare, only when a setting that reaches cached pages changed. Credentials, connection status, background work, and admin-only settings are listed as output-neutral; anything else, including any new setting, still purges.
+
+Cloudflare
+
+- Deactivation deletes the managed Cache Rule by its ref, leaving every other rule, and purges the zone, best effort and without blocking deactivation. After reactivation the Cloudflare tab says the rule is gone until the next sync. `wp gt-performance cloudflare disconnect [--forget]` and a Disconnect button do the same and turn the integration off; `--forget` also deletes the credentials and Zone ID.
+- The ruleset backup written on every sync was never read, and restoring it would undo the site owner's later rule changes, so it is no longer written. Uninstall still removes the old option.
+- The connection check adds two stages that warn rather than fail: whether the site host's DNS records are proxied (falling back to the site's own CF-Ray header when the token cannot read DNS), and whether APO is on. The summary says when a stage needs attention.
+
+Compatibility and diagnostics
+
+- WPML, Polylang, TranslatePress, Weglot, WooCommerce Multilingual & Multicurrency, CURCY, FOX (WOOCS), Aelia Currency Switcher, and Price Based on Country are detected. Integrations flags each active one with what to set, and the health report warns while any is active. Nothing is changed automatically.
+- The health report and cron checks are translatable, CronHealth leaves the server path out of exported reports through a flag instead of string replacement, and `languages/gt-performance.pot` ships with the plugin.
+
 ## 1.1.1 - 2026-09-27
 
 Fixes found while verifying the documentation against the 1.1.0 code. Each one was reproduced before it was fixed.

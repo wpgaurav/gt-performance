@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTPERF_PACKAGE_VERSION:-1.1.1}"
+VERSION="${GTPERF_PACKAGE_VERSION:-1.2.0}"
 CHANNELS="${1:-all}"
 
 build_channel() {
