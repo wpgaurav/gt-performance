@@ -32,6 +32,12 @@ final class Deactivator {
 			$pageDropin->remove();
 		}
 
+		// Nothing purges while the plugin is off, so a page edited in the meantime
+		// would come back from the store on reactivation (seen on
+		// gtp-demo.gatilab.com: a copy from before deactivation served as a HIT).
+		// The edge copies went with the Cloudflare rule above.
+		( new \GTPerformance\Cache\FileStore() )->purgeAll();
+
 		$redisDropin = new \GTPerformance\Redis\ObjectCacheInstaller();
 		if ( 'owned' === $redisDropin->status() ) {
 			$redisDropin->remove();

@@ -215,4 +215,15 @@ final class CloudflareDisconnectTest extends TestCase {
 		self::assertSame( array( 'hosts' => array( 'example.com' ) ), json_decode( (string) $last['args']['body'], true ) );
 		self::assertStringContainsString( 'Rate limited', $result['gtperf_purge'] );
 	}
+
+	public function test_deactivation_empties_the_local_page_store(): void {
+		$store = new \GTPerformance\Cache\FileStore();
+		$hash  = hash( 'sha256', 'deactivation-fixture' );
+		$store->write( $hash, '<html>old</html>', array( 'stored_at' => time(), 'fresh_until' => time() + 3600, 'stale_until' => time() + 7200, 'url' => 'https://example.com/old/', 'generation' => 1 ) );
+		self::assertFileExists( $store->pagePath( $hash ) );
+
+		Deactivator::deactivate();
+
+		self::assertFileDoesNotExist( $store->pagePath( $hash ), 'Pages edited while the plugin is off must not come back on reactivation.' );
+	}
 }
