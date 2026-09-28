@@ -1122,7 +1122,7 @@ final class AdminModule implements Module {
 				'store'    => __( 'Store pages (GT Performance serves them)', 'gt-performance' ),
 				'optimize' => __( 'Optimize only (my host already caches pages)', 'gt-performance' ),
 			),
-			__( 'Choose optimize only on hosts with their own page cache, such as LiteSpeed, Hostinger, xCloud, or Kinsta. Pages that would be cached are optimized as WordPress sends them and your host stores the result; nothing is stored here, the drop-in is not used, and cache headers are left to your host. Purge your host\'s cache after changing optimizations.', 'gt-performance' )
+			__( 'Choose optimize only on hosts with their own page cache, such as LiteSpeed, Hostinger, xCloud, or Kinsta. Pages that would be cached are optimized as WordPress sends them and your host stores the result; nothing is stored here and the drop-in is not used. Cache headers are left to your host, except that carts, checkouts, and other pages your cache exceptions exclude are still sent as no-store, so your host does not keep them either. Purge your host\'s cache after changing optimizations.', 'gt-performance' )
 		);
 		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Store a separate copy for phones. Only needed if your site sends different HTML to them.', 'gt-performance' ), $settings, __( 'Leave this off for a normal responsive theme. It doubles everything that has to be stored and cleared.', 'gt-performance' ) );
 		$this->panelClose();

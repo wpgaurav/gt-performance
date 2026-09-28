@@ -87,6 +87,14 @@ final class ArrayQueryTest extends TestCase {
 		self::assertFalse( $rule->matches( $array, 'example.com', $this->policy(), true ), 'Cloudflare sees `s%5B%5D=x`, so the empty-query term fails there too.' );
 	}
 
+	public function test_array_parameters_are_kept_out_of_shared_caches_too(): void {
+		foreach ( array( 'path:/cart/', 'cookie:woocommerce_items_in_cart', 'query:s', 'query_array:s' ) as $reason ) {
+			self::assertTrue( \GTPerformance\Commerce\CommerceModule::mustNotBeShared( $reason ), $reason );
+		}
+		self::assertFalse( \GTPerformance\Commerce\CommerceModule::mustNotBeShared( 'unknown_query:utm_id' ), 'An unknown parameter only skips this cache.' );
+		self::assertFalse( \GTPerformance\Commerce\CommerceModule::mustNotBeShared( 'cache_disabled' ) );
+	}
+
 	#[RunInSeparateProcess]
 	public function test_the_drop_in_does_not_serve_the_plain_page_for_an_array_parameter(): void {
 		// Without the bypass, serve() finds the stored home page, prints it, and

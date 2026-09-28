@@ -140,13 +140,27 @@ final class CommerceModule implements Module {
 			return;
 		}
 
-		if ( str_starts_with( $decision->reason, 'path:' )
-			|| str_starts_with( $decision->reason, 'cookie:' )
-			|| str_starts_with( $decision->reason, 'query:' ) ) {
+		if ( self::mustNotBeShared( $decision->reason ) ) {
 			nocache_headers();
 			SharedCacheHeaders::noStore();
 			header( 'X-GT-Commerce-Cache: BYPASS' );
 		}
+	}
+
+	/**
+	 * Bypass reasons that also have to keep every other cache away: a host's page
+	 * cache in optimize-only mode, and Cloudflare in either mode. These are the
+	 * rules an administrator or a store configured, plus array-valued parameters,
+	 * which would otherwise reach a cache that keys on the raw URL untouched.
+	 */
+	public static function mustNotBeShared( string $reason ): bool {
+		foreach ( array( 'path:', 'cookie:', 'query:', 'query_array:' ) as $prefix ) {
+			if ( str_starts_with( $reason, $prefix ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public function purgeProduct( int $postId, \WP_Post $post ): void {
