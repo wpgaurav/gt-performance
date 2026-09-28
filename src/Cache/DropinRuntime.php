@@ -354,6 +354,7 @@ final class DropinRuntime {
 			$cookies,
 			$headers,
 			RequestContext::sanitizeUserAgent( (string) ( $server['HTTP_USER_AGENT'] ?? '' ) ),
+			RequestContext::arrayNames( $query ),
 		);
 	}
 }

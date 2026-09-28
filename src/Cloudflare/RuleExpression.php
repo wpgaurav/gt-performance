@@ -96,7 +96,9 @@ final class RuleExpression {
 
 		$query = http_build_query( $request->query, '', '&', PHP_QUERY_RFC3986 );
 
-		if ( $requireEmptyQuery && '' !== $query ) {
+		// The edge sees `name[]=` in the raw query string even though the parsed
+		// context carries no value for it, so the query is not empty there.
+		if ( $requireEmptyQuery && ( '' !== $query || array() !== $request->arrayQuery ) ) {
 			return false;
 		}
 

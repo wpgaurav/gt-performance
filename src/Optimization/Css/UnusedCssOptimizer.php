@@ -382,7 +382,7 @@ final class UnusedCssOptimizer {
 		}
 		$query = $request->query;
 		unset( $query[ self::GENERATOR_PARAM ], $query[ self::GENERATOR_RUN_PARAM ] );
-		return new RequestContext( $request->method, $request->scheme, $request->host, $request->path, $query, $request->cookies, $request->headers, $request->userAgent );
+		return new RequestContext( $request->method, $request->scheme, $request->host, $request->path, $query, $request->cookies, $request->headers, $request->userAgent, $request->arrayQuery );
 	}
 
 	/**

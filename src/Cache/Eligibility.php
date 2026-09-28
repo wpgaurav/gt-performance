@@ -58,6 +58,12 @@ final class Eligibility {
 			}
 		}
 
+		// PHP drops array values from the parsed query, so these would otherwise be
+		// judged, and keyed, as the page without them.
+		if ( array() !== $request->arrayQuery ) {
+			return Decision::deny( 'query_array:' . strtolower( $request->arrayQuery[0] ) );
+		}
+
 		$bypass_query  = array_map( 'strtolower', (array) ( $config['bypass_query_params'] ?? array() ) );
 		$ignored_query = array_map( 'strtolower', (array) ( $config['ignored_query_params'] ?? array() ) );
 		$vary_query    = array_map( 'strtolower', (array) ( $config['vary_query_params'] ?? array() ) );

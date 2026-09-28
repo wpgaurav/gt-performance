@@ -11,9 +11,10 @@ namespace GTPerformance\Cache;
 
 final class RequestContext {
 	/**
-	 * @param array<string, string> $query Query values.
-	 * @param array<string, string> $cookies Cookie values.
-	 * @param array<string, string> $headers Request headers.
+	 * @param array<string, string> $query      Query values.
+	 * @param array<string, string> $cookies    Cookie values.
+	 * @param array<string, string> $headers    Request headers.
+	 * @param list<string>          $arrayQuery Names of query parameters sent as arrays (`name[]=`).
 	 */
 	public function __construct(
 		public readonly string $method,
@@ -24,6 +25,7 @@ final class RequestContext {
 		public readonly array $cookies,
 		public readonly array $headers,
 		public readonly string $userAgent,
+		public readonly array $arrayQuery = array(),
 	) {
 	}
 
@@ -75,6 +77,7 @@ final class RequestContext {
 			$cookies,
 			$headers,
 			self::sanitizeUserAgent( (string) ( $server['HTTP_USER_AGENT'] ?? '' ) ),
+			self::arrayNames( $query ),
 		);
 	}
 
@@ -118,6 +121,7 @@ final class RequestContext {
 			self::sanitizeMap( $cookies ),
 			$diagnosticHeaders,
 			self::sanitizeUserAgent( $userAgent ),
+			self::arrayNames( $query ),
 		);
 	}
 
@@ -200,6 +204,30 @@ final class RequestContext {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Names of parameters that parse_str() turned into arrays.
+	 *
+	 * The sanitized query keeps only scalar values, so `?preview[]=1` or `?s[]=x`
+	 * would otherwise reach the cache decision looking like the page with no query at
+	 * all: never matched against a bypass, never denied as unknown, and stored
+	 * under the plain page's key whatever WordPress rendered for it.
+	 *
+	 * @param array<mixed> $query Parsed query.
+	 * @return list<string>
+	 */
+	public static function arrayNames( array $query ): array {
+		$names = array();
+		foreach ( $query as $key => $value ) {
+			if ( ! is_scalar( $value ) ) {
+				// A name that sanitizes to nothing still marks the request.
+				$name    = self::sanitizeName( (string) $key );
+				$names[] = '' === $name ? '?' : $name;
+			}
+		}
+
+		return $names;
 	}
 
 	public static function normalizePath( string $path ): string {
