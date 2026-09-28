@@ -199,4 +199,20 @@ final class CloudflareDisconnectTest extends TestCase {
 		self::assertSame( 'create', $plan['operation'] );
 		self::assertNotContains( 'shop-rule', array_column( $plan['conflicts'], 'id' ), '"example.com" is a substring of "shop.example.com", not the same host.' );
 	}
+
+	public function test_a_sync_purges_this_sites_hostnames_and_reports_a_failed_purge(): void {
+		$inner = $GLOBALS['gtperf_test_http_callback'];
+		$GLOBALS['gtperf_test_http_callback'] = static function ( string $url, array $args ) use ( $inner ): array {
+			return str_ends_with( $url, '/purge_cache' )
+				? array( 'response' => array( 'code' => 429 ), 'body' => '{"success":false,"errors":[{"code":10000,"message":"Rate limited"}]}' )
+				: $inner( $url, $args );
+		};
+		$result = ( new RuleManager( $this->client() ) )->sync( 'zone-1', 'example.com', Settings::defaults()['cache'] );
+		$last   = end( $GLOBALS['gtperf_test_http_requests'] );
+
+		self::assertIsArray( $result, 'The rule was written; a failed purge does not undo that.' );
+		self::assertStringEndsWith( '/purge_cache', $last['url'] );
+		self::assertSame( array( 'hosts' => array( 'example.com' ) ), json_decode( (string) $last['args']['body'], true ) );
+		self::assertStringContainsString( 'Rate limited', $result['gtperf_purge'] );
+	}
 }

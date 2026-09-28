@@ -252,7 +252,7 @@ The complete release history is on the [GT Performance changelog](https://produc
 
 = 1.2.0 =
 * New: Setup tab. Six steps check this server, detect other page caches and your host's cache, choose the cache mode, connect Cloudflare, list store and language plugins, and verify a real cached page, with Cloudflare's answer shown beside it. The Dashboard points to it until verification passes.
-* New: optimize-only mode for hosts that already cache pages. Eligible pages are optimized as WordPress sends them and your host stores the result; nothing is stored twice. Cache headers are left to your host, except that carts, checkouts, and other excluded pages are still sent as no-store.
+* New: optimize-only mode for hosts that already cache pages. Eligible pages are optimized as WordPress sends them and your host stores the result; nothing is stored twice. Your host sets cache headers for those pages; pages GT Performance would not cache, such as carts, checkouts, and searches, are still sent as no-store.
 * New: "Don't cache this page" and "Use original CSS" in the editor's GT Performance box. Explain this page reports the first as `page-option`.
 * New: "Cache each value separately" query parameters. Pages like `?orderby=price` or `?lang=de` get their own cached copy (values up to 100 characters, up to 100 copies per page) instead of bypassing the cache, and purging the page clears every copy at the origin and at Cloudflare.
 * Saving settings purges the page cache and Cloudflare only when the change affects cached pages. Credentials, connection status, cleanup schedules, and preload limits no longer purge.

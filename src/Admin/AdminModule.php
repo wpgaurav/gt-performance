@@ -607,7 +607,7 @@ final class AdminModule implements Module {
 			$this->redirectError( new \WP_Error( 'gtperf_config_write', Settings::configurationError() ), 'integrations' );
 		}
 		$this->storeCloudflarePlan( $client, $zoneId, $host, $cache );
-		$this->redirect( 'cloudflare-synced', 'cloudflare' );
+		$this->redirect( 'ok' === ( $result['gtperf_purge'] ?? 'ok' ) ? 'cloudflare-synced' : 'cloudflare-synced-unpurged', 'cloudflare' );
 	}
 
 	public function cloudflarePreview(): void {
@@ -1124,7 +1124,7 @@ final class AdminModule implements Module {
 				'store'    => __( 'Store pages (GT Performance serves them)', 'gt-performance' ),
 				'optimize' => __( 'Optimize only (my host already caches pages)', 'gt-performance' ),
 			),
-			__( 'Choose optimize only on hosts with their own page cache, such as LiteSpeed, Hostinger, xCloud, or Kinsta. Pages that would be cached are optimized as WordPress sends them and your host stores the result; nothing is stored here and the drop-in is not used. Cache headers are left to your host, except that carts, checkouts, and other pages your cache exceptions exclude are still sent as no-store, so your host does not keep them either. Purge your host\'s cache after changing optimizations.', 'gt-performance' )
+			__( 'Choose optimize only on hosts with their own page cache, such as LiteSpeed, Hostinger, xCloud, or Kinsta. Pages that would be cached are optimized as WordPress sends them and your host stores the result; nothing is stored here and the drop-in is not used. Cache headers for those pages are left to your host. Pages GT Performance would not cache, such as carts, checkouts, searches, and your cache exceptions, are still sent as no-store, so your host and Cloudflare do not keep them either. Purge your host\'s cache after changing optimizations.', 'gt-performance' )
 		);
 		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Store a separate copy for phones. Only needed if your site sends different HTML to them.', 'gt-performance' ), $settings, __( 'Leave this off for a normal responsive theme. It doubles everything that has to be stored and cleared.', 'gt-performance' ) );
 		$this->panelClose();
@@ -3833,7 +3833,8 @@ PHP;
 			'redis-connected'           => array( __( 'Redis accepted the saved credentials and passed the connection test.', 'gt-performance' ), 'success' ),
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
 			'cache-purge-partial'       => array( __( 'The local page cache was cleared, but Cloudflare could not finish its purge. Review the latest Cloudflare purge below.', 'gt-performance' ), 'error' ),
-			'cloudflare-synced'         => array( __( 'Cloudflare connected and the managed cache rule was synchronized.', 'gt-performance' ), 'success' ),
+			'cloudflare-synced'         => array( __( 'Cloudflare connected, the managed cache rule was synchronized, and this site\'s pages were purged from Cloudflare so nothing cached under an earlier rule is served.', 'gt-performance' ), 'success' ),
+			'cloudflare-synced-unpurged' => array( __( 'The managed cache rule was synchronized, but purging this site\'s pages from Cloudflare failed. Pages Cloudflare stored earlier may be served until they expire; purge them from the Cloudflare tab.', 'gt-performance' ), 'warning' ),
 			'setup-probed'              => array( __( 'Your home page was fetched as a visitor; the host cache results are below.', 'gt-performance' ), 'success' ),
 			'setup-probe-failed'        => array( __( 'This server could not fetch its own home page. Host caches found in the environment are still listed below.', 'gt-performance' ), 'warning' ),
 			'setup-store'               => array( __( 'GT Performance now stores pages: the drop-in is installed and WP_CACHE is on. Verify below.', 'gt-performance' ), 'success' ),

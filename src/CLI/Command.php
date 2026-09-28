@@ -790,6 +790,9 @@ final class Command {
 			\WP_CLI::error( Settings::configurationError() );
 			return;
 		}
+		if ( 'ok' !== ( $result['gtperf_purge'] ?? 'ok' ) ) {
+			\WP_CLI::warning( 'The rule is synchronized, but purging this site\'s pages from Cloudflare failed: ' . $result['gtperf_purge'] . ' Pages Cloudflare stored earlier may be served until they expire.' );
+		}
 		\WP_CLI::success( 'Cloudflare rule synchronized.' );
 	}
 

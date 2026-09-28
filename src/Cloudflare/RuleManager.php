@@ -69,9 +69,19 @@ final class RuleManager {
 	 */
 	public function sync( string $zoneId, string $host, array $cache ): array|\WP_Error {
 		$result = $this->write( $zoneId, $host, $cache );
-		if ( ! is_wp_error( $result ) ) {
-			delete_option( self::REMOVED_OPTION );
+		if ( is_wp_error( $result ) ) {
+			return $result;
 		}
+		delete_option( self::REMOVED_OPTION );
+
+		// Cloudflare keeps what it stored while this rule was absent or different.
+		// On gtp-demo.gatilab.com a request that arrived in the seconds before a
+		// deleted rule stopped applying stored the page WordPress sent without GT
+		// Performance (no Cache-Control, so Cloudflare's default two hours), and
+		// recreating the rule served that copy as a HIT. Nothing cached under an
+		// earlier rule is known to be right under this one.
+		$purged                 = $this->client->purgeHosts( $zoneId, Settings::canonicalHosts() );
+		$result['gtperf_purge'] = is_wp_error( $purged ) ? $purged->get_error_message() : 'ok';
 
 		return $result;
 	}

@@ -246,6 +246,9 @@ final class CloudflarePurgeTest extends TestCase {
 					),
 				) ) ) );
 			}
+			if ( str_ends_with( $url, '/purge_cache' ) ) {
+				return $this->response();
+			}
 			self::assertSame( 'PATCH', $args['method'] );
 			self::assertStringEndsWith( '/rulesets/ruleset/rules/managed', $url );
 			$rule = json_decode( $args['body'], true );
@@ -256,8 +259,11 @@ final class CloudflarePurgeTest extends TestCase {
 			return $this->response();
 		};
 		$manager = new \GTPerformance\Cloudflare\RuleManager( new ApiClient( ApiCredentials::apiToken( 'fake' ) ) );
-		self::assertIsArray( $manager->sync( 'test-zone', 'example.com', array( 'bypass_paths' => array( '/checkout/' ), 'bypass_cookies' => array( 'fct_cart_hash' ) ) ) );
-		self::assertCount( 2, $GLOBALS['gtperf_test_http_requests'] );
+		$result = $manager->sync( 'test-zone', 'example.com', array( 'bypass_paths' => array( '/checkout/' ), 'bypass_cookies' => array( 'fct_cart_hash' ) ) );
+		self::assertIsArray( $result );
+		self::assertCount( 3, $GLOBALS['gtperf_test_http_requests'] );
+		self::assertSame( array( 'hosts' => array( 'example.com' ) ), json_decode( $GLOBALS['gtperf_test_http_requests'][2]['args']['body'], true ), 'Whatever Cloudflare stored before this rule existed is purged.' );
+		self::assertSame( 'ok', $result['gtperf_purge'] );
 	}
 
 	public function test_disabled_and_alternate_edge_ownership_do_not_call_cloudflare(): void {

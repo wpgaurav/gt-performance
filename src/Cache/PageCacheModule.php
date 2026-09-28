@@ -100,12 +100,18 @@ final class PageCacheModule implements Module {
 		$config         = $this->cacheConfig();
 		$this->decision = $this->eligibility->decide( $this->request, $config );
 
-		// The host's page cache decides what it stores and sends its own headers. A
-		// response the eligibility rules would never cache is left untouched, and one
-		// they would cache is optimized on its way to the host's cache.
+		// The host's page cache decides what it stores for a page the eligibility
+		// rules would cache, and the page is optimized on its way there. A response
+		// they would never cache is not transformed, and it is marked no-store as in
+		// store mode: a shared cache that gets no Cache-Control applies its own
+		// default lifetime (two hours at Cloudflare), which would share a page this
+		// plugin just refused to.
 		if ( $optimizeOnly ) {
 			if ( $this->decision->cacheable ) {
 				OutputBuffer::start( array( $this, 'captureOptimizeOnly' ) );
+			} else {
+				nocache_headers();
+				SharedCacheHeaders::noStore();
 			}
 			return;
 		}
