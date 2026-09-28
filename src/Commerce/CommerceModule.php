@@ -72,11 +72,35 @@ final class CommerceModule implements Module {
 
 		// A variation's price shows on its parent's page, not its own.
 		$parent = (int) wp_get_post_parent_id( $postId );
+		$now    = array();
 		foreach ( array_unique( array_filter( array( $postId, $parent ) ) ) as $id ) {
 			$url = get_permalink( $id );
 			if ( is_string( $url ) && '' !== $url ) {
-				do_action( 'gt_performance_enqueue_purge', array( $url ) );
+				$now[] = $url;
 			}
+			$post = get_post( $id );
+			if ( $post instanceof \WP_Post ) {
+				foreach ( $this->registry->active() as $adapter ) {
+					if ( $adapter->isProduct( $id, $post ) ) {
+						array_push( $now, ...$adapter->relatedUrls( $id ) );
+					}
+				}
+			}
+		}
+
+		// These hooks fire after the new price or stock is saved, and they are the
+		// only purge that does. The post save purged earlier, before the store wrote
+		// the price, so a visit in between cached the old one again: on
+		// gtp-demo.gatilab.com a price change reached visitors only when this
+		// purge's queue job ran, 80 seconds later, and Cloudflare had re-stored the
+		// stale page meanwhile. The product, its shop page, and its categories go
+		// now; the edge purge is still batched per request.
+		$now = array_values( array_unique( array_filter( $now ) ) );
+		if ( $now ) {
+			( new \GTPerformance\Cache\Purger() )->purgeUrls( $now );
+		}
+
+		foreach ( array_unique( array_filter( array( $postId, $parent ) ) ) as $id ) {
 			// Shop pages, grids, and landing pages that show the product carry the
 			// same price and stock badge. Stock can also add or remove it from a
 			// filtered listing, so this counts as a membership change.
