@@ -1789,3 +1789,25 @@ summary.gtp-notice-pill:focus-visible {
 	align-items: center;
 	margin: 0 0 12px;
 }
+
+.gtp-setup-actions {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 12px;
+}
+
+.gtp-setup-actions form {
+	margin: 0;
+}
+
+.gtp-setup-mode p + p {
+	margin-top: 14px;
+}
+
+@media (max-width: 782px) {
+	.gtp-integration-row:has(.gtp-setup-actions) {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}

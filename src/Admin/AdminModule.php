@@ -24,6 +24,7 @@ use GTPerformance\Contracts\Module;
 use GTPerformance\Core\Paths;
 use GTPerformance\Core\SecretCipher;
 use GTPerformance\Core\Settings;
+use GTPerformance\Setup\SetupReport;
 use GTPerformance\Database\Cleaner;
 use GTPerformance\Database\CleanupRun;
 use GTPerformance\Diagnostics\CacheInspector;
@@ -58,6 +59,7 @@ final class AdminModule implements Module {
 	 */
 	private const TABS = array(
 		'dashboard',
+		'setup',
 		'cache',
 		'optimization',
 		'css-status',
@@ -99,6 +101,9 @@ final class AdminModule implements Module {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'afterSettingsUpdate' ), 10, 2 );
 		add_action( 'admin_post_gtperf_install_dropin', array( $this, 'installDropin' ) );
+		add_action( 'admin_post_gtperf_setup_probe', array( $this, 'setupProbe' ) );
+		add_action( 'admin_post_gtperf_setup_mode', array( $this, 'setupMode' ) );
+		add_action( 'admin_post_gtperf_setup_verify', array( $this, 'setupVerify' ) );
 		add_action( 'admin_post_gtperf_install_redis', array( $this, 'installRedis' ) );
 		add_action( 'admin_post_gtperf_test_redis', array( $this, 'testRedis' ) );
 		add_action( 'admin_post_gtperf_xcloud_refresh', array( $this, 'xcloudRefresh' ) );
@@ -397,6 +402,9 @@ final class AdminModule implements Module {
 					case 'optimization':
 						$this->renderOptimization( $settings );
 						break;
+					case 'setup':
+						$this->renderSetup( $settings );
+						break;
 					case 'css-status':
 						$this->renderCssStatusTab();
 						break;
@@ -451,6 +459,49 @@ final class AdminModule implements Module {
 		$this->guard( 'gtperf_install_dropin' );
 		$result = ( new DropinInstaller() )->install();
 		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'dropin-installed', 'tools' );
+	}
+
+	/**
+	 * Fetch the home page once as a visitor to see which host cache answers.
+	 */
+	public function setupProbe(): void {
+		$this->guard( 'gtperf_setup_probe' );
+		$probe = ( new SetupReport() )->probe();
+		$this->redirect( '' === $probe['error'] ? 'setup-probed' : 'setup-probe-failed', 'setup' );
+	}
+
+	/**
+	 * Save the chosen cache mode. Store mode also installs the drop-in and turns on
+	 * WP_CACHE, which is what the button says it does.
+	 */
+	public function setupMode(): void {
+		$this->guard( 'gtperf_setup_mode' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- guard() verifies the action nonce above.
+		$mode     = isset( $_POST['gtperf_mode'] ) && 'optimize' === sanitize_key( wp_unslash( $_POST['gtperf_mode'] ) ) ? 'optimize' : 'store';
+		$settings = Settings::all();
+		$before   = $settings;
+		$settings['cache']['enabled'] = true;
+		$settings['cache']['mode']    = $mode;
+		if ( ! Settings::saveChanges( $before, $settings ) ) {
+			$this->redirectError( new \WP_Error( 'gtperf_config_write', Settings::configurationError() ), 'setup' );
+		}
+		if ( 'store' === $mode ) {
+			$installed = ( new DropinInstaller() )->install();
+			if ( is_wp_error( $installed ) ) {
+				$this->redirectError( $installed, 'setup' );
+			}
+		}
+
+		$this->redirect( 'store' === $mode ? 'setup-store' : 'setup-optimize', 'setup' );
+	}
+
+	/**
+	 * Request the home page as a visitor until the cache answers.
+	 */
+	public function setupVerify(): void {
+		$this->guard( 'gtperf_setup_verify' );
+		$result = ( new SetupReport() )->verify();
+		$this->redirect( $result['passed'] ? 'setup-verified' : 'setup-verify-failed', 'setup' );
 	}
 
 	public function installRedis(): void {
@@ -699,6 +750,7 @@ final class AdminModule implements Module {
 	private function renderHeader( string $tab ): void {
 		$tabs = array(
 			'dashboard'    => __( 'Dashboard', 'gt-performance' ),
+			'setup'        => __( 'Setup', 'gt-performance' ),
 			'cache'        => __( 'Page Cache', 'gt-performance' ),
 			'optimization' => __( 'Optimization', 'gt-performance' ),
 			'css-status'   => __( 'CSS Status', 'gt-performance' ),
@@ -850,7 +902,10 @@ final class AdminModule implements Module {
 						<p><?php esc_html_e( 'Finish the first incomplete performance layer.', 'gt-performance' ); ?></p>
 					</div>
 				</div>
-				<?php if ( ! $cacheReady ) : ?>
+				<?php if ( ! get_option( SetupReport::COMPLETE_OPTION, false ) ) : ?>
+					<p><?php esc_html_e( 'Run setup: it checks this server, detects your host\'s cache, picks the right cache mode, and confirms a real cached response.', 'gt-performance' ); ?></p>
+					<a class="button button-primary" href="<?php echo esc_url( $this->tabUrl( 'setup' ) ); ?>"><?php esc_html_e( 'Open setup', 'gt-performance' ); ?></a>
+				<?php elseif ( ! $cacheReady ) : ?>
 					<p><?php esc_html_e( 'Install the page-cache drop-in below, enable origin caching, then verify a public page before adding more optimizations.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cache' ) ); ?>"><?php esc_html_e( 'Open cache settings', 'gt-performance' ); ?></a>
 				<?php elseif ( $optimizeOnly && empty( $settings['cloudflare']['enabled'] ) ) : ?>
@@ -868,6 +923,185 @@ final class AdminModule implements Module {
 		</div>
 		<?php
 		$this->renderQuickOperations();
+	}
+
+	/**
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	private function renderSetup( array $settings ): void {
+		$report    = new SetupReport();
+		$probe     = get_option( SetupReport::PROBE_OPTION, null );
+		$verified  = get_option( SetupReport::VERIFY_OPTION, null );
+		$hosts     = is_array( $probe ) ? array_map( 'strval', (array) $probe['host_caches'] ) : $report->hostCachesFromEnvironment();
+		$plugins   = $report->cachePlugins();
+		$suggested = SetupReport::recommendedMode( $hosts );
+		$optimize  = Settings::optimizeOnly();
+		// A working setup keeps its mode; an unfinished one starts from the suggestion.
+		$selected  = $optimize ? 'optimize' : ( $report->storageReady() ? 'store' : $suggested );
+		$sensitive = $report->sensitivePlugins();
+
+		$this->pageIntro( __( 'Setup', 'gt-performance' ), __( 'Six steps from a fresh install to a verified cached page. Run it again any time; nothing here changes the site until you press a button.', 'gt-performance' ) );
+
+		$this->setupPanelOpen( __( '1. This server', 'gt-performance' ), __( 'What GT Performance needs before it can store anything.', 'gt-performance' ) );
+		foreach ( $report->environment() as $item ) {
+			$this->setupRow( $item['label'], $item['detail'], $item['ok'] ? __( 'Ready', 'gt-performance' ) : __( 'Fix first', 'gt-performance' ), $item['ok'] ? 'success' : 'danger' );
+		}
+		$this->setupPanelClose();
+
+		$this->setupPanelOpen( __( '2. Other caches', 'gt-performance' ), __( 'A second page cache in front of this one decides what visitors get.', 'gt-performance' ) );
+		$this->setupRow(
+			__( 'Page-cache plugins', 'gt-performance' ),
+			array() === $plugins
+				? __( 'No other page-cache plugin is active.', 'gt-performance' )
+				/* translators: %s: comma-separated plugin names. */
+				: sprintf( __( 'Active: %s. Deactivate them, or let one own the cache: two page caches store and purge independently.', 'gt-performance' ), implode( ', ', $plugins ) ),
+			array() === $plugins ? __( 'None', 'gt-performance' ) : __( 'Review', 'gt-performance' ),
+			array() === $plugins ? 'success' : 'warning'
+		);
+		$this->setupRow(
+			__( 'Host page cache', 'gt-performance' ),
+			array() === $hosts
+				? ( is_array( $probe ) ? __( 'No host page cache answered for your home page.', 'gt-performance' ) : __( 'Not checked yet. Detect fetches your home page once as a visitor.', 'gt-performance' ) )
+				/* translators: %s: comma-separated host cache names. */
+				: sprintf( __( 'Your host caches pages: %s. Optimize only is the right mode here.', 'gt-performance' ), implode( ', ', $hosts ) ),
+			array() === $hosts ? ( is_array( $probe ) ? __( 'None found', 'gt-performance' ) : __( 'Not checked', 'gt-performance' ) ) : __( 'Found', 'gt-performance' ),
+			array() === $hosts ? 'neutral' : 'success',
+			'gtperf_setup_probe',
+			__( 'Detect host cache', 'gt-performance' )
+		);
+		$this->setupPanelClose();
+
+		$this->setupPanelOpen( __( '3. Cache mode', 'gt-performance' ), __( 'Who stores the pages.', 'gt-performance' ) );
+		?>
+		<form class="gtp-panel-note gtp-panel-note--stacked gtp-setup-mode" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="gtperf_setup_mode">
+			<?php wp_nonce_field( 'gtperf_setup_mode' ); ?>
+			<p><label><input type="radio" name="gtperf_mode" value="store" <?php checked( 'store', $selected ); ?>> <strong><?php esc_html_e( 'Store pages', 'gt-performance' ); ?></strong><?php echo 'store' === $suggested ? ' ' . esc_html__( '(recommended here)', 'gt-performance' ) : ''; ?></label><br>
+			<?php esc_html_e( 'GT Performance serves cached pages before WordPress loads. Saving installs wp-content/advanced-cache.php and sets WP_CACHE in wp-config.php; deactivating the plugin removes both.', 'gt-performance' ); ?></p>
+			<p><label><input type="radio" name="gtperf_mode" value="optimize" <?php checked( 'optimize', $selected ); ?>> <strong><?php esc_html_e( 'Optimize only', 'gt-performance' ); ?></strong><?php echo 'optimize' === $suggested ? ' ' . esc_html__( '(recommended here)', 'gt-performance' ) : ''; ?></label><br>
+			<?php esc_html_e( 'Your host\'s cache stores pages; GT Performance optimizes them on the way in and changes no server files.', 'gt-performance' ); ?></p>
+			<p>
+				<?php submit_button( __( 'Save cache mode', 'gt-performance' ), 'primary', 'submit', false ); ?>
+				<span class="gtp-status gtp-status--<?php echo esc_attr( $optimize || $report->storageReady() ? 'success' : 'warning' ); ?>">
+					<?php
+					echo esc_html(
+						$optimize
+							? __( 'Now: optimize only', 'gt-performance' )
+							: ( $report->storageReady() ? __( 'Now: store pages, drop-in in place', 'gt-performance' ) : __( 'Now: store pages, drop-in or WP_CACHE missing', 'gt-performance' ) )
+					);
+					?>
+				</span>
+			</p>
+		</form>
+		<?php
+		$this->setupPanelClose();
+
+		$this->settingsFormOpen();
+		$this->panelOpen( __( '4. Cloudflare (optional)', 'gt-performance' ), __( 'Cache pages at Cloudflare\'s edge on the Free plan. Skip this step if the site is not on Cloudflare.', 'gt-performance' ) );
+		$this->password(
+			'cloudflare',
+			'api_token',
+			__( 'Scoped API token', 'gt-performance' ),
+			__( 'Needs Zone Read, Cache Rules Edit, and Cache Purge. Leave blank to keep the saved token.', 'gt-performance' ),
+			! empty( $settings['cloudflare']['api_token'] ),
+			'',
+			'https://developers.cloudflare.com/fundamentals/api/get-started/create-token/', // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Documentation help link; no asset is loaded from it.
+			__( 'Create a Cloudflare API token', 'gt-performance' )
+		);
+		$this->text( 'cloudflare', 'domain', __( 'Domain', 'gt-performance' ), __( 'The zone to manage, such as example.com.', 'gt-performance' ), $settings, 'text', 'example.com' );
+		$this->panelClose();
+		$this->settingsFormClose();
+		?>
+		<section class="gtp-panel gtp-operation-panel">
+			<div>
+				<h3><?php esc_html_e( 'Connect Cloudflare', 'gt-performance' ); ?></h3>
+				<p><?php esc_html_e( 'After saving the token, create the managed cache rule. Your other rules are kept. The Cloudflare tab has the connection check, DNS and APO checks, and more options.', 'gt-performance' ); ?></p>
+			</div>
+			<?php $this->actionButton( 'gtperf_cloudflare_sync', __( 'Connect/sync Cloudflare', 'gt-performance' ) ); ?>
+		</section>
+		<?php
+
+		$this->setupPanelOpen( __( '5. Shops, languages, and currencies', 'gt-performance' ), __( 'What is kept out of the cache on this site, and what needs a decision from you.', 'gt-performance' ) );
+		$this->setupRow(
+			__( 'Store plugins', 'gt-performance' ),
+			array() === $sensitive['commerce']
+				? __( 'No store plugin is active.', 'gt-performance' )
+				/* translators: %s: comma-separated store plugin names. */
+				: sprintf( __( '%s: cart, checkout, and account pages and shopper cookies bypass the cache automatically.', 'gt-performance' ), implode( ', ', $sensitive['commerce'] ) ),
+			array() === $sensitive['commerce'] ? __( 'None', 'gt-performance' ) : __( 'Protected', 'gt-performance' ),
+			'success'
+		);
+		$this->setupRow(
+			__( 'Language and currency plugins', 'gt-performance' ),
+			array() === $sensitive['variation']
+				? __( 'No plugin that shows visitors different pages at the same URL is active.', 'gt-performance' )
+				/* translators: %s: comma-separated plugin names. */
+				: sprintf( __( '%s can show visitors different pages at the same URL. The Integrations tab lists what to set for each before you rely on the cache.', 'gt-performance' ), implode( ', ', $sensitive['variation'] ) ),
+			array() === $sensitive['variation'] ? __( 'None', 'gt-performance' ) : __( 'Review', 'gt-performance' ),
+			array() === $sensitive['variation'] ? 'success' : 'warning'
+		);
+		$this->setupPanelClose();
+
+		$this->setupPanelOpen( __( '6. Verify', 'gt-performance' ), __( 'Fetches your home page as a visitor until the cache answers, up to four times.', 'gt-performance' ) );
+		$passed = is_array( $verified ) && ! empty( $verified['passed'] );
+		$detail = __( 'Not run yet.', 'gt-performance' );
+		if ( is_array( $verified ) ) {
+			$detail = sprintf(
+				/* translators: 1: result sentence, 2: origin cache status, 3: Cloudflare cache status, 4: date and time. */
+				__( '%1$s GT Performance: %2$s. Cloudflare: %3$s. Checked %4$s.', 'gt-performance' ),
+				(string) $verified['detail'],
+				'' !== (string) $verified['origin'] ? (string) $verified['origin'] : '—',
+				'' !== (string) $verified['edge'] ? (string) $verified['edge'] : '—',
+				wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) $verified['checked_at'] )
+			);
+		}
+		$this->setupRow(
+			__( 'Cached home page', 'gt-performance' ),
+			$detail,
+			$passed ? __( 'Passed', 'gt-performance' ) : ( is_array( $verified ) ? __( 'Not yet', 'gt-performance' ) : __( 'Not run', 'gt-performance' ) ),
+			$passed ? 'success' : ( is_array( $verified ) ? 'warning' : 'neutral' ),
+			'gtperf_setup_verify',
+			__( 'Verify', 'gt-performance' )
+		);
+		$this->setupPanelClose();
+	}
+
+	private function setupPanelOpen( string $title, string $description ): void {
+		?>
+		<section class="gtp-panel gtp-integration-list">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php echo esc_html( $title ); ?></h3>
+					<p><?php echo esc_html( $description ); ?></p>
+				</div>
+			</div>
+		<?php
+	}
+
+	private function setupPanelClose(): void {
+		echo '</section>';
+	}
+
+	/**
+	 * One setup finding: what was checked, what it means, its state, and an optional action.
+	 */
+	private function setupRow( string $label, string $detail, string $state, string $tone, string $action = '', string $actionLabel = '' ): void {
+		?>
+		<div class="gtp-integration-row">
+			<div>
+				<h3><?php echo esc_html( $label ); ?></h3>
+				<p><?php echo esc_html( $detail ); ?></p>
+			</div>
+			<div class="gtp-setup-actions">
+				<span class="gtp-status gtp-status--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $state ); ?></span>
+				<?php
+				if ( '' !== $action ) {
+					$this->actionButton( $action, $actionLabel );
+				}
+				?>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**
@@ -3598,6 +3832,12 @@ PHP;
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
 			'cache-purge-partial'       => array( __( 'The local page cache was cleared, but Cloudflare could not finish its purge. Review the latest Cloudflare purge below.', 'gt-performance' ), 'error' ),
 			'cloudflare-synced'         => array( __( 'Cloudflare connected and the managed cache rule was synchronized.', 'gt-performance' ), 'success' ),
+			'setup-probed'              => array( __( 'Your home page was fetched as a visitor; the host cache results are below.', 'gt-performance' ), 'success' ),
+			'setup-probe-failed'        => array( __( 'This server could not fetch its own home page. Host caches found in the environment are still listed below.', 'gt-performance' ), 'warning' ),
+			'setup-store'               => array( __( 'GT Performance now stores pages: the drop-in is installed and WP_CACHE is on. Verify below.', 'gt-performance' ), 'success' ),
+			'setup-optimize'            => array( __( 'Optimize-only mode is on. Your host\'s cache stores pages; purge it once so it keeps optimized copies.', 'gt-performance' ), 'success' ),
+			'setup-verified'            => array( __( 'Setup verified: the home page was served as expected.', 'gt-performance' ), 'success' ),
+			'setup-verify-failed'       => array( __( 'Verification did not pass. The result below says which layer did not answer.', 'gt-performance' ), 'warning' ),
 			'cloudflare-disconnected'   => array( __( 'Cloudflare disconnected. The managed cache rule is gone and the zone was purged.', 'gt-performance' ), 'success' ),
 			'cloudflare-disconnected-unpurged' => array( __( 'Cloudflare disconnected and the managed cache rule is gone, but the zone purge failed. Purge the zone in the Cloudflare dashboard, or pages it stored stay until they expire.', 'gt-performance' ), 'warning' ),
 			'cloudflare-previewed'      => array( __( 'The live Cloudflare rule plan was checked without changing it.', 'gt-performance' ), 'success' ),
