@@ -1811,3 +1811,17 @@ summary.gtp-notice-pill:focus-visible {
 		align-items: flex-start;
 	}
 }
+
+.gtp-guidance-list details summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.gtp-guidance-list details p {
+	margin: 8px 0;
+}
+
+.gtp-guidance-list details textarea {
+	font-family: Menlo, Consolas, monospace;
+	font-size: 12px;
+}

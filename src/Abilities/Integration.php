@@ -42,6 +42,36 @@ final class Integration {
 	}
 
 	/**
+	 * The plugin that loaded the MCP Adapter: its own plugin, or one that bundles
+	 * it (Rank Math ships it in its vendor directory). '' when none is loaded.
+	 */
+	public static function adapterSource(): string {
+		if ( ! class_exists( '\WP\MCP\Core\McpAdapter' ) || ! defined( 'WP_PLUGIN_DIR' ) ) {
+			return '';
+		}
+		$file    = (string) ( new \ReflectionClass( \WP\MCP\Core\McpAdapter::class ) )->getFileName();
+		$plugins = wp_normalize_path( (string) WP_PLUGIN_DIR ) . '/';
+		$file    = wp_normalize_path( $file );
+		if ( ! str_starts_with( $file, $plugins ) ) {
+			return '';
+		}
+		$slug = strtok( substr( $file, strlen( $plugins ) ), '/' );
+		if ( ! is_string( $slug ) || 'mcp-adapter' === $slug ) {
+			return '';
+		}
+		if ( ! function_exists( 'get_plugins' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+		foreach ( get_plugins() as $basename => $data ) {
+			if ( str_starts_with( $basename, $slug . '/' ) ) {
+				return (string) ( $data['Name'] ?? $slug );
+			}
+		}
+
+		return $slug;
+	}
+
+	/**
 	 * The route of the MCP server the adapter actually registered.
 	 *
 	 * Asked of the adapter rather than predicted, so a site that changes the

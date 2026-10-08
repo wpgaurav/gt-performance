@@ -480,55 +480,136 @@ final class AdminModule implements Module {
 	 * Server rules: what is installed, the buttons to add or remove it, and the
 	 * Nginx snippet to paste.
 	 */
-	private function renderServerRules(): void {
-		$rules     = new \GTPerformance\Cache\ServerRules();
-		$server    = \GTPerformance\Cache\ServerRules::server();
-		$installed = '' !== $rules->installed();
-		$error     = (string) \GTPerformance\Core\Network::getOption( \GTPerformance\Cache\ServerRules::ERROR_OPTION, '' );
-		$snippet   = $rules->nginxSnippet();
-		$manage    = \GTPerformance\Core\Network::canManageNetwork();
+	/**
+	 * @param array<string, mixed> $settings Current settings.
+	 */
+	private function renderServerRules( array $settings ): void {
+		$rules      = new \GTPerformance\Cache\ServerRules();
+		$server     = \GTPerformance\Cache\ServerRules::server();
+		$installed  = '' !== $rules->installed();
+		$enabled    = \GTPerformance\Cache\ServerRules::enabled();
+		$error      = (string) \GTPerformance\Core\Network::getOption( \GTPerformance\Cache\ServerRules::ERROR_OPTION, '' );
+		$snippet    = 'nginx' === $server ? $rules->nginxSnippet() : '';
+		$manage     = \GTPerformance\Core\Network::canManageNetwork();
+		$liteSpeed  = 'litespeed' === $server;
+		$names      = array(
+			'litespeed' => 'LiteSpeed',
+			'apache'    => 'Apache',
+			'nginx'     => 'Nginx',
+			'unknown'   => __( 'Not detected', 'gt-performance' ),
+		);
+		$serverHelp = array(
+			'litespeed' => __( 'LiteSpeed keeps cached pages itself when "Let LiteSpeed cache pages" is on. The rules only make sure its cache lookup is switched on.', 'gt-performance' ),
+			'apache'    => __( 'Apache can send stored pages, compressed copies included, straight from disk.', 'gt-performance' ),
+			'nginx'     => __( 'Nginx does not read .htaccess. Add the configuration below to the site\'s server block instead.', 'gt-performance' ),
+			'unknown'   => __( 'The rules work on Apache and LiteSpeed. Nginx needs its configuration added by hand.', 'gt-performance' ),
+		);
+		// What has to be on before the rules can do anything on this server.
+		$missing = '';
+		if ( $liteSpeed && empty( $settings['cache']['litespeed'] ) ) {
+			$missing = __( 'Turn on "Let LiteSpeed cache pages" above and save first.', 'gt-performance' );
+		} elseif ( ! $liteSpeed && empty( $settings['cache']['static'] ) ) {
+			$missing = __( 'Turn on "Keep copies the web server can serve" above and save first.', 'gt-performance' );
+		}
 		?>
-		<section class="gtp-panel">
+		<section class="gtp-panel" id="gtp-server-rules">
 			<div class="gtp-panel__header">
 				<div>
 					<h3><?php esc_html_e( 'Server rules', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Rules that let the web server answer a hit from the stored copy. They are added only when you add them here, rewritten when your cache settings change, and removed when GT Performance is deactivated.', 'gt-performance' ); ?></p>
+					<p><?php esc_html_e( 'Let the web server hand out cached pages by itself, so PHP and WordPress never start for a cache hit. Nothing is added until you click Add. GT Performance keeps the rules in step with your settings and removes them when it is deactivated.', 'gt-performance' ); ?></p>
 				</div>
 			</div>
-			<div class="gtp-fields">
-				<p>
-					<?php
-					/* translators: 1: web server name, 2: installed or not installed. */
-					echo esc_html( sprintf( __( 'Web server: %1$s. .htaccess rules: %2$s.', 'gt-performance' ), $server, $installed ? __( 'installed', 'gt-performance' ) : __( 'not installed', 'gt-performance' ) ) );
-					?>
-				</p>
-				<?php if ( '' !== $error ) : ?>
-					<p class="gtp-warning"><?php echo esc_html( $error ); ?></p>
-				<?php endif; ?>
-				<?php if ( \GTPerformance\Cache\LiteSpeedCache::pluginOwnsCache() ) : ?>
-					<p class="gtp-warning"><?php esc_html_e( 'The LiteSpeed Cache plugin is active on this site, so GT Performance leaves LiteSpeed\'s cache headers, vary cookie, and purges to it. Two owners would contradict each other on every page. Deactivate LiteSpeed Cache to let GT Performance drive the server cache; hosting panels such as xCloud activate it when you switch their LiteSpeed cache on.', 'gt-performance' ); ?></p>
-				<?php endif; ?>
-				<?php if ( 'litespeed' === $server ) : ?>
-					<p><?php esc_html_e( 'This server is LiteSpeed. Turn on "Let LiteSpeed cache pages" so the server answers hits without PHP. The static-file rules skip LiteSpeed: in testing OpenLiteSpeed served those copies even to signed-in visitors and to URLs with query strings. Adding server rules here only switches on LiteSpeed\'s cache lookup, which most LiteSpeed servers already do.', 'gt-performance' ); ?></p>
-				<?php elseif ( 'nginx' === $server ) : ?>
-					<p><?php esc_html_e( 'Nginx does not read .htaccess. Paste the snippet below into the site\'s server block and reload Nginx. Paste it again after changing cache exclusions.', 'gt-performance' ); ?></p>
-				<?php endif; ?>
-				<?php if ( ! $manage ) : ?>
-					<p><?php esc_html_e( 'On this network the server rules are shared by every site, so a network administrator adds or removes them.', 'gt-performance' ); ?></p>
-				<?php elseif ( \GTPerformance\Cache\ServerRules::enabled() ) : ?>
-					<?php $this->actionButton( 'gtperf_rules_remove', __( 'Remove server rules', 'gt-performance' ) ); ?>
-				<?php else : ?>
-					<?php $this->actionButton( 'gtperf_rules_add', __( 'Add server rules', 'gt-performance' ) ); ?>
-				<?php endif; ?>
-				<?php if ( '' !== $snippet ) : ?>
-					<p><label for="gtperf-nginx"><?php esc_html_e( 'Nginx configuration', 'gt-performance' ); ?></label></p>
-					<textarea id="gtperf-nginx" class="large-text code" rows="12" readonly><?php echo esc_textarea( $snippet ); ?></textarea>
-				<?php else : ?>
-					<p><?php esc_html_e( 'Turn on "Keep copies the web server can serve" and save to generate the rules.', 'gt-performance' ); ?></p>
+			<div class="gtp-integration-list">
+				<div class="gtp-integration-row">
+					<div>
+						<h3><?php esc_html_e( 'Web server', 'gt-performance' ); ?></h3>
+						<p><?php echo esc_html( $serverHelp[ $server ] ); ?></p>
+					</div>
+					<div class="gtp-setup-actions">
+						<span class="gtp-status"><?php echo esc_html( $names[ $server ] ); ?></span>
+					</div>
+				</div>
+				<?php if ( 'nginx' !== $server ) : ?>
+					<div class="gtp-integration-row">
+						<div>
+							<h3><?php esc_html_e( 'Rules in .htaccess', 'gt-performance' ); ?></h3>
+							<p>
+								<?php
+								if ( $installed ) {
+									esc_html_e( 'Added at the top of .htaccess. Rewritten whenever cache settings change.', 'gt-performance' );
+								} elseif ( $enabled ) {
+									esc_html_e( 'Switched on, but nothing to add yet for the current settings.', 'gt-performance' );
+								} else {
+									esc_html_e( 'Not added. Every cache hit is answered by the PHP drop-in.', 'gt-performance' );
+								}
+								?>
+							</p>
+						</div>
+						<div class="gtp-setup-actions">
+							<span class="gtp-status<?php echo $installed ? ' gtp-status--success' : ''; ?>"><?php echo esc_html( $installed ? __( 'Added', 'gt-performance' ) : __( 'Not added', 'gt-performance' ) ); ?></span>
+							<?php if ( ! $manage ) : ?>
+								<span class="gtp-status"><?php esc_html_e( 'Network administrator', 'gt-performance' ); ?></span>
+							<?php elseif ( $enabled ) : ?>
+								<button type="submit" class="button" form="gtp-form-gtperf_rules_remove"><?php esc_html_e( 'Remove', 'gt-performance' ); ?></button>
+							<?php else : ?>
+								<button type="submit" class="button button-primary" form="gtp-form-gtperf_rules_add"<?php disabled( '' !== $missing ); ?>><?php esc_html_e( 'Add server rules', 'gt-performance' ); ?></button>
+							<?php endif; ?>
+						</div>
+					</div>
 				<?php endif; ?>
 			</div>
+			<?php if ( '' !== $error || '' !== $missing || ! $manage || \GTPerformance\Cache\LiteSpeedCache::pluginOwnsCache() || '' !== $snippet ) : ?>
+				<div class="gtp-guidance-list">
+					<?php if ( '' !== $error ) : ?>
+						<div class="gtp-callout gtp-callout--danger" role="note">
+							<strong><?php esc_html_e( 'The rules could not be updated', 'gt-performance' ); ?></strong>
+							<p><?php echo esc_html( $error ); ?></p>
+						</div>
+					<?php endif; ?>
+					<?php if ( \GTPerformance\Cache\LiteSpeedCache::pluginOwnsCache() ) : ?>
+						<div class="gtp-callout gtp-callout--warning" role="note">
+							<strong><?php esc_html_e( 'LiteSpeed Cache plugin is active', 'gt-performance' ); ?></strong>
+							<p><?php esc_html_e( 'It drives LiteSpeed\'s cache, so GT Performance stays out of the way. Deactivate it to let GT Performance take over. Hosting panels such as xCloud turn it on with their LiteSpeed cache switch.', 'gt-performance' ); ?></p>
+						</div>
+					<?php endif; ?>
+					<?php if ( '' !== $missing ) : ?>
+						<div class="gtp-callout gtp-callout--info" role="note">
+							<strong><?php esc_html_e( 'One step first', 'gt-performance' ); ?></strong>
+							<p><?php echo esc_html( $missing ); ?></p>
+						</div>
+					<?php endif; ?>
+					<?php if ( ! $manage ) : ?>
+						<div class="gtp-callout gtp-callout--info" role="note">
+							<p><?php esc_html_e( 'Every site on this network shares one .htaccess, so a network administrator adds or removes the rules.', 'gt-performance' ); ?></p>
+						</div>
+					<?php endif; ?>
+					<?php if ( '' !== $snippet ) : ?>
+						<details>
+							<summary><?php esc_html_e( 'Nginx configuration to copy', 'gt-performance' ); ?></summary>
+							<p><?php esc_html_e( 'Paste inside the site\'s server block, use its try_files line in your "location /" block, and reload Nginx. Paste it again after changing cache exclusions.', 'gt-performance' ); ?></p>
+							<textarea class="large-text code" rows="14" readonly aria-label="<?php esc_attr_e( 'Nginx configuration', 'gt-performance' ); ?>"><?php echo esc_textarea( $snippet ); ?></textarea>
+						</details>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
 		</section>
 		<?php
+	}
+
+	/**
+	 * The add and remove forms. They live outside the settings form, which cannot
+	 * contain another form; the panel's buttons submit them through `form=`.
+	 */
+	private function renderServerRulesForms(): void {
+		foreach ( array( 'gtperf_rules_add', 'gtperf_rules_remove' ) as $action ) {
+			?>
+			<form id="gtp-form-<?php echo esc_attr( $action ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" hidden>
+				<input type="hidden" name="action" value="<?php echo esc_attr( $action ); ?>">
+				<input type="hidden" name="gtperf_return" value="cache">
+				<?php wp_nonce_field( $action ); ?>
+			</form>
+			<?php
+		}
 	}
 
 	public function addServerRules(): void {
@@ -1228,6 +1309,7 @@ final class AdminModule implements Module {
 		$this->checkbox( 'cache', 'litespeed', __( 'Let LiteSpeed cache pages', 'gt-performance' ), __( 'On LiteSpeed or OpenLiteSpeed, mark each page GT Performance would cache so the server keeps it and answers hits without PHP. Edits, purges, and setting changes clear the server\'s copies too.', 'gt-performance' ), $settings, __( 'Signed-in visitors and shoppers get a _lscache_vary cookie so the server never hands them the public copy. Not used together with a separate mobile cache.', 'gt-performance' ) );
 		$this->checkbox( 'cache', 'static', __( 'Keep copies the web server can serve', 'gt-performance' ), __( 'Write each eligible page where Apache, LiteSpeed, or Nginx can serve it without PHP. Takes effect once the server rules below are added.', 'gt-performance' ), $settings, __( 'Pages that send their own security headers from PHP, pages with query strings, and mobile copies keep going through PHP.', 'gt-performance' ) );
 		$this->panelClose();
+		$this->renderServerRules( $settings );
 
 		$this->panelOpen( __( 'Cache lifetime', 'gt-performance' ), __( 'Shorter times suit sites that change often.', 'gt-performance' ) );
 		$this->renderCachePresets();
@@ -1260,7 +1342,7 @@ final class AdminModule implements Module {
 		$this->textarea( 'cache', 'preload_sitemaps', __( 'Sitemap sources', 'gt-performance' ), __( 'One sitemap URL from this site per line, up to 10. Leave empty to use the WordPress sitemap and any sitemaps listed in robots.txt.', 'gt-performance' ), $settings, home_url( '/sitemap_index.xml' ), __( 'Nested indexes are followed five levels deep. Other domains are ignored.', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
-		$this->renderServerRules();
+		$this->renderServerRulesForms();
 	}
 
 	/**
@@ -2290,7 +2372,16 @@ PHP;
 		?>
 		<dl class="gtp-definition-list">
 			<div><dt><?php esc_html_e( 'REST API', 'gt-performance' ); ?></dt><dd><code><?php echo esc_html( $rest ); ?></code><br><small><?php esc_html_e( 'Works with no extra plugin: scripts, automations, and assistants that call HTTP APIs run abilities at …/abilities/gt-performance/<name>/run.', 'gt-performance' ); ?></small></dd></div>
-			<div><dt><?php esc_html_e( 'MCP', 'gt-performance' ); ?></dt><dd><?php echo esc_html( '' === $ready['mcp_adapter'] ? __( 'Optional. MCP clients such as Claude, Codex, and Cursor need the official WordPress MCP Adapter plugin; it is not active.', 'gt-performance' ) : sprintf( /* translators: %s: adapter version. */ __( 'MCP Adapter %s active', 'gt-performance' ), $ready['mcp_adapter'] ) ); ?>
+			<div><dt><?php esc_html_e( 'MCP', 'gt-performance' ); ?></dt><dd>
+			<?php
+			echo esc_html(
+				'' === $ready['mcp_adapter'] ? __( 'Optional. MCP clients such as Claude, Codex, and Cursor need the official WordPress MCP Adapter plugin; it is not active.', 'gt-performance' ) : ( '' !== \GTPerformance\Abilities\Integration::adapterSource()
+					/* translators: 1: adapter version, 2: name of the plugin that bundles it. */
+					? sprintf( __( 'MCP Adapter %1$s active, loaded by %2$s, which bundles it', 'gt-performance' ), $ready['mcp_adapter'], \GTPerformance\Abilities\Integration::adapterSource() )
+					/* translators: %s: adapter version. */
+				: sprintf( __( 'MCP Adapter %s active', 'gt-performance' ), $ready['mcp_adapter'] ) )
+			);
+			?>
 			<?php if ( '' !== $ready['mcp_endpoint'] ) : ?>
 				<br><code><?php echo esc_html( $ready['mcp_endpoint'] ); ?></code>
 			<?php endif; ?></dd></div>

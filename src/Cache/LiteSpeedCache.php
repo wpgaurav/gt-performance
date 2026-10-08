@@ -132,14 +132,16 @@ final class LiteSpeedCache implements Module {
 		add_action( 'wp_ajax_nopriv_' . self::ACTION, array( self::class, 'endpoint' ) );
 		add_action( 'shutdown', array( self::class, 'persist' ), 1000 );
 		add_action( 'init', array( self::class, 'syncOwner' ), 2 );
-		// Runs just before PHP sends the headers, whatever produced the response:
-		// a page, a redirect after a save, an AJAX add-to-cart. The CLI has no
-		// response for it to run on; purges there go through the queue.
+		// Every response, whatever produced it (a page, a redirect after a save, an
+		// AJAX add-to-cart), passes through this outermost buffer, and WordPress
+		// flushes it from its own shutdown action while the object cache and the
+		// database are still up. A header_register_callback() ran later, after PHP
+		// had destroyed them, and crashed lsphp with the Redis object cache on every
+		// body-less response: wp-admin redirects and admin-post.php returned 500.
+		// The CLI has no response; purges there go through the queue.
 		if ( 'cli' !== PHP_SAPI ) {
-			header_register_callback( array( self::class, 'beforeHeaders' ) );
-			// PHP keeps one header callback per request, so a plugin registering its
-			// own later replaces this one. The page, redirect, and JSON paths run it
-			// again from WordPress hooks; it does its work once.
+			ob_start( array( self::class, 'outputHandler' ), 8192 );
+			add_action( 'shutdown', array( self::class, 'stopHandling' ), PHP_INT_MAX );
 			add_action( 'send_headers', array( self::class, 'beforeHeaders' ), PHP_INT_MAX );
 			add_filter( 'wp_redirect', array( self::class, 'beforeRedirect' ), PHP_INT_MAX );
 			add_filter( 'wp_die_ajax_handler', array( self::class, 'beforeAjaxDie' ), PHP_INT_MAX );
@@ -161,6 +163,33 @@ final class LiteSpeedCache implements Module {
 			Settings::compile();
 			update_option( self::OWNER_OPTION, $owner, true );
 		}
+	}
+
+	private static bool $stopped = false;
+
+	/**
+	 * Output handler: settle the headers the first time output leaves PHP.
+	 * Never alters the body.
+	 */
+	public static function outputHandler( string $buffer, int $phase ): string {
+		unset( $phase );
+		if ( ! self::$stopped && ! self::$emitted && ! headers_sent() ) {
+			try {
+				self::beforeHeaders();
+			} catch ( \Throwable $error ) {
+				unset( $error );
+			}
+		}
+
+		return $buffer;
+	}
+
+	/**
+	 * After WordPress's own shutdown work, PHP tears objects down before it
+	 * flushes what is left; nothing may reach back into WordPress from there.
+	 */
+	public static function stopHandling(): void {
+		self::$stopped = true;
 	}
 
 	/**
