@@ -10,7 +10,46 @@ declare(strict_types=1);
 namespace GTPerformance\Core;
 
 final class Deactivator {
-	public static function deactivate(): void {
+	public static function deactivate( bool $networkWide = false ): void {
+		if ( ! is_multisite() ) {
+			self::deactivateSite( true );
+			\GTPerformance\Cache\ServerRules::disable();
+			return;
+		}
+
+		if ( ! $networkWide ) {
+			// The drop-ins and WP_CACHE serve every other site on the network.
+			self::deactivateSite();
+			delete_option( Network::SITE_REVISION );
+			return;
+		}
+
+		foreach ( get_sites(
+			array(
+				'number' => 0,
+				'fields' => 'ids',
+			)
+		) as $blogId ) {
+			switch_to_blog( (int) $blogId );
+			try {
+				self::deactivateSite();
+				delete_option( Network::SITE_REVISION );
+			} finally {
+				restore_current_blog();
+			}
+		}
+		self::removeDropins();
+		\GTPerformance\Cache\ServerRules::disable();
+		if ( is_file( Paths::siteMap() ) ) {
+			wp_delete_file( Paths::siteMap() );
+		}
+	}
+
+	/**
+	 * @param bool $removeDropins Remove the shared drop-ins too: always on a single
+	 *                            site, never for one site of a network.
+	 */
+	private static function deactivateSite( bool $removeDropins = false ): void {
 		$settings = Settings::all();
 
 		// Best effort: a zone that cannot be reached must not block deactivation.
@@ -27,9 +66,11 @@ final class Deactivator {
 			Settings::compile( $settings );
 		}
 
-		$pageDropin = new \GTPerformance\Cache\DropinInstaller();
-		if ( 'owned' === $pageDropin->status() ) {
-			$pageDropin->remove();
+		if ( $removeDropins ) {
+			$pageDropin = new \GTPerformance\Cache\DropinInstaller();
+			if ( 'owned' === $pageDropin->status() ) {
+				$pageDropin->remove();
+			}
 		}
 
 		// Nothing purges while the plugin is off, so a page edited in the meantime
@@ -38,9 +79,11 @@ final class Deactivator {
 		// The edge copies went with the Cloudflare rule above.
 		( new \GTPerformance\Cache\FileStore() )->purgeAll();
 
-		$redisDropin = new \GTPerformance\Redis\ObjectCacheInstaller();
-		if ( 'owned' === $redisDropin->status() ) {
-			$redisDropin->remove();
+		if ( $removeDropins ) {
+			$redisDropin = new \GTPerformance\Redis\ObjectCacheInstaller();
+			if ( 'owned' === $redisDropin->status() ) {
+				$redisDropin->remove();
+			}
 		}
 
 		wp_clear_scheduled_hook( 'gt_performance_run_queue' );
@@ -49,5 +92,17 @@ final class Deactivator {
 		wp_unschedule_hook( \GTPerformance\Cloudflare\CloudflareModule::RETRY_HOOK );
 		// Scheduled by builds distributed before the WordPress.org release.
 		wp_clear_scheduled_hook( 'gt_performance_verify_license' );
+	}
+
+	private static function removeDropins(): void {
+		$pageDropin = new \GTPerformance\Cache\DropinInstaller();
+		if ( 'owned' === $pageDropin->status() ) {
+			$pageDropin->remove();
+		}
+
+		$redisDropin = new \GTPerformance\Redis\ObjectCacheInstaller();
+		if ( 'owned' === $redisDropin->status() ) {
+			$redisDropin->remove();
+		}
 	}
 }

@@ -155,6 +155,13 @@ final class PageCacheModule implements Module {
 	}
 
 	/**
+	 * Whether this site keeps copies for the web server to serve.
+	 */
+	public static function staticCopies(): bool {
+		return Settings::staticCopies( Settings::all() );
+	}
+
+	/**
 	 * Whether the early drop-in already queued a given X-GT-Cache status.
 	 */
 	private static function hasCacheStatus( string $status ): bool {
@@ -212,8 +219,10 @@ final class PageCacheModule implements Module {
 			return $optimized;
 		}
 
-		$now    = time();
-		$stored = $this->store->write(
+		$now     = time();
+		$copies  = FileStore::copiesFor( $optimized );
+		$headers = DropinRuntime::replayableHeaders( headers_list() );
+		$stored  = $this->store->write(
 			$hash,
 			$optimized,
 			array(
@@ -223,9 +232,15 @@ final class PageCacheModule implements Module {
 				// The preloader rebuilds a stale entry from this URL, so a variant keeps its query.
 				'url'         => '' === $variant ? $base : $base . '?' . $variant,
 				'generation'  => (int) $config['generation'],
-				'headers'     => DropinRuntime::replayableHeaders( headers_list() ),
-			)
+				'headers'     => $headers,
+			),
+			$copies
 		);
+
+		// The web server's copy: the shared variant of a query-free URL only.
+		if ( $stored && '' === $variant && self::staticCopies() && ! ( new CacheKey() )->isMobile( $this->request, $config ) ) {
+			( new StaticStore() )->write( $base, $optimized, $copies, $headers );
+		}
 
 		if ( $stored ) {
 			do_action( 'gt_performance_cache_stored', $this->request, $hash );
@@ -259,6 +274,9 @@ final class PageCacheModule implements Module {
 			return $html;
 		}
 
+		if ( ! headers_sent() ) {
+			LiteSpeedCache::sendPublicFor( $this->request );
+		}
 		if ( ! headers_sent() && (bool) Settings::get( 'debug', false ) ) {
 			header( 'X-GT-Cache: OPTIMIZE-ONLY' );
 			// Replaces the idle drop-in's own debug reason.
@@ -321,6 +339,10 @@ final class PageCacheModule implements Module {
 			? 'Accept-Encoding, User-Agent'
 			: 'Accept-Encoding';
 		header( 'Vary: ' . $vary );
+
+		if ( null !== $this->request ) {
+			LiteSpeedCache::sendPublicFor( $this->request );
+		}
 	}
 
 	public function purgePost( int $postId, \WP_Post $post ): void {

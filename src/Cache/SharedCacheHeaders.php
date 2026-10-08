@@ -18,5 +18,6 @@ final class SharedCacheHeaders {
 		header( 'Cache-Control: no-store, private, max-age=0' );
 		header( 'CDN-Cache-Control: no-store' );
 		header( 'Cloudflare-CDN-Cache-Control: no-store' );
+		LiteSpeedCache::sendNoCache();
 	}
 }

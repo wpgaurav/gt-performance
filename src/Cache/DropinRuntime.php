@@ -46,6 +46,16 @@ final class DropinRuntime {
 
 	private const REPLAY_LIMIT = 20;
 
+	/**
+	 * Precompressed copies stored beside a page, by Content-Encoding token, in the
+	 * order they are preferred. Defined here because this class loads before
+	 * WordPress and its autoloader; FileStore refers to it.
+	 */
+	public const ENCODINGS = array(
+		'br'   => '.br',
+		'gzip' => '.gz',
+	);
+
 	private const REPLAY_LINE_BYTES = 8192;
 
 	/**
@@ -105,12 +115,6 @@ final class DropinRuntime {
 			return;
 		}
 
-		$html = self::readLocalCacheFile( $page, $pagesRoot );
-		if ( ! is_string( $html ) ) {
-			header( 'X-GT-Cache: MISS' );
-			return;
-		}
-
 		$stored  = (int) ( $meta['stored_at'] ?? 0 );
 		$fresh   = (int) ( $meta['fresh_until'] ?? 0 );
 		$stale   = (int) ( $meta['stale_until'] ?? 0 );
@@ -127,16 +131,21 @@ final class DropinRuntime {
 			return;
 		}
 
-		$etag = '"' . hash( 'sha256', $html ) . '"';
-		// WordPress is not loaded here, so the shared RequestContext helper does
-		// the sanitizing that wp_unslash()/sanitize_text_field() would.
+		// A copy compressed when the page was stored, so no hit compresses it again.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized on the same line; wp_unslash() does not exist yet.
-		$ifNoneMatch = isset( $_SERVER['HTTP_IF_NONE_MATCH'] ) ? trim( RequestContext::sanitizeValue( (string) $_SERVER['HTTP_IF_NONE_MATCH'], 256 ) ) : '';
-		if ( hash_equals( $etag, $ifNoneMatch ) ) {
-			http_response_code( 304 );
-			header( 'ETag: ' . $etag );
-			header( 'X-GT-Cache: ' . ( $isStale ? 'STALE' : 'HIT' ) );
-			exit;
+		$acceptEncoding = isset( $_SERVER['HTTP_ACCEPT_ENCODING'] ) ? RequestContext::sanitizeValue( (string) $_SERVER['HTTP_ACCEPT_ENCODING'], 256 ) : '';
+		$encoding       = self::encodingFor( $acceptEncoding, $meta );
+		$body           = '' === $encoding ? null : self::readLocalCacheFile( $page . self::ENCODINGS[ $encoding ], $pagesRoot );
+		if ( is_string( $body ) ) {
+			$etag = '"' . (string) $meta['etag'] . '-' . $encoding . '"';
+		} else {
+			$encoding = '';
+			$body     = self::readLocalCacheFile( $page, $pagesRoot );
+			if ( ! is_string( $body ) ) {
+				header( 'X-GT-Cache: MISS' );
+				return;
+			}
+			$etag = '"' . hash( 'sha256', $body ) . '"';
 		}
 
 		$browserTtl = max( 0, (int) ( $cacheConfig['browser_ttl'] ?? 300 ) );
@@ -149,11 +158,31 @@ final class DropinRuntime {
 		}
 
 		header( 'Content-Type: text/html; charset=UTF-8' );
+		if ( '' !== $encoding ) {
+			header( 'Content-Encoding: ' . $encoding );
+		}
 		header( 'Cache-Control: ' . $cacheControl );
 		header( 'Age: ' . max( 0, $now - $stored ) );
 		header( 'ETag: ' . $etag );
 		header( 'Vary: ' . ( (bool) ( $cacheConfig['separate_mobile'] ?? false ) ? 'Accept-Encoding, User-Agent' : 'Accept-Encoding' ) );
 		header( 'X-GT-Cache: ' . ( $isStale ? 'STALE' : 'HIT' ) );
+		// LiteSpeed keeps a fresh hit and answers the next request itself. A stale
+		// one is left to the rebuild, which marks the new page.
+		$liteSpeed = is_array( $config['litespeed'] ?? null ) ? $config['litespeed'] : null;
+		if ( null !== $liteSpeed && is_string( $liteSpeed['prefix'] ?? null ) ) {
+			// This request passed every cookie bypass, so a vary cookie left over from
+			// a signed-in session only keeps the visitor away from LiteSpeed's copy.
+			if ( isset( $_COOKIE['_lscache_vary'] ) ) {
+				// The same Domain it was set with, or the browser keeps the original.
+				$domain = preg_replace( '/[^A-Za-z0-9.-]/', '', (string) ( $liteSpeed['cookie_domain'] ?? '' ) );
+				header( 'Set-Cookie: _lscache_vary=deleted; Path=/' . ( '' !== $domain ? '; Domain=' . $domain : '' ) . '; Max-Age=0; HttpOnly; SameSite=Lax', false );
+			}
+			if ( $isStale ) {
+				header( 'X-LiteSpeed-Cache-Control: no-cache' );
+			} else {
+				self::liteSpeedPublic( min( (int) ( $liteSpeed['max_age'] ?? 0 ), max( 0, $fresh - $now ) ), $liteSpeed['prefix'], self::liteSpeedUrlTag( $liteSpeed['prefix'], $request->scheme, $request->host, $request->path ) );
+			}
+		}
 		// A cache-key fingerprint on every public response tells an attacker when two
 		// requests collide, which is the reconnaissance step for a poisoning attempt.
 		// It is a debugging aid, so gate it like one.
@@ -168,10 +197,74 @@ final class DropinRuntime {
 		if ( 'HEAD' !== $request->method ) {
 			// Replay the validated complete response through an output handler.
 			// Escaping it as a fragment would strip the site's scripts/forms/SVG.
-			ob_start( static fn( string $buffer ): string => $html );
+			ob_start( static fn( string $buffer ): string => $body );
 			ob_end_flush();
 		}
 		exit;
+	}
+
+	/**
+	 * LiteSpeed cache tag of one URL, without its query. LiteSpeedCache uses it
+	 * too, so a purge names exactly what a hit was tagged with.
+	 */
+	public static function liteSpeedUrlTag( string $prefix, string $scheme, string $host, string $path ): string {
+		return $prefix . '_u' . substr( md5( strtolower( $scheme . '://' . $host ) . $path ), 0, 16 );
+	}
+
+	/**
+	 * Let LiteSpeed keep this response. Never for a request carrying the vary
+	 * cookie, which every signed-in visitor and shopper shares.
+	 */
+	public static function liteSpeedPublic( int $maxAge, string $prefix, string $urlTag ): void {
+		if ( isset( $_COOKIE['_lscache_vary'] ) ) {
+			header( 'X-LiteSpeed-Cache-Control: no-cache' );
+			return;
+		}
+		header( 'X-LiteSpeed-Cache-Control: public,max-age=' . max( 0, $maxAge ) );
+		header( 'X-LiteSpeed-Tag: ' . $prefix . ',' . $urlTag );
+	}
+
+	/**
+	 * The stored encoding to send, or '' for the plain page.
+	 *
+	 * Brotli first, then gzip, each only when the client accepts it (a q of 0 is a
+	 * refusal) and the page was stored with it. Never when PHP's own output
+	 * compression is on, which would compress the compressed body again.
+	 *
+	 * @param array<mixed> $meta Entry metadata.
+	 */
+	public static function encodingFor( string $acceptEncoding, array $meta ): string {
+		if ( ! is_string( $meta['etag'] ?? null ) || 1 !== preg_match( '/^[a-f0-9]{64}$/', $meta['etag'] ) || ! is_array( $meta['encodings'] ?? null ) ) {
+			return '';
+		}
+		$compression = strtolower( (string) ini_get( 'zlib.output_compression' ) );
+		if ( '' !== $compression && '0' !== $compression && 'off' !== $compression ) {
+			return '';
+		}
+
+		$accepted = array();
+		foreach ( explode( ',', strtolower( $acceptEncoding ) ) as $token ) {
+			$parts = array_map( 'trim', explode( ';', $token ) );
+			$name  = $parts[0];
+			$q     = 1.0;
+			foreach ( array_slice( $parts, 1 ) as $parameter ) {
+				if ( str_starts_with( $parameter, 'q=' ) ) {
+					$q = (float) substr( $parameter, 2 );
+				}
+			}
+			if ( '' !== $name ) {
+				$accepted[ $name ] = $q;
+			}
+		}
+
+		foreach ( array_keys( self::ENCODINGS ) as $encoding ) {
+			$q = $accepted[ $encoding ] ?? ( 'gzip' === $encoding ? ( $accepted['x-gzip'] ?? null ) : null ) ?? ( $accepted['*'] ?? 0.0 );
+			if ( $q > 0 && in_array( $encoding, $meta['encodings'], true ) ) {
+				return $encoding;
+			}
+		}
+
+		return '';
 	}
 
 	/**

@@ -81,7 +81,7 @@ final class FontOptimizer {
 		$file = $this->fileName( $href );
 
 		return is_file( Paths::assets() . '/fonts/' . $file )
-			? content_url( '/cache/gt-performance/assets/fonts/' . $file )
+			? Paths::assetsUrl( 'fonts/' . $file )
 			: null;
 	}
 
@@ -184,7 +184,7 @@ final class FontOptimizer {
 					}
 				}
 
-				return 'url("' . content_url( '/cache/gt-performance/assets/fonts/' . $file ) . '")';
+				return 'url("' . Paths::assetsUrl( 'fonts/' . $file ) . '")';
 			},
 			$css
 		) ?? $css;

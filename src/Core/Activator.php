@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\Core;
 
 final class Activator {
-	public static function activate(): void {
+	public static function activate( bool $networkWide = false ): void {
 		if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
 			deactivate_plugins( GTPERF_BASENAME );
 			wp_die( esc_html__( 'GT Performance requires PHP 8.1 or newer.', 'gt-performance' ) );
@@ -21,16 +21,31 @@ final class Activator {
 			wp_die( esc_html__( 'GT Performance requires WordPress 6.6 or newer.', 'gt-performance' ) );
 		}
 
-		// One compiled config file and one cache root are shared by the whole network,
-		// so the last subsite to save settings decides the bypass rules every other
-		// subsite is cached under, and a network purge wipes every site at once. Refusing
-		// is honest; a half-correct network mode would cache one subsite's checkout for
-		// another's visitors.
 		if ( is_multisite() ) {
-			deactivate_plugins( GTPERF_BASENAME );
-			wp_die( esc_html__( 'GT Performance does not support WordPress multisite. Its cache configuration and cache directory are shared across a network, which would let one site\'s settings decide another site\'s cache behavior.', 'gt-performance' ) );
+			if ( $networkWide ) {
+				// Each site provisions and compiles itself on its next request, in its
+				// own context, so its commerce rules come from its own plugins.
+				Network::bumpRevision();
+				foreach ( Paths::writableDirectories() as $directory ) {
+					wp_mkdir_p( $directory );
+				}
+				Paths::harden();
+				Network::writeSiteMap();
+				return;
+			}
+			self::activateSite();
+			Network::writeSiteMap();
+			return;
 		}
 
+		self::activateSite();
+	}
+
+	/**
+	 * Set up one site: its directories, tables, scheduled work, and compiled
+	 * configuration. On a network this runs in a request for that site.
+	 */
+	public static function activateSite(): void {
 		foreach ( Paths::writableDirectories() as $directory ) {
 			wp_mkdir_p( $directory );
 		}
@@ -38,7 +53,8 @@ final class Activator {
 		Paths::harden();
 		Logger::removeLegacyFiles();
 
-		if ( false === get_option( Settings::OPTION, false ) ) {
+		// A network site inherits the network defaults until it saves its own.
+		if ( ! is_multisite() && false === get_option( Settings::OPTION, false ) ) {
 			add_option( Settings::OPTION, Settings::defaults(), '', false );
 		}
 
@@ -56,5 +72,9 @@ final class Activator {
 		}
 
 		remove_filter( 'cron_schedules', array( Plugin::class, 'cronSchedules' ) );
+
+		if ( is_multisite() ) {
+			update_option( Network::SITE_REVISION, (string) get_site_option( Network::REVISION, '0' ), true );
+		}
 	}
 }

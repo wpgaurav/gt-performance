@@ -30,26 +30,107 @@ final class FileStore {
 	}
 
 	/**
-	 * @param array<string, int|string|list<string>> $metadata Metadata; `headers` holds the lines a hit replays.
+	 * File extension of each precompressed copy, by Content-Encoding token.
 	 */
-	public function write( string $hash, string $html, array $metadata ): bool {
+	public const ENCODINGS = DropinRuntime::ENCODINGS;
+
+	public function encodedPath( string $hash, string $encoding ): string {
+		return $this->pagePath( $hash ) . ( self::ENCODINGS[ $encoding ] ?? '.invalid' );
+	}
+
+	/**
+	 * Compress a page once, when it is stored, so no hit has to compress it again.
+	 *
+	 * The gzip copy is always available through zlib. Brotli needs the PHP brotli extension;
+	 * without it only the gzip copy exists and Brotli clients get gzip.
+	 *
+	 * @return array<string, string> Content-Encoding token => compressed body.
+	 */
+	public static function compress( string $html ): array {
+		$copies = array();
+		if ( function_exists( 'brotli_compress' ) ) {
+			// Quality 9 keeps the one visitor who triggers the store from waiting on
+			// quality 11, which is several times slower for a few percent.
+			$brotli = brotli_compress( $html, 9, defined( 'BROTLI_TEXT' ) ? BROTLI_TEXT : 1 );
+			if ( is_string( $brotli ) && '' !== $brotli ) {
+				$copies['br'] = $brotli;
+			}
+		}
+		if ( function_exists( 'gzencode' ) ) {
+			$gzip = gzencode( $html, 9 );
+			if ( is_string( $gzip ) && '' !== $gzip ) {
+				$copies['gzip'] = $gzip;
+			}
+		}
+
+		return $copies;
+	}
+
+	/**
+	 * @param array<string, int|string|list<string>> $metadata Metadata; `headers` holds the lines a hit replays.
+	 * @param array<string, string>|null             $copies   Precompressed bodies, or null to compress here.
+	 */
+	public function write( string $hash, string $html, array $metadata, ?array $copies = null ): bool {
 		$directory = dirname( $this->pagePath( $hash ) );
 		if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
 			return false;
 		}
 
+		$copies = $copies ?? self::copiesFor( $html );
+		if ( $copies ) {
+			$metadata['etag']      = hash( 'sha256', $html );
+			$metadata['encodings'] = array_keys( $copies );
+		}
 		$meta = wp_json_encode( $metadata );
 		if ( ! is_string( $meta ) ) {
 			return false;
 		}
-		return \GTPerformance\Core\AtomicFile::write( $this->pagePath( $hash ), $html )
-			&& \GTPerformance\Core\AtomicFile::write( $this->metaPath( $hash ), $meta );
+
+		// A compressed copy of the previous page must never outlive it. Drop them
+		// first; a hit in between is answered uncompressed from the new page.
+		$this->deleteEncoded( $hash );
+		if ( ! \GTPerformance\Core\AtomicFile::write( $this->pagePath( $hash ), $html ) ) {
+			return false;
+		}
+		foreach ( $copies as $encoding => $body ) {
+			// Best effort: a missing copy only means this page is compressed per hit.
+			\GTPerformance\Core\AtomicFile::write( $this->encodedPath( $hash, $encoding ), $body );
+		}
+
+		return \GTPerformance\Core\AtomicFile::write( $this->metaPath( $hash ), $meta );
+	}
+
+	/**
+	 * The precompressed copies a page gets under the current settings.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function copiesFor( string $html ): array {
+		return (bool) \GTPerformance\Core\Settings::get( 'cache.precompress', true ) ? self::compress( $html ) : array();
+	}
+
+	private function deleteEncoded( string $hash ): bool {
+		$hit = false;
+		foreach ( array_keys( self::ENCODINGS ) as $encoding ) {
+			$path = $this->encodedPath( $hash, $encoding );
+			if ( is_file( $path ) && @unlink( $path ) ) {
+				$hit = true;
+			}
+		}
+
+		return $hit;
 	}
 
 	public function delete( string $hash ): bool {
 		$page = $this->pagePath( $hash );
 		$meta = $this->metaPath( $hash );
-		$hit  = false;
+
+		// The web server's copy answers the same URL and has to go with the entry,
+		// whether a purge, the garbage collector, or an eviction removes it.
+		$static = new StaticStore();
+		$url    = is_dir( $static->root() ) ? (string) ( $this->metadata( $hash )['url'] ?? '' ) : '';
+		$hit    = '' !== $url && $static->deleteUrl( $url );
+		$hit = $this->deleteEncoded( $hash ) || $hit;
 
 		if ( is_file( $page ) && @unlink( $page ) ) {
 			$hit = true;
@@ -267,6 +348,6 @@ final class FileStore {
 		// Subdirectories are removed wholesale, so re-assert the guards afterwards.
 		Paths::harden();
 
-		return $count;
+		return $count + ( new StaticStore() )->purgeAll();
 	}
 }

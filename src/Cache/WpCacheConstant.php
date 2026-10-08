@@ -79,13 +79,13 @@ final class WpCacheConstant {
 			return $result;
 		}
 
-		update_option( self::OPTION, $ownership, false );
+		\GTPerformance\Core\Network::updateOption( self::OPTION, $ownership );
 
 		return true;
 	}
 
 	public function restore(): bool|\WP_Error {
-		$stored = get_option( self::OPTION, '' );
+		$stored = \GTPerformance\Core\Network::getOption( self::OPTION, '' );
 		if ( is_array( $stored ) ) {
 			$mode     = (string) ( $stored['mode'] ?? '' );
 			$original = (string) ( $stored['original'] ?? '' );
@@ -118,7 +118,7 @@ final class WpCacheConstant {
 			return $result;
 		}
 
-		delete_option( self::OPTION );
+		\GTPerformance\Core\Network::deleteOption( self::OPTION );
 
 		return true;
 	}

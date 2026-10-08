@@ -51,9 +51,14 @@ final class Eligibility {
 			return Decision::deny( 'authorization' );
 		}
 
+		// A subfolder network site answers below its own path, so a bypass written
+		// for the site root (`/wp-admin/`, `/account/`) also has to protect
+		// `/shop/wp-admin/`. Store paths derived from permalinks already carry the
+		// prefix and keep matching the full path.
+		$relative = self::siteRelativePath( $request->path, (string) ( $config['site_path'] ?? '' ) );
 		foreach ( (array) ( $config['bypass_paths'] ?? array() ) as $path ) {
 			$path = (string) $path;
-			if ( '' !== $path && self::pathMatches( $request->path, $path ) ) {
+			if ( '' !== $path && ( self::pathMatches( $request->path, $path ) || ( null !== $relative && self::pathMatches( $relative, $path ) ) ) ) {
 				return Decision::deny( 'path:' . $path );
 			}
 		}
@@ -99,6 +104,22 @@ final class Eligibility {
 		}
 
 		return Decision::allow();
+	}
+
+	/**
+	 * The request path below a subfolder site's path, or null for a site at the
+	 * root of its domain. The site path is compared without case, as WordPress
+	 * compares it when it routes the request.
+	 */
+	private static function siteRelativePath( string $requestPath, string $sitePath ): ?string {
+		$prefix = rtrim( $sitePath, '/' );
+		if ( '' === $prefix || ! str_starts_with( strtolower( rtrim( $requestPath, '/' ) . '/' ), strtolower( $prefix ) . '/' ) ) {
+			return null;
+		}
+
+		$relative = substr( $requestPath, strlen( $prefix ) );
+
+		return '' === $relative ? '/' : $relative;
 	}
 
 	/**

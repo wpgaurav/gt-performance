@@ -562,6 +562,109 @@ if ( ! function_exists( 'wp_remote_retrieve_body' ) ) {
 	}
 }
 
+// Multisite: off unless a test sets $GLOBALS['gtperf_test_is_multisite'], with the
+// network described by $GLOBALS['gtperf_test_sites'] (blog id => WP_Site).
+if ( ! class_exists( 'WP_Site' ) ) {
+	// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound, Squiz.Commenting.ClassComment.Missing
+	final class WP_Site {
+		public string $blog_id = '1';
+		public string $domain  = 'example.com';
+		public string $path    = '/';
+		public string $archived = '0';
+		public string $deleted  = '0';
+		public string $spam     = '0';
+	}
+}
+
+if ( ! function_exists( 'get_current_blog_id' ) ) {
+	function get_current_blog_id(): int {
+		return (int) ( $GLOBALS['gtperf_test_blog_id'] ?? 1 );
+	}
+}
+
+if ( ! function_exists( 'is_main_site' ) ) {
+	function is_main_site(): bool {
+		return 1 === get_current_blog_id();
+	}
+}
+
+if ( ! function_exists( 'get_site' ) ) {
+	function get_site( mixed $site = null ): ?WP_Site {
+		$id = null === $site ? get_current_blog_id() : (int) $site;
+
+		return $GLOBALS['gtperf_test_sites'][ $id ] ?? null;
+	}
+}
+
+if ( ! function_exists( 'get_sites' ) ) {
+	/** @return list<WP_Site|int> */
+	function get_sites( array $args = array() ): array {
+		$sites = array_values( (array) ( $GLOBALS['gtperf_test_sites'] ?? array() ) );
+
+		return 'ids' === ( $args['fields'] ?? '' ) ? array_map( static fn ( WP_Site $site ): int => (int) $site->blog_id, $sites ) : $sites;
+	}
+}
+
+if ( ! function_exists( 'switch_to_blog' ) ) {
+	function switch_to_blog( int $blogId ): bool {
+		$GLOBALS['gtperf_test_blog_stack'][] = get_current_blog_id();
+		$GLOBALS['gtperf_test_blog_id']      = $blogId;
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'restore_current_blog' ) ) {
+	function restore_current_blog(): bool {
+		$GLOBALS['gtperf_test_blog_id'] = array_pop( $GLOBALS['gtperf_test_blog_stack'] ) ?? 1;
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'update_site_option' ) ) {
+	function update_site_option( string $name, mixed $value ): bool {
+		$GLOBALS['gtperf_test_site_options'][ $name ] = $value;
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'delete_site_option' ) ) {
+	function delete_site_option( string $name ): bool {
+		unset( $GLOBALS['gtperf_test_site_options'][ $name ] );
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'get_home_path' ) ) {
+	function get_home_path(): string {
+		return (string) ( $GLOBALS['gtperf_test_home_path'] ?? dirname( WP_CONTENT_DIR ) . '/' );
+	}
+}
+
+if ( ! function_exists( 'get_main_site_id' ) ) {
+	function get_main_site_id(): int {
+		return 1;
+	}
+}
+
+if ( ! function_exists( 'get_network' ) ) {
+	function get_network(): object {
+		return (object) array( 'path' => '/' );
+	}
+}
+
+if ( ! function_exists( 'wp_remote_post' ) ) {
+	/** @return array<string, mixed> */
+	function wp_remote_post( string $url, array $args = array() ): array {
+		$GLOBALS['gtperf_test_remote_posts'][] = compact( 'url', 'args' );
+
+		return array( 'response' => array( 'code' => 200 ), 'body' => '' );
+	}
+}
+
 // Paths::cacheRoot() derives every cache directory from WP_CONTENT_DIR. Point it
 // at a scratch directory so filesystem-backed tests never touch a real site.
 if ( ! defined( 'WP_CONTENT_DIR' ) ) {

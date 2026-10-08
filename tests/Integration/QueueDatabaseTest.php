@@ -245,7 +245,12 @@ final class QueueDatabaseTest extends TestCase {
 		self::assertFalse( $this->jobs->retry( $id ) );
 	}
 
-	public function test_preload_does_not_follow_redirects_with_lease_credentials_or_report_them_complete(): void {
+	/**
+	 * A redirect is never followed with the lease credentials, and since 1.2.0 it is
+	 * the page's answer rather than a failure: the job finishes, skipped, instead of
+	 * retrying the same 301 three times.
+	 */
+	public function test_preload_does_not_follow_redirects_with_lease_credentials_and_skips_them(): void {
 		$this->jobs->enqueue( 'preload_url', array( 'url' => home_url( '/redirect-fixture/' ) ) );
 		$seen = array();
 		$http = static function ( $pre, $args, $url ) use ( &$seen ) {
@@ -259,8 +264,9 @@ final class QueueDatabaseTest extends TestCase {
 			self::assertCount( 1, $seen );
 			self::assertSame( 0, $seen[0]['redirection'] );
 			self::assertNotEmpty( $seen[0]['headers']['X-GT-Job-Token'] );
-			self::assertSame( 0, $this->jobs->counts()['complete'] );
-			self::assertSame( 1, $this->jobs->counts()['pending'] );
+			self::assertSame( 1, $this->jobs->counts()['complete'] );
+			self::assertSame( 0, $this->jobs->counts()['pending'] );
+			self::assertSame( 0, $this->jobs->counts()['failed'] ?? 0 );
 		} finally {
 			remove_filter( 'pre_http_request', $http, 10 );
 		}

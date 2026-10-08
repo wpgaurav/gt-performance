@@ -23,15 +23,62 @@ final class Paths {
 			return false;
 		}
 		$root = realpath( self::cacheRoot() );
-		return false === $root || $root === $content . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'gt-performance';
+		if ( false !== $root && $root !== $content . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'gt-performance' ) {
+			return false;
+		}
+		// A per-site directory aliased elsewhere would let one site's purge or writes
+		// land in another site's store, or outside wp-content entirely.
+		return ! is_multisite() || ( ! is_link( self::sitesRoot() ) && ! is_link( self::siteRoot() ) );
+	}
+
+	/**
+	 * The directory that holds this site's pages, assets, and compiled config.
+	 *
+	 * A single site keeps the original layout. On a network each site gets its own
+	 * directory, keyed by blog id, so one site's settings, purges, and stored pages
+	 * can never reach another. It follows switch_to_blog(), which is how network-wide
+	 * operations address each site in turn.
+	 */
+	public static function siteRoot(): string {
+		if ( ! is_multisite() ) {
+			return self::cacheRoot();
+		}
+
+		return self::siteRootFor( get_current_blog_id() );
+	}
+
+	public static function siteRootFor( int $blogId ): string {
+		return self::sitesRoot() . '/' . max( 0, $blogId );
+	}
+
+	/** Parent of every per-site directory on a network. */
+	public static function sitesRoot(): string {
+		return self::cacheRoot() . '/sites';
+	}
+
+	/**
+	 * Host and path of every site on the network, which advanced-cache.php reads to
+	 * pick the site's configuration before WordPress has resolved the site itself.
+	 */
+	public static function siteMap(): string {
+		return self::cacheRoot() . '/sites.json';
 	}
 
 	public static function pages(): string {
-		return self::cacheRoot() . '/pages';
+		return self::siteRoot() . '/pages';
 	}
 
 	public static function assets(): string {
-		return self::cacheRoot() . '/assets';
+		return self::siteRoot() . '/assets';
+	}
+
+	/**
+	 * Public URL of the assets directory, matching assets().
+	 */
+	public static function assetsUrl( string $path = '' ): string {
+		$site = is_multisite() ? '/sites/' . get_current_blog_id() : '';
+
+		return content_url( '/cache/gt-performance' . $site . '/assets/' . ltrim( $path, '/' ) );
 	}
 
 	public static function locks(): string {
@@ -44,9 +91,13 @@ final class Paths {
 	 * Authenticated encrypted JSON, distinct from all legacy PHP filenames.
 	 */
 	public static function config(): string {
-		return self::cacheRoot() . '/config.json';
+		return self::siteRoot() . '/config.json';
 	}
 
+	/**
+	 * Object-cache configuration. There is one object-cache.php per install, so on a
+	 * network this file stays network-wide and only the main site writes it.
+	 */
 	public static function redisConfig(): string {
 		return self::cacheRoot() . '/redis-config.json';
 	}
@@ -59,8 +110,19 @@ final class Paths {
 	 * @return list<string>
 	 */
 	public static function writableDirectories(): array {
+		if ( ! is_multisite() ) {
+			return array(
+				self::cacheRoot(),
+				self::pages(),
+				self::assets(),
+				self::locks(),
+			);
+		}
+
 		return array(
 			self::cacheRoot(),
+			self::sitesRoot(),
+			self::siteRoot(),
 			self::pages(),
 			self::assets(),
 			self::locks(),
@@ -120,7 +182,7 @@ final class Paths {
 
 		// Belt and braces for servers that ignore .htaccess: the config payloads carry
 		// credentials and only PHP needs to read them.
-		foreach ( array( self::config(), self::redisConfig() ) as $file ) {
+		foreach ( array( self::config(), self::redisConfig(), self::siteMap() ) as $file ) {
 			if ( is_file( $file ) ) {
 				@chmod( $file, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPress.PHP.NoSilencedErrors.Discouraged
 			}

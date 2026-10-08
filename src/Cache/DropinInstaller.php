@@ -77,21 +77,44 @@ final class DropinInstaller {
 		// otherwise never be republished, leaving the stale copy running.
 		$source    = GTPERF_DIR . '/dropins/advanced-cache.php';
 		$signature = GTPERF_VERSION . '|' . GTPERF_DIR . '|' . ( is_file( $source ) ? (string) filemtime( $source ) : '' );
-		if ( (string) get_option( self::VERSION_OPTION, '' ) === $signature ) {
+		if ( (string) \GTPerformance\Core\Network::getOption( self::VERSION_OPTION, '' ) === $signature ) {
 			return;
 		}
 
 		$installer = new self();
 		if ( 'owned' === $installer->status() ) {
-			if ( is_wp_error( $installer->install() ) ) {
+			if ( is_wp_error( $installer->publish() ) ) {
 				return;
 			}
 		}
 
-		update_option( self::VERSION_OPTION, $signature, false );
+		\GTPerformance\Core\Network::updateOption( self::VERSION_OPTION, $signature );
 	}
 
 	public function install(): bool|\WP_Error {
+		if ( is_multisite() ) {
+			// The drop-in and WP_CACHE are shared by the network. A site admin can
+			// still switch their own site to store mode once the network has them.
+			if ( 'owned' === $this->status() && GTPERF_VERSION === $this->installedVersion() && defined( 'WP_CACHE' ) && WP_CACHE ) {
+				if ( ! Settings::compile() ) {
+					return new \WP_Error( 'gtperf_config_write', __( 'Unable to securely write the runtime configuration. Check OpenSSL, the WordPress authentication key, and cache directory permissions.', 'gt-performance' ) );
+				}
+				return \GTPerformance\Core\Network::writeSiteMap() ? true : new \WP_Error( 'gtperf_site_map', __( 'Unable to write the network site map. Check the cache directory permissions.', 'gt-performance' ) );
+			}
+			if ( ! \GTPerformance\Core\Network::canManageNetwork() ) {
+				return new \WP_Error( 'gtperf_network_only', __( 'The page-cache drop-in is shared by every site on this network. Ask a network administrator to install it.', 'gt-performance' ) );
+			}
+		}
+
+		$result = $this->publish();
+		if ( true === $result && is_multisite() && ! \GTPerformance\Core\Network::writeSiteMap() ) {
+			return new \WP_Error( 'gtperf_site_map', __( 'Unable to write the network site map. Check the cache directory permissions.', 'gt-performance' ) );
+		}
+
+		return $result;
+	}
+
+	private function publish(): bool|\WP_Error {
 		$status = $this->status();
 		if ( 'conflict' === $status ) {
 			return new \WP_Error( 'gtperf_dropin_conflict', __( 'Another plugin owns advanced-cache.php. Disable or migrate it first.', 'gt-performance' ) );

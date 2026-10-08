@@ -39,7 +39,7 @@ final class ArtifactStore {
 
 		return array(
 			'path' => $path,
-			'url'  => content_url( '/cache/gt-performance/assets/css/' . $filename ),
+			'url'  => Paths::assetsUrl( 'css/' . $filename ),
 			'hash' => $hash,
 		);
 	}

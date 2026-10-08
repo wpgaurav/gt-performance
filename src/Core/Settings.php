@@ -28,7 +28,7 @@ final class Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function defaults(): array {
-		return array(
+		$defaults = array(
 			'generation' => 1,
 			'cache'      => array(
 				'enabled'              => true,
@@ -78,6 +78,13 @@ final class Settings {
 					'wp-postpass_',
 				),
 				'separate_mobile'      => false,
+				// Store gzip, and Brotli where PHP has the extension, beside each page.
+				'precompress'          => true,
+				// Keep a copy the web server can serve without PHP, through the server
+				// rules a site owner adds from the Cache screen.
+				'static'               => false,
+				// Let LiteSpeed's own cache answer hits, driven by response headers.
+				'litespeed'            => false,
 				'entry_budget'         => 5000,
 				'preload'              => true,
 				'preload_max_urls'     => 200,
@@ -253,6 +260,9 @@ final class Settings {
 			'debug'      => false,
 			'remove_data_on_uninstall' => false,
 		);
+
+		// A network site that never saved its own settings inherits the network's.
+		return is_multisite() ? self::merge( $defaults, Network::defaults() ) : $defaults;
 	}
 
 	/**
@@ -309,6 +319,9 @@ final class Settings {
 		$merged['cache']['enabled']          = (bool) ( $merged['cache']['enabled'] ?? false );
 		$merged['cache']['mode']             = 'optimize' === ( $merged['cache']['mode'] ?? 'store' ) ? 'optimize' : 'store';
 		$merged['cache']['separate_mobile']  = (bool) ( $merged['cache']['separate_mobile'] ?? false );
+		$merged['cache']['precompress']      = (bool) ( $merged['cache']['precompress'] ?? true );
+		$merged['cache']['static']           = (bool) ( $merged['cache']['static'] ?? false );
+		$merged['cache']['litespeed']        = (bool) ( $merged['cache']['litespeed'] ?? false );
 		$merged['cache']['preload']          = (bool) ( $merged['cache']['preload'] ?? true );
 		$merged['cache']['preload_max_urls'] = max( 0, min( 2000, (int) ( $merged['cache']['preload_max_urls'] ?? 200 ) ) );
 		$merged['cache']['preload_sitemaps'] = self::sanitizeSitemaps( $merged['cache']['preload_sitemaps'] ?? array() );
@@ -495,6 +508,9 @@ final class Settings {
 	 */
 	private const OUTPUT_NEUTRAL = array(
 		'cache.post_publish_purge',
+		'cache.precompress',
+		'cache.static',
+		'cache.litespeed',
 		'cache.entry_budget',
 		'cache.preload',
 		'cache.preload_max_urls',
@@ -636,7 +652,7 @@ final class Settings {
 		// If a read-only directory also prevents invalidation, callers retain the
 		// old database settings and explicitly report that they may remain active.
 		if ( Paths::cacheRootIsSafe() ) {
-			foreach ( array( Paths::config(), Paths::redisConfig() ) as $file ) {
+			foreach ( self::ownsRedisConfig() ? array( Paths::config(), Paths::redisConfig() ) : array( Paths::config() ) as $file ) {
 				if ( is_file( $file ) || is_link( $file ) ) {
 					wp_delete_file( $file );
 				}
@@ -664,7 +680,30 @@ final class Settings {
 			// plugin keeps working from a renamed or relocated plugin directory.
 			'plugin_dir' => GTPERF_DIR,
 		);
+		$static = self::staticCopies( $settings );
+		if ( $static ) {
+			// What ServerRules needs to build this site's block from the compiled file
+			// alone, without this site's plugins or options.
+			$config['static'] = array(
+				'scheme' => 'http' === strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_SCHEME ) ) ? 'http' : 'https',
+				'root'   => ( new \GTPerformance\Cache\StaticStore() )->root(),
+			);
+		}
+		if ( \GTPerformance\Cache\LiteSpeedCache::enabled( $settings ) ) {
+			// The drop-in marks its own hits for LiteSpeed with these.
+			$config['litespeed'] = array(
+				'prefix'        => \GTPerformance\Cache\LiteSpeedCache::prefix(),
+				'max_age'       => max( 0, (int) ( $settings['cache']['fresh_ttl'] ?? 3600 ) ),
+				// The drop-in clears the vary cookie and must name the domain it was set on.
+				'cookie_domain' => defined( 'COOKIE_DOMAIN' ) ? (string) constant( 'COOKIE_DOMAIN' ) : '',
+			);
+		}
 		$config   = apply_filters( 'gt_performance_compiled_config', $config, $settings );
+		// A compile that ran before the commerce rules were registered left them out.
+		// Forget the compiled policy, so the site compiles again on its next request.
+		if ( ! \GTPerformance\Commerce\CommerceModule::registered() ) {
+			delete_option( \GTPerformance\Commerce\CommerceModule::POLICY_HASH_OPTION );
+		}
 
 		foreach ( Paths::writableDirectories() as $directory ) {
 			if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
@@ -678,11 +717,27 @@ final class Settings {
 			return false;
 		}
 
-		$redis = ( new \GTPerformance\Redis\Configuration() )->runtime( (array) ( $settings['redis'] ?? array() ) );
+		if ( self::ownsRedisConfig() ) {
+			$redis = ( new \GTPerformance\Redis\Configuration() )->runtime( (array) ( $settings['redis'] ?? array() ) );
 
-		if ( ! self::writeConfig( Paths::redisConfig(), $redis ) ) {
-			return false;
+			if ( ! self::writeConfig( Paths::redisConfig(), $redis ) ) {
+				return false;
+			}
 		}
+		// The drop-in cannot find any site's configuration without the site map.
+		if ( is_multisite() && ! is_file( Paths::siteMap() ) ) {
+			Network::writeSiteMap();
+		}
+
+		// Copies the web server serves on its own must follow the configuration the
+		// drop-in now reads: none when switched off, none from an older generation,
+		// and rules that name this site's current bypass cookies.
+		$store = new \GTPerformance\Cache\StaticStore();
+		$store->sync( $static, (int) $settings['generation'] );
+		if ( $static ) {
+			$store->harden( max( 0, (int) ( $settings['cache']['browser_ttl'] ?? 300 ) ), (bool) ( $settings['cache']['separate_mobile'] ?? false ) );
+		}
+		\GTPerformance\Cache\ServerRules::sync();
 		// Retire only known legacy configuration files after both replacements exist.
 		foreach ( array( 'config.php', 'config.json.php', 'redis-config.json.php' ) as $legacy ) {
 			$file = Paths::cacheRoot() . '/' . $legacy;
@@ -691,6 +746,28 @@ final class Settings {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Whether these settings keep copies for the web server to serve.
+	 *
+	 * @param array<string, mixed> $settings Settings.
+	 */
+	public static function staticCopies( array $settings ): bool {
+		$cache = (array) ( $settings['cache'] ?? array() );
+
+		return (bool) ( $cache['static'] ?? false )
+			&& (bool) ( $cache['enabled'] ?? false )
+			&& 'store' === ( $cache['mode'] ?? 'store' )
+			&& ! \GTPerformance\Cache\DropinRuntime::servingDisabled();
+	}
+
+	/**
+	 * There is one object-cache.php per install. On a network the main site owns
+	 * its configuration, so one subsite's save cannot repoint the whole network.
+	 */
+	public static function ownsRedisConfig(): bool {
+		return ! is_multisite() || is_main_site();
 	}
 
 	/**
@@ -707,7 +784,7 @@ final class Settings {
 			$cache['enabled'] = false;
 		}
 
-		return array( 'hosts' => self::canonicalHosts() ) + $cache;
+		return Network::scopePolicy( array( 'hosts' => self::canonicalHosts() ) + $cache );
 	}
 
 	/**

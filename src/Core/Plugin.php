@@ -36,11 +36,20 @@ final class Plugin {
 			}
 		}
 		Database::maybeUpgrade();
-		\GTPerformance\Cache\DropinInstaller::syncVersion();
-		\GTPerformance\Redis\ObjectCacheInstaller::syncVersion();
-
+		// Safe mode promises no page comes from the cache, and server rules cannot
+		// read a PHP constant, so the copies they would serve have to go.
+		if ( \GTPerformance\Cache\DropinRuntime::servingDisabled() ) {
+			( new \GTPerformance\Cache\StaticStore() )->sync( false, 0 );
+		}
 		self::$instance = new self();
 		self::$instance->register();
+
+		// After the modules: republishing a drop-in compiles the runtime configuration,
+		// and the commerce and compatibility rules only reach it through filters the
+		// modules add. Compiled before them, an update shipped a configuration without
+		// any store's cart cookies, and the drop-in then served cached pages to shoppers.
+		\GTPerformance\Cache\DropinInstaller::syncVersion();
+		\GTPerformance\Redis\ObjectCacheInstaller::syncVersion();
 	}
 
 	private function __construct() {
@@ -60,6 +69,16 @@ final class Plugin {
 			new \GTPerformance\Optimization\OptimizationModule( $logger ),
 			new \GTPerformance\Database\DatabaseModule(),
 		);
+
+		// LiteSpeed's own cache, and any purge still owed to it after switching off.
+		if ( Settings::get( 'cache.litespeed', false ) || array() !== get_option( \GTPerformance\Cache\LiteSpeedCache::QUEUE_OPTION, array() ) ) {
+			$this->modules[] = new \GTPerformance\Cache\LiteSpeedCache();
+		}
+
+		// Per-site provisioning, the site map, and the network admin screen.
+		if ( is_multisite() ) {
+			$this->modules[] = new Network();
+		}
 
 		// Settings can change from admin, CLI, REST, or cron; each save records a revision.
 		$this->modules[] = new \GTPerformance\Configuration\ConfigurationModule();
@@ -135,6 +154,14 @@ final class Plugin {
 	 * @return list<Module>
 	 */
 	private static function managementModules( Logger $logger ): array {
+		// Edge rules are deployed per zone and compiled from one site's bypass rules.
+		// Subfolder sites share a zone, so one site's rule would decide what the edge
+		// caches for every other site. Until edge rules are network-aware they stay
+		// off on a network; each site's origin cache is unaffected.
+		if ( is_multisite() ) {
+			return array( new \GTPerformance\Redis\RedisModule() );
+		}
+
 		return array(
 			new \GTPerformance\Cloudflare\CloudflareModule( $logger ),
 			new \GTPerformance\XCloud\XCloudModule( $logger ),

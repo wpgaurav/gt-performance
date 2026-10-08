@@ -91,7 +91,8 @@ final class WarmingDatabaseTest extends TestCase {
 		self::assertSame( 'edge_observed', $targets['/a/']['status'] );
 		self::assertSame( 'requested', $targets['/b/']['status'] );
 		self::assertSame( 'gt_dynamic', $targets['/b/']['result'] );
-		self::assertSame( 'failed', $targets['/d/']['status'] );
+		// A 404 is the page's answer, so it is skipped rather than retried (1.2.0).
+		self::assertSame( 'skipped', $targets['/d/']['status'] );
 		self::assertSame( 'http_404', $targets['/d/']['result'] );
 
 		$order = array_values( array_filter( array_map( static fn ( array $r ): string => (string) wp_parse_url( $r['url'], PHP_URL_PATH ), $this->requests ), static fn ( string $p ): bool => ! str_ends_with( $p, '.xml' ) && ! str_ends_with( $p, '.txt' ) ) );

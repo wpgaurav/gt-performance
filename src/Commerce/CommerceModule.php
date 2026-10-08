@@ -22,7 +22,17 @@ final class CommerceModule implements Module {
 		$this->registry = new Registry();
 	}
 
+	/** Hash of the policy last compiled; Settings clears it when a compile ran without this module. */
+	public const POLICY_HASH_OPTION = 'gt_performance_commerce_policy_hash';
+
+	private static bool $registered = false;
+
+	public static function registered(): bool {
+		return self::$registered;
+	}
+
 	public function register(): void {
+		self::$registered = true;
 		add_filter( 'gt_performance_cache_policy', array( $this, 'mergePolicy' ) );
 		add_filter( 'gt_performance_compiled_config', array( $this, 'mergeCompiledConfig' ) );
 		add_action( 'init', array( $this, 'synchronizeCompiledPolicy' ), 99 );
@@ -147,16 +157,16 @@ final class CommerceModule implements Module {
 	public function synchronizeCompiledPolicy(): void {
 		$policy = $this->registry->policy();
 		$hash   = hash( 'sha256', (string) wp_json_encode( $policy ) );
-		$old    = (string) get_option( 'gt_performance_commerce_policy_hash', '' );
+		$old    = (string) get_option( self::POLICY_HASH_OPTION, '' );
 
 		if ( ! hash_equals( $old, $hash ) ) {
 			Settings::compile();
-			update_option( 'gt_performance_commerce_policy_hash', $hash, false );
+			update_option( self::POLICY_HASH_OPTION, $hash, false );
 		}
 	}
 
 	public function protectDynamicResponse(): void {
-		$config   = $this->mergePolicy( (array) Settings::get( 'cache', array() ) );
+		$config   = \GTPerformance\Core\Network::scopePolicy( $this->mergePolicy( (array) Settings::get( 'cache', array() ) ) );
 		$request  = \GTPerformance\Optimization\Css\UnusedCssOptimizer::publicRequest( RequestContext::fromGlobals() );
 		$decision = ( new Eligibility() )->decide( $request, array_merge( $config, array( 'enabled' => true ) ) );
 

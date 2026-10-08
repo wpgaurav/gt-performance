@@ -919,6 +919,108 @@ final class Command {
 	}
 
 	/**
+	 * Web-server rules that serve stored pages without PHP.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : status, add, remove, or nginx. Defaults to status.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp gt-performance server-rules add
+	 *     wp gt-performance server-rules nginx > gt-performance.conf
+	 *
+	 * @subcommand server-rules
+	 * @param list<string> $args Positional arguments.
+	 */
+	public function serverRules( array $args ): void {
+		$action = $this->action( $args, 'status', array( 'status', 'add', 'remove', 'nginx' ), 'server-rules' );
+		if ( null === $action ) {
+			return;
+		}
+		$rules = new \GTPerformance\Cache\ServerRules();
+		if ( 'add' === $action || 'remove' === $action ) {
+			$result = 'add' === $action ? \GTPerformance\Cache\ServerRules::enable() : \GTPerformance\Cache\ServerRules::disable();
+			is_wp_error( $result ) ? \WP_CLI::error( $result->get_error_message() ) : \WP_CLI::success( 'add' === $action ? 'Server rules added to ' . $rules->htaccessPath() . '.' : 'Server rules removed.' );
+			return;
+		}
+		if ( 'nginx' === $action ) {
+			$snippet = $rules->nginxSnippet();
+			'' === $snippet ? \WP_CLI::error( 'No site keeps web-server copies. Enable cache.static first.' ) : \WP_CLI::line( $snippet );
+			return;
+		}
+		\WP_CLI::log( 'enabled=' . ( \GTPerformance\Cache\ServerRules::enabled() ? 'yes' : 'no' ) );
+		\WP_CLI::log( 'installed=' . ( '' !== $rules->installed() ? 'yes' : 'no' ) . ' file=' . $rules->htaccessPath() );
+		\WP_CLI::log( 'static-sites=' . count( $rules->sites() ) . ' litespeed-sites=' . $rules->liteSpeedSites() );
+		$error = (string) \GTPerformance\Core\Network::getOption( \GTPerformance\Cache\ServerRules::ERROR_OPTION, '' );
+		if ( '' !== $error ) {
+			\WP_CLI::warning( $error );
+		}
+	}
+
+	/**
+	 * Multisite network operations.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : status, purge, map, or defaults. Defaults to status.
+	 *
+	 * [--from=<blog_id>]
+	 * : With defaults, copy this site's settings as the network defaults. 0 clears them.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp gt-performance network purge
+	 *     wp gt-performance network defaults --from=1
+	 *
+	 * @param list<string>          $args      Positional arguments.
+	 * @param array<string, string> $assocArgs Named arguments.
+	 */
+	public function network( array $args, array $assocArgs = array() ): void {
+		if ( ! is_multisite() ) {
+			\WP_CLI::error( 'This is not a multisite network.' );
+			return;
+		}
+		$action = $this->action( $args, 'status', array( 'status', 'purge', 'map', 'defaults' ), 'network' );
+		if ( null === $action ) {
+			return;
+		}
+
+		if ( 'purge' === $action ) {
+			\WP_CLI::success( sprintf( 'Removed %d stored files across the network.', \GTPerformance\Core\Network::purgeAllSites() ) );
+			return;
+		}
+		if ( 'map' === $action ) {
+			\GTPerformance\Core\Network::writeSiteMap() ? \WP_CLI::success( 'Site map written.' ) : \WP_CLI::error( 'The site map could not be written.' );
+			return;
+		}
+		if ( 'defaults' === $action ) {
+			if ( ! isset( $assocArgs['from'] ) ) {
+				\WP_CLI::error( 'Pass --from=<blog_id>, or --from=0 to clear the network defaults.' );
+				return;
+			}
+			$from = (int) $assocArgs['from'];
+			\GTPerformance\Core\Network::setDefaultsFrom( $from )
+				? \WP_CLI::success( $from > 0 ? 'Network defaults copied from site ' . $from . '.' : 'Network defaults cleared.' )
+				: \WP_CLI::error( 'No site has that id.' );
+			return;
+		}
+
+		$rows = array();
+		foreach ( get_sites( array( 'number' => 0 ) ) as $site ) {
+			$rows[] = array(
+				'id'       => (int) $site->blog_id,
+				'site'     => $site->domain . $site->path,
+				'compiled' => is_file( Paths::siteRootFor( (int) $site->blog_id ) . '/config.json' ) ? 'yes' : 'no',
+			);
+		}
+		\WP_CLI::log( 'drop-in=' . ( new DropinInstaller() )->status() . ' site-map=' . ( is_file( Paths::siteMap() ) ? 'yes' : 'no' ) );
+		\WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'site', 'compiled' ) );
+	}
+
+	/**
 	 * Resolve and validate a command-family action before constructing services
 	 * or performing work. Invalid actions must never fall through to a default
 	 * operation, especially for mutating commands such as Cloudflare sync.

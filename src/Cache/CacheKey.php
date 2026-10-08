@@ -16,10 +16,7 @@ final class CacheKey {
 	public function make( RequestContext $request, array $config ): string {
 		$query = $this->keptQuery( $request, $config );
 
-		$variant = 'public';
-		if ( (bool) ( $config['separate_mobile'] ?? false ) && preg_match( '/Mobile|Android|iPhone|iPad/i', $request->userAgent ) ) {
-			$variant = 'mobile';
-		}
+		$variant = $this->isMobile( $request, $config ) ? 'mobile' : 'public';
 
 		return implode(
 			'|',
@@ -33,6 +30,18 @@ final class CacheKey {
 			)
 		);
 	}
+
+	/**
+	 * Whether the request gets the separately stored mobile copy.
+	 *
+	 * @param array<string, mixed> $config Compiled cache configuration.
+	 */
+	public function isMobile( RequestContext $request, array $config ): bool {
+		return (bool) ( $config['separate_mobile'] ?? false ) && 1 === preg_match( '/' . self::MOBILE_AGENTS . '/i', $request->userAgent );
+	}
+
+	/** User-agent pattern for the mobile copy. ServerRules mirrors it. */
+	public const MOBILE_AGENTS = 'Mobile|Android|iPhone|iPad';
 
 	/**
 	 * The query string that selects a separately cached copy: everything but the

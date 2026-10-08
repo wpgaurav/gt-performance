@@ -101,6 +101,8 @@ final class AdminModule implements Module {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'afterSettingsUpdate' ), 10, 2 );
 		add_action( 'admin_post_gtperf_install_dropin', array( $this, 'installDropin' ) );
+		add_action( 'admin_post_gtperf_rules_add', array( $this, 'addServerRules' ) );
+		add_action( 'admin_post_gtperf_rules_remove', array( $this, 'removeServerRules' ) );
 		add_action( 'admin_post_gtperf_setup_probe', array( $this, 'setupProbe' ) );
 		add_action( 'admin_post_gtperf_setup_mode', array( $this, 'setupMode' ) );
 		add_action( 'admin_post_gtperf_setup_verify', array( $this, 'setupVerify' ) );
@@ -389,6 +391,7 @@ final class AdminModule implements Module {
 		<div class="wrap gtp-admin">
 			<?php $this->renderHeader( $tab ); ?>
 			<?php $this->renderNotice(); ?>
+			<?php $this->renderNetworkNotice(); ?>
 			<?php settings_errors( Settings::OPTION ); ?>
 			<main class="gtp-admin__main">
 				<?php
@@ -453,6 +456,97 @@ final class AdminModule implements Module {
 			</main>
 		</div>
 		<?php
+	}
+
+	/**
+	 * On a network, say which parts of this screen belong to this site alone.
+	 */
+	private function renderNetworkNotice(): void {
+		if ( ! is_multisite() ) {
+			return;
+		}
+		$inherits = false === get_option( Settings::OPTION, false );
+		?>
+		<div class="notice notice-info inline"><p>
+			<?php esc_html_e( 'Multisite network: these settings, bypass rules, and the page cache apply to this site only. The page-cache drop-in and WP_CACHE are shared and managed by a network administrator; the Redis object cache is configured from the main site. Cloudflare and xCloud edge rules are not available on a network yet.', 'gt-performance' ); ?>
+			<?php if ( $inherits ) : ?>
+				<?php esc_html_e( 'This site has not saved its own settings yet and uses the network defaults.', 'gt-performance' ); ?>
+			<?php endif; ?>
+		</p></div>
+		<?php
+	}
+
+	/**
+	 * Server rules: what is installed, the buttons to add or remove it, and the
+	 * Nginx snippet to paste.
+	 */
+	private function renderServerRules(): void {
+		$rules     = new \GTPerformance\Cache\ServerRules();
+		$server    = \GTPerformance\Cache\ServerRules::server();
+		$installed = '' !== $rules->installed();
+		$error     = (string) \GTPerformance\Core\Network::getOption( \GTPerformance\Cache\ServerRules::ERROR_OPTION, '' );
+		$snippet   = $rules->nginxSnippet();
+		$manage    = \GTPerformance\Core\Network::canManageNetwork();
+		?>
+		<section class="gtp-panel">
+			<div class="gtp-panel__header">
+				<div>
+					<h3><?php esc_html_e( 'Server rules', 'gt-performance' ); ?></h3>
+					<p><?php esc_html_e( 'Rules that let the web server answer a hit from the stored copy. They are added only when you add them here, rewritten when your cache settings change, and removed when GT Performance is deactivated.', 'gt-performance' ); ?></p>
+				</div>
+			</div>
+			<div class="gtp-fields">
+				<p>
+					<?php
+					/* translators: 1: web server name, 2: installed or not installed. */
+					echo esc_html( sprintf( __( 'Web server: %1$s. .htaccess rules: %2$s.', 'gt-performance' ), $server, $installed ? __( 'installed', 'gt-performance' ) : __( 'not installed', 'gt-performance' ) ) );
+					?>
+				</p>
+				<?php if ( '' !== $error ) : ?>
+					<p class="gtp-warning"><?php echo esc_html( $error ); ?></p>
+				<?php endif; ?>
+				<?php if ( \GTPerformance\Cache\LiteSpeedCache::pluginOwnsCache() ) : ?>
+					<p class="gtp-warning"><?php esc_html_e( 'The LiteSpeed Cache plugin is active on this site, so GT Performance leaves LiteSpeed\'s cache headers, vary cookie, and purges to it. Two owners would contradict each other on every page. Deactivate LiteSpeed Cache to let GT Performance drive the server cache; hosting panels such as xCloud activate it when you switch their LiteSpeed cache on.', 'gt-performance' ); ?></p>
+				<?php endif; ?>
+				<?php if ( 'litespeed' === $server ) : ?>
+					<p><?php esc_html_e( 'This server is LiteSpeed. Turn on "Let LiteSpeed cache pages" so the server answers hits without PHP. The static-file rules skip LiteSpeed: in testing OpenLiteSpeed served those copies even to signed-in visitors and to URLs with query strings. Adding server rules here only switches on LiteSpeed\'s cache lookup, which most LiteSpeed servers already do.', 'gt-performance' ); ?></p>
+				<?php elseif ( 'nginx' === $server ) : ?>
+					<p><?php esc_html_e( 'Nginx does not read .htaccess. Paste the snippet below into the site\'s server block and reload Nginx. Paste it again after changing cache exclusions.', 'gt-performance' ); ?></p>
+				<?php endif; ?>
+				<?php if ( ! $manage ) : ?>
+					<p><?php esc_html_e( 'On this network the server rules are shared by every site, so a network administrator adds or removes them.', 'gt-performance' ); ?></p>
+				<?php elseif ( \GTPerformance\Cache\ServerRules::enabled() ) : ?>
+					<?php $this->actionButton( 'gtperf_rules_remove', __( 'Remove server rules', 'gt-performance' ) ); ?>
+				<?php else : ?>
+					<?php $this->actionButton( 'gtperf_rules_add', __( 'Add server rules', 'gt-performance' ) ); ?>
+				<?php endif; ?>
+				<?php if ( '' !== $snippet ) : ?>
+					<p><label for="gtperf-nginx"><?php esc_html_e( 'Nginx configuration', 'gt-performance' ); ?></label></p>
+					<textarea id="gtperf-nginx" class="large-text code" rows="12" readonly><?php echo esc_textarea( $snippet ); ?></textarea>
+				<?php else : ?>
+					<p><?php esc_html_e( 'Turn on "Keep copies the web server can serve" and save to generate the rules.', 'gt-performance' ); ?></p>
+				<?php endif; ?>
+			</div>
+		</section>
+		<?php
+	}
+
+	public function addServerRules(): void {
+		$this->guard( 'gtperf_rules_add' );
+		if ( ! \GTPerformance\Core\Network::canManageNetwork() ) {
+			$this->redirect( 'gtperf_network_only', 'cache' );
+		}
+		$result = \GTPerformance\Cache\ServerRules::enable();
+		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'rules-added', 'cache' );
+	}
+
+	public function removeServerRules(): void {
+		$this->guard( 'gtperf_rules_remove' );
+		if ( ! \GTPerformance\Core\Network::canManageNetwork() ) {
+			$this->redirect( 'gtperf_network_only', 'cache' );
+		}
+		$result = \GTPerformance\Cache\ServerRules::disable();
+		$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'rules-removed', 'cache' );
 	}
 
 	public function installDropin(): void {
@@ -1129,6 +1223,12 @@ final class AdminModule implements Module {
 		$this->checkbox( 'cache', 'separate_mobile', __( 'Separate cache for mobile HTML', 'gt-performance' ), __( 'Store a separate copy for phones. Only needed if your site sends different HTML to them.', 'gt-performance' ), $settings, __( 'Leave this off for a normal responsive theme. It doubles everything that has to be stored and cleared.', 'gt-performance' ) );
 		$this->panelClose();
 
+		$this->panelOpen( __( 'Web server delivery', 'gt-performance' ), __( 'Answer cache hits before PHP starts, and compress each page once instead of on every visit.', 'gt-performance' ) );
+		$this->checkbox( 'cache', 'precompress', __( 'Store compressed copies', 'gt-performance' ), __( 'Keep a gzip copy of each stored page, plus a Brotli copy when PHP has the brotli extension, and send the one the browser accepts.', 'gt-performance' ), $settings, __( 'Uses roughly one more file per page and less CPU on every hit.', 'gt-performance' ) );
+		$this->checkbox( 'cache', 'litespeed', __( 'Let LiteSpeed cache pages', 'gt-performance' ), __( 'On LiteSpeed or OpenLiteSpeed, mark each page GT Performance would cache so the server keeps it and answers hits without PHP. Edits, purges, and setting changes clear the server\'s copies too.', 'gt-performance' ), $settings, __( 'Signed-in visitors and shoppers get a _lscache_vary cookie so the server never hands them the public copy. Not used together with a separate mobile cache.', 'gt-performance' ) );
+		$this->checkbox( 'cache', 'static', __( 'Keep copies the web server can serve', 'gt-performance' ), __( 'Write each eligible page where Apache, LiteSpeed, or Nginx can serve it without PHP. Takes effect once the server rules below are added.', 'gt-performance' ), $settings, __( 'Pages that send their own security headers from PHP, pages with query strings, and mobile copies keep going through PHP.', 'gt-performance' ) );
+		$this->panelClose();
+
 		$this->panelOpen( __( 'Cache lifetime', 'gt-performance' ), __( 'Shorter times suit sites that change often.', 'gt-performance' ) );
 		$this->renderCachePresets();
 		$this->number( 'cache', 'fresh_ttl', __( 'Fresh cache lifetime', 'gt-performance' ), __( 'Seconds before a cached page needs regeneration.', 'gt-performance' ), $settings, 0, 604800, __( 'seconds', 'gt-performance' ), '1', __( 'How long a stored page is served before WordPress builds it again.', 'gt-performance' ) );
@@ -1160,6 +1260,7 @@ final class AdminModule implements Module {
 		$this->textarea( 'cache', 'preload_sitemaps', __( 'Sitemap sources', 'gt-performance' ), __( 'One sitemap URL from this site per line, up to 10. Leave empty to use the WordPress sitemap and any sitemaps listed in robots.txt.', 'gt-performance' ), $settings, home_url( '/sitemap_index.xml' ), __( 'Nested indexes are followed five levels deep. Other domains are ignored.', 'gt-performance' ) );
 		$this->panelClose();
 		$this->settingsFormClose();
+		$this->renderServerRules();
 	}
 
 	/**
@@ -3729,11 +3830,26 @@ PHP;
 		<?php
 	}
 
+	/**
+	 * Actions that reach the zone-wide edge, which a network does not support yet.
+	 */
+	private const EDGE_ACTIONS = array(
+		'gtperf_xcloud_refresh',
+		'gtperf_cloudflare_sync',
+		'gtperf_cloudflare_preview',
+		'gtperf_cloudflare_diagnose',
+		'gtperf_cloudflare_token',
+		'gtperf_cloudflare_disconnect',
+	);
+
 	private function guard( string $action ): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You are not allowed to manage GT Performance.', 'gt-performance' ) );
 		}
 		check_admin_referer( $action );
+		if ( is_multisite() && in_array( $action, self::EDGE_ACTIONS, true ) ) {
+			$this->redirect( 'gtperf_network_edge', 'dashboard' );
+		}
 	}
 
 	/**
@@ -3832,6 +3948,8 @@ PHP;
 			'redis-installed'           => array( __( 'The Redis object-cache drop-in was installed.', 'gt-performance' ), 'success' ),
 			'redis-connected'           => array( __( 'Redis accepted the saved credentials and passed the connection test.', 'gt-performance' ), 'success' ),
 			'cache-purged'              => array( __( 'GT Performance cache was purged.', 'gt-performance' ), 'success' ),
+			'rules-added'               => array( __( 'Server rules added. Stored pages are now served by the web server where the rules allow it.', 'gt-performance' ), 'success' ),
+			'rules-removed'             => array( __( 'Server rules removed. Every hit goes through the PHP drop-in again.', 'gt-performance' ), 'success' ),
 			'cache-purge-partial'       => array( __( 'The local page cache was cleared, but Cloudflare could not finish its purge. Review the latest Cloudflare purge below.', 'gt-performance' ), 'error' ),
 			'cloudflare-synced'         => array( __( 'Cloudflare connected, the managed cache rule was synchronized, and this site\'s pages were purged from Cloudflare so nothing cached under an earlier rule is served.', 'gt-performance' ), 'success' ),
 			'cloudflare-synced-unpurged' => array( __( 'The managed cache rule was synchronized, but purging this site\'s pages from Cloudflare failed. Pages Cloudflare stored earlier may be served until they expire; purge them from the Cloudflare tab.', 'gt-performance' ), 'warning' ),
@@ -3905,6 +4023,13 @@ PHP;
 			'xcloud-edge-conflict'     => array( __( 'xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules.', 'gt-performance' ), 'warning' ),
 			'gtperf_diagnostic_url'        => array( __( 'Enter a valid URL from this WordPress site.', 'gt-performance' ), 'error' ),
 			'gtperf_purge_verification_http' => array( __( 'The purge ran, but GT Performance could not fetch the public page for verification.', 'gt-performance' ), 'warning' ),
+			'gtperf_htaccess_write'        => array( __( '.htaccess could not be updated, so the server rules were not changed. Check its file permissions.', 'gt-performance' ), 'error' ),
+			'gtperf_rules_litespeed'       => array( __( 'Server rules were not added: LiteSpeed does not apply them reliably. Hits keep going through the PHP drop-in, with stored compressed copies.', 'gt-performance' ), 'warning' ),
+			'gtperf_htaccess_read'         => array( __( '.htaccess could not be read.', 'gt-performance' ), 'error' ),
+			'gtperf_htaccess_link'         => array( __( '.htaccess is a symbolic link, so GT Performance leaves it alone.', 'gt-performance' ), 'warning' ),
+			'gtperf_network_only'          => array( __( 'This file is shared by every site on the network. A network administrator has to install it.', 'gt-performance' ), 'warning' ),
+			'gtperf_network_edge'          => array( __( 'Cloudflare and xCloud edge rules are not available on a multisite network yet. Each site\'s own page cache still works.', 'gt-performance' ), 'warning' ),
+			'gtperf_site_map'              => array( __( 'The network site map could not be written. Check the cache directory permissions.', 'gt-performance' ), 'error' ),
 			'gtperf_dropin_conflict'       => array( __( 'Another plugin owns advanced-cache.php. Disable or migrate that cache before installing this drop-in.', 'gt-performance' ), 'warning' ),
 			'gtperf_dropin_directory'      => array( __( 'The WordPress content directory is not writable, so the page-cache drop-in could not be installed.', 'gt-performance' ), 'error' ),
 			'gtperf_dropin_write'          => array( __( 'GT Performance could not write the page-cache drop-in.', 'gt-performance' ), 'error' ),

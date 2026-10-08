@@ -70,7 +70,7 @@ final class ObjectCacheInstaller {
 
 	public static function syncVersion(): void {
 		$signature = self::signature();
-		if ( (string) get_option( self::VERSION_OPTION, '' ) === $signature ) {
+		if ( (string) \GTPerformance\Core\Network::getOption( self::VERSION_OPTION, '' ) === $signature ) {
 			return;
 		}
 
@@ -90,13 +90,18 @@ final class ObjectCacheInstaller {
 			return;
 		}
 
-		update_option( self::VERSION_OPTION, $signature, false );
+		\GTPerformance\Core\Network::updateOption( self::VERSION_OPTION, $signature );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
 		wp_cache_delete( 'cron', 'options' );
 	}
 
 	public function install(): bool|\WP_Error {
+		// One object-cache.php and one configuration serve the whole network, and the
+		// main site owns that configuration.
+		if ( is_multisite() && ( ! is_main_site() || ! \GTPerformance\Core\Network::canManageNetwork() ) ) {
+			return new \WP_Error( 'gtperf_network_only', __( 'On a multisite network, a network administrator installs the Redis object cache from the main site.', 'gt-performance' ) );
+		}
 		if ( ! class_exists( '\\Redis' ) ) {
 			return new \WP_Error( 'gtperf_redis_extension', __( 'The PHP Redis extension is not installed.', 'gt-performance' ) );
 		}
