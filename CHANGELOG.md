@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.3.0 - 2026-10-08
+
+Multisite support, compressed copies of every stored page, LiteSpeed server-cache integration, web-server delivery on Apache and Nginx, and a fix for store cookies dropping out of the cache rules after an update.
+
+New
+
+- WordPress multisite, subfolder and subdomain. Each site keeps its own settings, compiled configuration, and page store under `cache/gt-performance/sites/{blog_id}/`. The shared advanced-cache.php picks the site from the host and path through `sites.json` before WordPress loads, so one site's bypass rules and purges never reach another. A suspended site is never answered from its parent's store. A site compiles only in its own requests, so its commerce rules come from its own plugins. New sites provision themselves on their first request.
+- Network admin screen and `wp gt-performance network status|purge|map|defaults`: purge every site, rebuild the site map, and copy one site's settings as defaults for sites that have not saved their own.
+- Stored compressed copies. Each page is stored with a gzip copy, plus Brotli when PHP has the brotli extension, and the drop-in sends the one the browser accepts instead of the server compressing the page on every hit. Turn it off with "Store compressed copies".
+- "Let LiteSpeed cache pages". On LiteSpeed Web Server and OpenLiteSpeed, every page GT Performance would cache is marked `X-LiteSpeed-Cache-Control: public` with a site tag and a URL tag, so the server answers hits without starting PHP; drop-in hits are marked too, with their remaining freshness. Edits, comments, purges, and setting changes send `X-LiteSpeed-Purge` for the same URLs, or the whole site. Purges from WP-CLI or a system cron are queued and delivered by a loopback request. Signed-in visitors, commenters, and shoppers get the `_lscache_vary` cookie, so the server never hands them the public copy. On a network each site has its own tag, and `network purge` clears every site.
+- On LiteSpeed, the server rules switch on `CacheLookup` and drop the ignored campaign parameters (`utm_*`, `fbclid`, `gclid`, …) from LiteSpeed's cache key with `CacheKeyModify`, so a campaign link is answered from the page's one copy. OpenLiteSpeed reads them at its next restart.
+- GT Performance steps aside from LiteSpeed's cache while the LiteSpeed Cache plugin is active, and says so on the Cache tab. xCloud's LiteSpeed Cache switch activates that plugin.
+- "Keep copies the web server can serve" and Add server rules (Cache screen, network screen, or `wp gt-performance server-rules add`). On Apache a cache hit, including the stored gzip or Brotli copy, is answered by the web server without starting PHP. The rules sit above the WordPress block, are rewritten when cache settings change, and are removed on deactivation. Nginx gets a copy-ready snippet (`wp gt-performance server-rules nginx`).
+
+Fixes
+
+- After a plugin update, the drop-in republished itself from `plugins_loaded` priority 1, before the commerce and compatibility modules had registered, so the compiled configuration lost every store's cart and session cookies and paths. The drop-in then served cached pages to shoppers until settings were saved again. Drop-ins now republish after every module is registered, and a compile that runs without the commerce module clears the stored policy hash so the next request compiles again.
+
+Notes
+
+- A bypass cookie the visitor got without any PHP response seeing it (set by JavaScript, or by another site) does not carry `_lscache_vary`, so LiteSpeed can still hand that visitor its public copy. Rewrite rules cannot close this on OpenLiteSpeed: `E=Cache-Control:no-cache` on a cookie match was ignored in 30 of 30 tries.
+- LiteSpeed is excluded from the server rules. On OpenLiteSpeed, rules like these served stored pages to requests with a login cookie or a query string in up to 49 of 60 tries, while Apache honored every condition. LiteSpeed sites keep the PHP drop-in and get the stored compressed copies.
+- Cloudflare and xCloud edge rules are off on a multisite network: they are zone-wide, and one site's bypass rules would decide another's.
+- On a network, the page-cache drop-in, WP_CACHE, and the server rules are installed by a network administrator; the Redis object cache is configured from the main site.
+- Pages whose PHP sends its own CSP, HSTS, framing, or X-Robots-Tag headers, pages with query strings, URLs without a trailing slash, and mobile copies stay with the PHP drop-in, which replays those headers.
+
 ## 1.2.1 - 2026-09-28
 
 A fix for "Don't cache this page" in optimize-only mode, and admin and CLI text that now matches the screens it describes.

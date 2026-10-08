@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -41,6 +41,9 @@ GT Performance suits blogs, content sites, online stores, and anyone who manages
 * **JavaScript defer and delay**: Defer follows WordPress's own script dependencies, so inline jQuery keeps working. Analytics plugin scripts are protected automatically.
 * **Explain this page**: Shows why any URL is or isn't cached, what your server holds, and whether Cloudflare agrees.
 * **Safe mode**: One constant in `wp-config.php` switches off every optimization and cache read without touching a setting.
+* **Multisite**: Each site on a network keeps its own settings, bypass rules, and page cache, on subfolder and subdomain networks alike.
+* **LiteSpeed's own cache**: On LiteSpeed and OpenLiteSpeed, the server keeps the pages GT Performance would cache and answers hits without starting PHP. Edits and purges clear the server's copies too.
+* **Compressed once**: Every stored page keeps a gzip copy, plus Brotli when PHP has the extension, so no visit compresses it again.
 
 ### Page caching
 
@@ -54,6 +57,17 @@ GT Performance suits blogs, content sites, online stores, and anyone who manages
 * Optimize-only mode for hosts that already cache pages, such as LiteSpeed, Hostinger, xCloud, and Kinsta: pages are optimized on their way into your host's cache, and nothing is stored twice.
 * Query parameters that change the page, such as `orderby` or `lang`, can get a cached copy per value instead of skipping the cache. Purging the page clears every copy.
 * Saving a setting purges only when the change affects cached pages, so a new API token or cleanup schedule leaves the cache and Cloudflare alone.
+* Each stored page keeps a gzip copy, and a Brotli copy when PHP has the brotli extension. The drop-in sends the one the browser accepts.
+* Optional server rules let Apache answer hits, compressed copies included, without starting PHP. Nginx gets a copy-ready snippet. LiteSpeed is left out of these rules on purpose: in testing, OpenLiteSpeed served such copies to signed-in visitors.
+* On LiteSpeed Web Server and OpenLiteSpeed, "Let LiteSpeed cache pages" marks every page GT Performance would cache for the server's own cache, tagged per site and per URL, and purges it on every edit. Signed-in visitors, commenters, and shoppers get LiteSpeed's `_lscache_vary` cookie, so they never receive the public copy. Purges from WP-CLI or a system cron reach the server through a loopback request.
+
+### Multisite
+
+* Works on subfolder and subdomain networks, including sites on their own domains.
+* Each site has its own settings, compiled configuration, and page store. One site's checkout rules or purges never reach another.
+* The shared `advanced-cache.php` drop-in finds the site from the host and path before WordPress loads, the way WordPress routes the request.
+* The network admin screen and `wp gt-performance network` purge every site, rebuild the site map, and set defaults for sites that have not saved their own settings.
+* The drop-in, `WP_CACHE`, and server rules are installed by a network administrator, and the Redis object cache is configured from the main site. Cloudflare and xCloud edge rules are not available on a network yet.
 
 ### Unused CSS, built on your server
 
@@ -121,13 +135,16 @@ On WordPress 7.0 or later, an optional adviser explains diagnostics using the AI
 * Site Kit by Google and PixelYourSite, whose scripts are never deferred or delayed
 * Redis Object Cache `wp-config.php` constants
 * WordPress Studio and WordPress Playground (SQLite)
+* Apache, Nginx, LiteSpeed Web Server, and OpenLiteSpeed
+* WordPress multisite, subfolder and subdomain
 
 ### Before you turn it on
 
 * Page caching starts from the Setup tab, which checks your server, detects a host page cache, installs the drop-in (or switches to optimize-only mode), and confirms a real cached page.
 * Language and currency plugins such as WPML, Polylang, TranslatePress, Weglot, and WooCommerce currency switchers can show visitors different pages at the same URL. The Integrations tab says what to set for each.
 * Riskier optimizations such as unused CSS removal and JavaScript delay are off by default. Test them on staging first.
-* GT Performance runs on single sites. It won't activate on multisite.
+* On a multisite network, network-activate GT Performance, then install the page-cache drop-in from the network admin screen or with `wp gt-performance cache install-dropin`. Each site sets itself up on its first visit.
+* On LiteSpeed, leave the LiteSpeed Cache plugin off if you want GT Performance to drive the server cache. Hosting panels such as xCloud activate it when you switch their LiteSpeed cache on; GT Performance steps aside while it is active.
 
 ### Privacy
 
@@ -185,7 +202,15 @@ Yes. Enter its HTTPS origin-pull URL on the CDN tab and select the static-file e
 
 = Does it work on multisite? =
 
-No. A network shares one compiled configuration and cache directory, so one site's settings would decide another site's cache behavior. GT Performance won't activate on multisite.
+Yes, from 1.3.0, on subfolder and subdomain networks. Every site keeps its own settings, bypass rules, and page cache, so one store's cart cookies or one site's purge never affect another site. Network-activate the plugin, then install the drop-in once from the network admin screen. Cloudflare and xCloud edge rules are not available on a network yet; each site's own page cache works without them.
+
+= Does it work with LiteSpeed's server cache? =
+
+Yes. Turn on "Let LiteSpeed cache pages" on the Cache tab. GT Performance tells the server which pages to keep, tags them per site and per URL, and purges them on every edit. Signed-in visitors and shoppers get the `_lscache_vary` cookie, which keeps them away from the public copy. The LiteSpeed Cache plugin does the same job, so GT Performance steps aside while that plugin is active.
+
+= Can the web server serve cached pages without PHP? =
+
+On Apache, yes: turn on "Keep copies the web server can serve" and add the server rules on the Cache tab. On Nginx, paste the snippet shown there. On LiteSpeed, use "Let LiteSpeed cache pages" instead; the server rules skip LiteSpeed because OpenLiteSpeed did not apply their cookie and query conditions reliably.
 
 = Can I undo a settings change? =
 
@@ -222,6 +247,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.3.0 =
+Multisite support, compressed copies of every stored page, LiteSpeed server-cache integration, and optional Apache and Nginx rules. Fixes an update path that could leave store cart cookies out of the compiled cache rules until settings were saved. Recommended for every site, especially stores.
+
 = 1.2.1 =
 In optimize-only mode, pages marked "Don't cache this page" are now sent no-store, so your host's cache can't keep them. Recommended for sites using optimize-only mode.
 
@@ -252,6 +280,14 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 == Changelog ==
 
 The complete release history is on the [GT Performance changelog](https://products.gatilab.com/changelogs/gt-performance/), and planned work is on the [roadmap](https://products.gatilab.com/roadmaps/gt-performance/).
+
+= 1.3.0 =
+* New: WordPress multisite, subfolder and subdomain. Each site keeps its own settings, compiled configuration, and page cache under `cache/gt-performance/sites/<id>/`, and the shared drop-in picks the site from the host and path before WordPress loads. Network admin screen and `wp gt-performance network status|purge|map|defaults`.
+* New: stored compressed copies. Each cached page keeps a gzip copy, and a Brotli copy when PHP has the brotli extension; the drop-in sends the one the browser accepts. Turn it off with "Store compressed copies".
+* New: "Let LiteSpeed cache pages". On LiteSpeed and OpenLiteSpeed the server keeps and serves the pages GT Performance would cache, tagged per site and URL and purged on every change, with `_lscache_vary` for signed-in visitors and shoppers. GT Performance steps aside while the LiteSpeed Cache plugin is active.
+* New: optional server rules (`wp gt-performance server-rules add|remove|status|nginx`). Apache serves stored pages, compressed copies included, without PHP; Nginx gets a copy-ready snippet; on LiteSpeed the rules switch on the cache lookup and drop campaign parameters such as `utm_source` from its key. Rules are rewritten when settings change and removed on deactivation.
+* Fixed: after a plugin update, republishing the drop-in compiled the cache rules before the store integrations had registered, so cart and session cookies of WooCommerce, Easy Digital Downloads, and FluentCart could be missing from the drop-in's rules until settings were next saved. The drop-in now republishes after every module is loaded, and a compile that missed them repeats on the next request.
+* Bypass paths written for the site root, such as `/wp-admin/` or `/account/`, also cover the same paths below a subfolder site.
 
 = 1.2.1 =
 * Optimize-only mode: pages marked "Don't cache this page", and pages a plugin marks with DONOTCACHEPAGE, are now sent no-store. Before, they skipped optimization but sent no cache headers, so a host cache such as LiteSpeed, Hostinger, or Kinsta could store them.
