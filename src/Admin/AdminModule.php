@@ -207,12 +207,14 @@ final class AdminModule implements Module {
 		if ( $this->pageHook !== $hook ) {
 			return;
 		}
+		$cssFile = GTPERF_DIR . '/assets/admin.css';
+		$cssVersion = GTPERF_VERSION . '.' . ( is_file( $cssFile ) ? (string) filemtime( $cssFile ) : '0' );
 
 		wp_enqueue_style(
 			'gt-performance-admin',
 			plugins_url( 'assets/admin.css', GTPERF_FILE ),
 			array( 'dashicons' ),
-			GTPERF_VERSION
+			$cssVersion
 		);
 		wp_enqueue_script(
 			'gt-performance-admin',
@@ -1647,7 +1649,7 @@ final class AdminModule implements Module {
 			'failed' => __( 'Failed; action needed', 'gt-performance' ),
 		);
 		?>
-		<section class="gtp-panel">
+		<section class="gtp-panel gtp-panel--padded">
 			<h3><?php esc_html_e( 'Latest Cloudflare purge', 'gt-performance' ); ?></h3>
 			<p><strong><?php echo esc_html( $labels[ $result['status'] ?? '' ] ?? __( 'Unknown', 'gt-performance' ) ); ?></strong> · <?php echo esc_html( (string) ( $result['created_at'] ?? '' ) ); ?> UTC</p>
 			<p><?php echo esc_html( (string) ( $result['message'] ?? '' ) ); ?></p>
@@ -2291,7 +2293,7 @@ PHP;
 
 	private function renderQueue(): void {
 		if ( ! \GTPerformance\Core\Database::queueReady() ) {
-			echo '<section class="gtp-panel"><h3>' . esc_html__( 'Queue upgrade in progress', 'gt-performance' ) . '</h3><p>' . esc_html__( 'New jobs wait until the queue schema and existing jobs are ready. Reload this screen to continue the bounded migration. Active workers keep their leases. If this persists, check database permissions and that the jobs table uses InnoDB.', 'gt-performance' ) . '</p></section>';
+			echo '<section class="gtp-panel gtp-panel--padded"><h3>' . esc_html__( 'Queue upgrade in progress', 'gt-performance' ) . '</h3><p>' . esc_html__( 'New jobs wait until the queue schema and existing jobs are ready. Reload this screen to continue the bounded migration. Active workers keep their leases. If this persists, check database permissions and that the jobs table uses InnoDB.', 'gt-performance' ) . '</p></section>';
 			return;
 		}
 		$queue  = new QueueModule( new \GTPerformance\Core\Logger() );

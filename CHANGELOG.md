@@ -6,6 +6,7 @@
 - Managed Cloudflare rules exclude Markdown negotiation and authenticated requests. Apache, Nginx and LiteSpeed rules protect Markdown requests from HTML cache entries.
 - Documents origin and edge invalidation after manual plugin or theme deployments.
 - Preload requests bypass Cloudflare and LiteSpeed lookup so stale origin pages can actually be rebuilt.
+- Restores card padding for Cloudflare purge status and queue-upgrade messages; admin CSS revisions refresh independently of the plugin version.
 
 ## 1.3.0 - 2026-10-08
 
