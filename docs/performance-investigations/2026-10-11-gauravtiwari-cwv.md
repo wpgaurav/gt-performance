@@ -26,24 +26,6 @@ The DNA illustration still uses a large PNG. The ebook cover and Xbox image cand
 
 Next: inspect responsive candidates at common viewport widths and pixel densities, then validate compression and sharpness before replacing delivery variants.
 
-## Historical Failed Preloads
-
-Three preload jobs retain transport failures recorded on 8 October. The queue was draining during the latest checks, so these historical failures do not establish that the current queue is stopped.
-
-Next: inspect the three target URLs and failure details, retry appropriate jobs and record their outcomes. Check the actual queue hook, `gt_performance_run_queue`, and the existing server cron schedule (`DISABLE_WP_CRON` is enabled).
-
-## Cold-Cache Timeouts
-
-A full cache refresh briefly exposed timeouts while pages were being rebuilt. Warmed public pages subsequently answered normally; the cause of the cold-cache delays has not been isolated.
-
-Next: profile cold rebuild dependencies and verify bounded preload scheduling before repeating full-site purges.
-
-## Cloudflare Expression Headroom
-
-The current managed expression is 3,987 ASCII characters, leaving 109 characters under Cloudflare's [4,096-character expression limit](https://developers.cloudflare.com/ruleset-engine/rules-language/expressions/).
-
-Next: budget and simplify compilation as bypass policies grow, preserving private-page, representation and preload guards. Validate the resulting expression against the API.
-
 ## Evidence for Open Issues
 
 - [Retest results](</Users/gauravtiwari/Library/Mobile Documents/com~apple~CloudDocs/writing-system/__work/internal-page-performance-fixes-2026-10-11/RESULTS.md>)
