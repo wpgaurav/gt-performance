@@ -439,7 +439,7 @@ final class JobRepository {
 	public function defer( int $id, string $token, int $delay = 60 ): bool {
 		global $wpdb;
 		$table = $wpdb->prefix . 'gtperf_jobs';
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$changed = $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE {$table} SET status = 'pending', attempts = GREATEST(0, attempts - 1),
@@ -452,7 +452,7 @@ final class JobRepository {
 				$token
 			)
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return 1 === (int) $changed;
 	}
 

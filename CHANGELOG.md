@@ -11,6 +11,7 @@
 - Documents origin and edge invalidation after manual plugin or theme deployments.
 - Preload requests bypass Cloudflare and LiteSpeed lookup so stale origin pages can actually be rebuilt.
 - Restores card padding for Cloudflare purge status and queue-upgrade messages; admin CSS revisions refresh independently of the plugin version.
+- Corrects queue SQL annotation scope and makes CI enforce Plugin Check warnings and performance checks.
 
 ## 1.3.0 - 2026-10-08
 

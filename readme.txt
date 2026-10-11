@@ -287,6 +287,7 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 * Managed Cloudflare and generated server rules protect negotiated representations and Authorization headers.
 * Documents complete origin and edge invalidation after manual deployments.
 * Preload requests bypass Cloudflare and LiteSpeed lookup to rebuild stale origin pages.
+* Restores padding in Cloudflare purge status and queue-upgrade cards.
 
 The complete release history is on the [GT Performance changelog](https://products.gatilab.com/changelogs/gt-performance/), and planned work is on the [roadmap](https://products.gatilab.com/roadmaps/gt-performance/).
 

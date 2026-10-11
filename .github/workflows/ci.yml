@@ -143,11 +143,11 @@ jobs:
         uses: wordpress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
         with:
           build-dir: ${{ runner.temp }}/pcp/gt-performance
-          # Errors fail the build from 1.1.0. Warnings are surfaced but not enforced
-          # until the i18n and direct-database backlog is cleared in 2.3.0.
+          # The submission package must pass without errors or warnings.
           categories: |
             general
             plugin_repo
             security
-          ignore-warnings: true
+            performance
+          ignore-warnings: false
           wp-version: "6.8"
