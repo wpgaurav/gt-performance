@@ -82,6 +82,7 @@ final class RuleManager {
 		// earlier rule is known to be right under this one.
 		$purged                 = $this->client->purgeHosts( $zoneId, Settings::canonicalHosts() );
 		$result['gtperf_purge'] = is_wp_error( $purged ) ? $purged->get_error_message() : 'ok';
+		$result['gtperf_expression_mode'] = $this->compiler->expressionPlan( $host, $cache, $this->edgeTtl() > 0 )['mode'];
 
 		return $result;
 	}

@@ -34,7 +34,7 @@ final class RuleExpressionTest extends TestCase {
 		);
 
 		// Both the canonical `/checkout` and everything under `/checkout/` must be excluded.
-		self::assertStringContainsString( 'http.request.uri.path eq "/checkout"', $expression );
+		self::assertStringContainsString( 'http.request.uri.path in {"/checkout"}', $expression );
 		self::assertStringContainsString( 'starts_with(http.request.uri.path, "/checkout/")', $expression );
 	}
 
@@ -47,8 +47,8 @@ final class RuleExpressionTest extends TestCase {
 		// The boundary-anchored form must not degrade to the substring `contains "s="`,
 		// which would also exclude unrelated params such as `utms=`. Both the leading
 		// parameter and any later one have to be covered.
-		self::assertStringContainsString( 'starts_with(http.request.uri.query, "s=")', $expression );
-		self::assertStringContainsString( 'http.request.uri.query contains "&s="', $expression );
+		self::assertStringContainsString( 'http.request.uri.args.names', $expression );
+		self::assertStringContainsString( '"s"', $expression );
 		self::assertStringNotContainsString( 'query contains "s="', $expression );
 	}
 
@@ -70,8 +70,25 @@ final class RuleExpressionTest extends TestCase {
 		$expression = ( new RuleExpression() )->compile( 'www.example.com', array( 'bypass_query_params' => $parameters ) );
 
 		foreach ( $parameters as $parameter ) {
-			self::assertStringContainsString( 'starts_with(http.request.uri.query, "' . $parameter . '=")', $expression );
-			self::assertStringContainsString( 'http.request.uri.query contains "&' . $parameter . '="', $expression );
+			self::assertStringContainsString( '"' . $parameter . '"', $expression );
 		}
+	}
+	public function test_whole_decoded_query_names_and_path_boundaries_stay_protected(): void {
+		$compiler = new RuleExpression();
+		$policy = array(
+			'bypass_paths' => array( '/checkout/', '/wp-json/', '/wp-json/fluent-cart/' ),
+			'bypass_query_params' => array( 's', 'wc-ajax', '0' ),
+			'bypass_cookies' => array( 'fct_', 'fct_cart_hash' ),
+		);
+		foreach ( array( '/checkout', '/checkout/pay', '/wp-json/fluent-cart/cart', '/post/?s', '/post/?wc%2Dajax=cart', '/post/?WC-AJAX=cart', '/post/?0=private' ) as $path ) {
+			self::assertFalse( $compiler->matches( \GTPerformance\Cache\RequestContext::fromUrl( 'https://example.com' . $path ), 'example.com', $policy ), $path );
+		}
+		foreach ( array( '/checkout-summary', '/post/?forms=1', '/post/?utms=1' ) as $path ) {
+			self::assertTrue( $compiler->matches( \GTPerformance\Cache\RequestContext::fromUrl( 'https://example.com' . $path ), 'example.com', $policy ), $path );
+		}
+		$expression = $compiler->compile( 'example.com', $policy );
+		self::assertStringNotContainsString( '/wp-json/fluent-cart', $expression );
+		self::assertStringNotContainsString( 'fct_cart_hash', $expression );
+		self::assertStringContainsString( '"0"', $expression );
 	}
 }

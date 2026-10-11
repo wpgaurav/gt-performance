@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\Cache;
 
 use GTPerformance\Core\Settings;
+use GTPerformance\Core\Logger;
 use GTPerformance\Diagnostics\ResponseSnapshot;
 use GTPerformance\Queue\JobLease;
 
@@ -30,9 +31,9 @@ final class Preloader {
 	/**
 	 * Request a URL as a preload and report what actually happened.
 	 *
-	 * @return array{status:string,detail:string,http:int}
+	 * @return array{status:string,detail:string,http:int,error_code?:string,error_message?:string}
 	 */
-	public function preload( string $url, string $variant = 'public' ): array {
+	public function preload( string $url, string $variant = 'public', ?float $budgetSeconds = null ): array {
 		$agent   = 'mobile' === $variant ? self::MOBILE_AGENT . GTPERF_VERSION : 'GT-Performance-Preloader/' . GTPERF_VERSION;
 		$policy  = $this->policy();
 		$request = RequestContext::fromUrl( $url, array(), array(), $agent );
@@ -42,6 +43,18 @@ final class Preloader {
 		$decision = ( new Eligibility() )->decide( $request, $policy );
 		if ( ! $decision->cacheable ) {
 			return $this->outcome( 'skipped', sanitize_key( $decision->reason ), 0 );
+		}
+		$hash = ( new CacheKey() )->hash( ( new CacheKey() )->make( $request, $policy ) );
+		$metadata = is_readable( $this->store->pagePath( $hash ) ) ? $this->store->metadata( $hash ) : null;
+		if ( null !== $metadata && (int) ( $metadata['fresh_until'] ?? 0 ) >= time() ) {
+			// Warming targets the origin. The signed request bypasses the edge anyway;
+			// a fresh artifact needs no HTTP/PHP work, even after an edge-only purge.
+			return $this->outcome( 'origin_ready', 'existing', 0 );
+		}
+		if ( null !== $budgetSeconds && $budgetSeconds < 15 ) {
+			// Do not shorten a cold rebuild's timeout and spend a retry on the worker's
+			// time budget. Leave it pending for a run with its full request allowance.
+			return $this->outcome( 'deferred', 'worker_budget', 0 );
 		}
 
 		$started  = time();
@@ -55,12 +68,15 @@ final class Preloader {
 			)
 		);
 		if ( is_wp_error( $response ) ) {
-			return $this->outcome( 'failed', 'request_error', 0 );
+			return $this->outcome( 'failed', 'request_error', 0 ) + array(
+				'error_code' => sanitize_key( (string) $response->get_error_code() ),
+				'error_message' => Logger::redact( $response->get_error_message() ),
+			);
 		}
 
 		$snapshot = ( new ResponseSnapshot() )->fromWordPressResponse( $response );
 		$status   = (int) wp_remote_retrieve_response_code( $response );
-		$hash     = ( new CacheKey() )->hash( ( new CacheKey() )->make( $request, $policy ) );
+		clearstatcache( true, $this->store->pagePath( $hash ) );
 		$metadata = is_file( $this->store->pagePath( $hash ) ) ? $this->store->metadata( $hash ) : null;
 
 		return self::classify(

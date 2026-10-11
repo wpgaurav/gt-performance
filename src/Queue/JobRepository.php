@@ -435,6 +435,27 @@ final class JobRepository {
 		return 1 === (int) $updated;
 	}
 
+	/** Release an owned claim before its work starts, without consuming a retry. */
+	public function defer( int $id, string $token, int $delay = 60 ): bool {
+		global $wpdb;
+		$table = $wpdb->prefix . 'gtperf_jobs';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$changed = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table} SET status = 'pending', attempts = GREATEST(0, attempts - 1),
+			available_at = %s, locked_at = NULL, lock_token = NULL, lease_expires_at = NULL, updated_at = %s
+			WHERE id = %d AND lock_token = %s AND status = 'running' AND cancel_requested = 0
+			AND lease_expires_at >= UTC_TIMESTAMP()",
+				gmdate( 'Y-m-d H:i:s', time() + max( 0, $delay ) ),
+				current_time( 'mysql', true ),
+				$id,
+				$token
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return 1 === (int) $changed;
+	}
+
 	public function cancel( int $id ): bool {
 		global $wpdb;
 

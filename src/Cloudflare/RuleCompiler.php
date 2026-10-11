@@ -19,6 +19,43 @@ final class RuleCompiler {
 	 */
 	public const LEGACY_RULE_REF = 'gt-performance-free-html-cache';
 	public const FREE_RULE_LIMIT  = 10;
+	public const EXPRESSION_LIMIT = 4096;
+
+	/**
+	 * Never truncate exemptions to fit Cloudflare's expression limit. Restrict
+	 * caching to query-free URLs first; if the complete path/cookie policy still
+	 * cannot fit, bypass edge caching for this host instead.
+	 *
+	 * @param array<string, mixed> $cache Cache policy.
+	 * @return array{expression:string,mode:string,original_size:int,require_empty_query:bool,cache:bool}
+	 */
+	public function expressionPlan( string $host, array $cache, bool $requireEmptyQuery = false ): array {
+		$compiler = new RuleExpression();
+		$expression = $compiler->compile( $host, $cache, $requireEmptyQuery );
+		$original = strlen( $expression );
+		$mode = 'full';
+		if ( $original > self::EXPRESSION_LIMIT && ! $requireEmptyQuery ) {
+			$requireEmptyQuery = true;
+			$expression = $compiler->compile( $host, $cache, true );
+			$mode = 'queryless';
+		}
+		if ( strlen( $expression ) > self::EXPRESSION_LIMIT ) {
+			return array(
+				'expression' => '(http.host eq "' . addcslashes( self::normalizeHost( $host ), "\\\"\n\r" ) . '")',
+				'mode' => 'bypass',
+				'original_size' => $original,
+				'require_empty_query' => true,
+				'cache' => false,
+			);
+		}
+		return array(
+			'expression' => $expression,
+			'mode' => $mode,
+			'original_size' => $original,
+			'require_empty_query' => $requireEmptyQuery,
+			'cache' => true,
+		);
+	}
 
 	/**
 	 * Compile the managed cache rule.
@@ -35,6 +72,7 @@ final class RuleCompiler {
 	public function rule( string $host, array $cache, int $edgeTtl = 0, bool $allowCustomKey = true ): array {
 		$ignored = array_values( array_filter( array_map( 'strval', (array) ( $cache['ignored_query_params'] ?? array() ) ) ) );
 		$edgeTtl = max( 0, min( 31536000, $edgeTtl ) );
+		$expression = $this->expressionPlan( $host, $cache, $edgeTtl > 0 );
 		$action  = array(
 			'cache'       => true,
 			'edge_ttl'    => $edgeTtl > 0
@@ -60,11 +98,14 @@ final class RuleCompiler {
 				),
 			);
 		}
+		if ( ! $expression['cache'] ) {
+			$action = array( 'cache' => false );
+		}
 
 		return array(
 			'ref'               => self::managedRef( $host ),
-			'description'       => 'GT Performance: cache eligible public HTML',
-			'expression'        => ( new RuleExpression() )->compile( $host, $cache, $edgeTtl > 0 ),
+			'description'       => $expression['cache'] ? 'GT Performance: cache eligible public HTML' : 'GT Performance: bypass cache (expression limit)',
+			'expression'        => $expression['expression'],
 			'action'            => 'set_cache_settings',
 			'action_parameters' => $action,
 			'enabled'           => true,
@@ -119,6 +160,7 @@ final class RuleCompiler {
 		$expectedHash = $this->fingerprint( $expected );
 		$liveHash     = is_array( $managed ) ? $this->fingerprint( $managed ) : '';
 		$used         = count( $existingRules );
+		$expression = $this->expressionPlan( $host, $cache, $edgeTtl > 0 );
 
 		return array(
 			'operation'       => null === $managed ? 'create' : ( hash_equals( $expectedHash, $liveHash ) ? 'none' : 'update' ),
@@ -131,9 +173,13 @@ final class RuleCompiler {
 			'expected_hash'   => $expectedHash,
 			'live_hash'       => $liveHash,
 			'custom_key'      => isset( $expected['action_parameters']['cache_key']['custom_key'] ),
-			'override_origin' => $edgeTtl > 0,
+			'override_origin' => $edgeTtl > 0 && $expression['cache'],
 			'expression'      => (string) $expected['expression'],
 			'expression_size' => strlen( (string) $expected['expression'] ),
+			'expression_limit' => self::EXPRESSION_LIMIT,
+			'expression_mode' => $expression['mode'],
+			'expression_original_size' => $expression['original_size'],
+			'edge_cache_enabled' => $expression['cache'],
 			'conflicts'       => $conflicts,
 			'rule'            => $expected,
 		);

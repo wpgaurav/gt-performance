@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-11T01:08:34+00:00\n"
+"POT-Creation-Date: 2026-10-11T02:06:38+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: gt-performance\n"
@@ -18,9 +18,9 @@ msgstr ""
 #: gt-performance.php
 #: src/Abilities/AbilitiesModule.php:38
 #: src/Admin/AdminBarModule.php:33
-#: src/Admin/AdminModule.php:144
 #: src/Admin/AdminModule.php:145
-#: src/Admin/AdminModule.php:955
+#: src/Admin/AdminModule.php:146
+#: src/Admin/AdminModule.php:958
 #: src/Admin/PageOptionsBox.php:29
 #: src/Core/Network.php:344
 #: src/Core/Network.php:345
@@ -196,7 +196,7 @@ msgid "Saved purge-verification receipts, newest first: what a purge removed at 
 msgstr ""
 
 #: src/Abilities/ReadAbilities.php:288
-#: src/Diagnostics/CacheInspector.php:31
+#: src/Diagnostics/CacheInspector.php:32
 msgid "Use a URL from this WordPress site."
 msgstr ""
 
@@ -205,7 +205,7 @@ msgid "Open dashboard"
 msgstr ""
 
 #: src/Admin/AdminBarModule.php:53
-#: src/Admin/AdminModule.php:2212
+#: src/Admin/AdminModule.php:2221
 msgid "Explain this page"
 msgstr ""
 
@@ -230,7 +230,7 @@ msgid "Flush object cache"
 msgstr ""
 
 #: src/Admin/AdminBarModule.php:71
-#: src/Admin/AdminModule.php:2002
+#: src/Admin/AdminModule.php:2011
 msgid "Test Redis connection"
 msgstr ""
 
@@ -239,3192 +239,3204 @@ msgid "Object cache settings"
 msgstr ""
 
 #: src/Admin/AdminBarModule.php:84
-#: src/Admin/AdminModule.php:3938
+#: src/Admin/AdminModule.php:3947
 msgid "You are not allowed to manage GT Performance."
 msgstr ""
 
-#: src/Admin/AdminModule.php:175
+#: src/Admin/AdminModule.php:176
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/AdminModule.php:228
+#: src/Admin/AdminModule.php:231
 msgid "CSS status refreshed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:229
+#: src/Admin/AdminModule.php:232
 msgid "Status could not be refreshed. Reload this page and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:258
+#: src/Admin/AdminModule.php:261
 msgid "Page preview used to fetch important CSS classes"
 msgstr ""
 
-#: src/Admin/AdminModule.php:259
+#: src/Admin/AdminModule.php:262
 msgid "desktop"
 msgstr ""
 
-#: src/Admin/AdminModule.php:260
+#: src/Admin/AdminModule.php:263
 msgid "mobile"
 msgstr ""
 
 #. translators: 1: pages finished, 2: pages in total, 3: post type name, 4: page URL, 5: "desktop" or "mobile".
-#: src/Admin/AdminModule.php:262
+#: src/Admin/AdminModule.php:265
 #, php-format
 msgid "Checking pages: %1$d of %2$d done. Now: %3$s, %4$s (%5$s)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:263
+#: src/Admin/AdminModule.php:266
 msgid "All pages checked. Saving what was found…"
 msgstr ""
 
-#: src/Admin/AdminModule.php:264
+#: src/Admin/AdminModule.php:267
 msgid "There are no published pages to check."
 msgstr ""
 
-#: src/Admin/AdminModule.php:265
+#: src/Admin/AdminModule.php:268
 msgid "The page could not be opened here."
 msgstr ""
 
-#: src/Admin/AdminModule.php:266
+#: src/Admin/AdminModule.php:269
 msgid "Unused CSS is now rebuilding your pages so these styles are kept. CSS Status shows the progress."
 msgstr ""
 
-#: src/Admin/AdminModule.php:267
+#: src/Admin/AdminModule.php:270
 msgid "Unused CSS is off, so nothing changes yet. These are used as soon as you turn it on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:268
+#: src/Admin/AdminModule.php:271
 msgid "Done. Nothing new was found, so your CSS stays as it is."
 msgstr ""
 
-#: src/Admin/AdminModule.php:269
+#: src/Admin/AdminModule.php:272
 msgid "No page could be checked. The list below says why."
 msgstr ""
 
 #. translators: %d: number of page checks that failed.
-#: src/Admin/AdminModule.php:271
+#: src/Admin/AdminModule.php:274
 #, php-format
 msgid "%d page checks did not finish:"
 msgstr ""
 
-#: src/Admin/AdminModule.php:272
+#: src/Admin/AdminModule.php:275
 msgid "The results could not be saved. Reload this page and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:273
+#: src/Admin/AdminModule.php:276
 msgid "See CSS Status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:274
+#: src/Admin/AdminModule.php:277
 msgid "Turn on unused CSS"
 msgstr ""
 
-#: src/Admin/AdminModule.php:289
+#: src/Admin/AdminModule.php:292
 msgid "Another settings change is in progress. Your changes were not saved; try again in a moment."
 msgstr ""
 
 #. translators: %s: invalid selector regular expressions.
-#: src/Admin/AdminModule.php:336
+#: src/Admin/AdminModule.php:339
 #, php-format
 msgid "These selector regular expressions were not saved because they are invalid: %s"
 msgstr ""
 
-#: src/Admin/AdminModule.php:471
+#: src/Admin/AdminModule.php:474
 msgid "Multisite network: these settings, bypass rules, and the page cache apply to this site only. The page-cache drop-in and WP_CACHE are shared and managed by a network administrator; the Redis object cache is configured from the main site. Cloudflare and xCloud edge rules are not available on a network yet."
 msgstr ""
 
-#: src/Admin/AdminModule.php:473
+#: src/Admin/AdminModule.php:476
 msgid "This site has not saved its own settings yet and uses the network defaults."
 msgstr ""
 
-#: src/Admin/AdminModule.php:499
-#: src/Admin/AdminModule.php:2050
+#: src/Admin/AdminModule.php:502
+#: src/Admin/AdminModule.php:2059
 msgid "Not detected"
 msgstr ""
 
-#: src/Admin/AdminModule.php:502
+#: src/Admin/AdminModule.php:505
 msgid "LiteSpeed keeps cached pages itself when \"Let LiteSpeed cache pages\" is on. The rules only make sure its cache lookup is switched on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:503
+#: src/Admin/AdminModule.php:506
 msgid "Apache can send stored pages, compressed copies included, straight from disk."
 msgstr ""
 
-#: src/Admin/AdminModule.php:504
+#: src/Admin/AdminModule.php:507
 msgid "Nginx does not read .htaccess. Add the configuration below to the site's server block instead."
 msgstr ""
 
-#: src/Admin/AdminModule.php:505
+#: src/Admin/AdminModule.php:508
 msgid "The rules work on Apache and LiteSpeed. Nginx needs its configuration added by hand."
 msgstr ""
 
-#: src/Admin/AdminModule.php:510
+#: src/Admin/AdminModule.php:513
 msgid "Turn on \"Let LiteSpeed cache pages\" above and save first."
 msgstr ""
 
-#: src/Admin/AdminModule.php:512
+#: src/Admin/AdminModule.php:515
 msgid "Turn on \"Keep copies the web server can serve\" above and save first."
 msgstr ""
 
-#: src/Admin/AdminModule.php:518
+#: src/Admin/AdminModule.php:521
 #: src/Core/Network.php:469
 msgid "Server rules"
 msgstr ""
 
-#: src/Admin/AdminModule.php:519
+#: src/Admin/AdminModule.php:522
 msgid "Let the web server hand out cached pages by itself, so PHP and WordPress never start for a cache hit. Nothing is added until you click Add. GT Performance keeps the rules in step with your settings and removes them when it is deactivated."
 msgstr ""
 
-#: src/Admin/AdminModule.php:525
+#: src/Admin/AdminModule.php:528
 msgid "Web server"
 msgstr ""
 
-#: src/Admin/AdminModule.php:535
+#: src/Admin/AdminModule.php:538
 msgid "Rules in .htaccess"
 msgstr ""
 
-#: src/Admin/AdminModule.php:539
+#: src/Admin/AdminModule.php:542
 msgid "Added at the top of .htaccess. Rewritten whenever cache settings change."
 msgstr ""
 
-#: src/Admin/AdminModule.php:541
+#: src/Admin/AdminModule.php:544
 msgid "Switched on, but nothing to add yet for the current settings."
 msgstr ""
 
-#: src/Admin/AdminModule.php:543
+#: src/Admin/AdminModule.php:546
 msgid "Not added. Every cache hit is answered by the PHP drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:549
+#: src/Admin/AdminModule.php:552
 msgid "Added"
 msgstr ""
 
-#: src/Admin/AdminModule.php:549
+#: src/Admin/AdminModule.php:552
 msgid "Not added"
 msgstr ""
 
-#: src/Admin/AdminModule.php:551
+#: src/Admin/AdminModule.php:554
 msgid "Network administrator"
 msgstr ""
 
-#: src/Admin/AdminModule.php:553
+#: src/Admin/AdminModule.php:556
 msgid "Remove"
 msgstr ""
 
-#: src/Admin/AdminModule.php:555
+#: src/Admin/AdminModule.php:558
 #: src/Core/Network.php:474
 msgid "Add server rules"
 msgstr ""
 
-#: src/Admin/AdminModule.php:565
+#: src/Admin/AdminModule.php:568
 msgid "The rules could not be updated"
 msgstr ""
 
-#: src/Admin/AdminModule.php:571
+#: src/Admin/AdminModule.php:574
 msgid "LiteSpeed Cache plugin is active"
 msgstr ""
 
-#: src/Admin/AdminModule.php:572
+#: src/Admin/AdminModule.php:575
 msgid "It drives LiteSpeed's cache, so GT Performance stays out of the way. Deactivate it to let GT Performance take over. Hosting panels such as xCloud turn it on with their LiteSpeed cache switch."
 msgstr ""
 
-#: src/Admin/AdminModule.php:577
+#: src/Admin/AdminModule.php:580
 msgid "One step first"
 msgstr ""
 
-#: src/Admin/AdminModule.php:583
+#: src/Admin/AdminModule.php:586
 msgid "Every site on this network shares one .htaccess, so a network administrator adds or removes the rules."
 msgstr ""
 
-#: src/Admin/AdminModule.php:588
+#: src/Admin/AdminModule.php:591
 msgid "Nginx configuration to copy"
 msgstr ""
 
-#: src/Admin/AdminModule.php:589
+#: src/Admin/AdminModule.php:592
 msgid "Paste inside the site's server block, use its try_files line in your \"location /\" block, and reload Nginx. Paste it again after changing cache exclusions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:590
+#: src/Admin/AdminModule.php:593
 #: src/Core/Network.php:478
 msgid "Nginx configuration"
 msgstr ""
 
-#: src/Admin/AdminModule.php:927
-#: src/Admin/AdminModule.php:1046
+#: src/Admin/AdminModule.php:930
+#: src/Admin/AdminModule.php:1049
 msgid "Dashboard"
 msgstr ""
 
-#: src/Admin/AdminModule.php:928
-#: src/Admin/AdminModule.php:1118
+#: src/Admin/AdminModule.php:931
+#: src/Admin/AdminModule.php:1121
 msgid "Setup"
 msgstr ""
 
-#: src/Admin/AdminModule.php:929
-#: src/Admin/AdminModule.php:1288
+#: src/Admin/AdminModule.php:932
+#: src/Admin/AdminModule.php:1291
 msgid "Page Cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:930
-#: src/Admin/AdminModule.php:1352
+#: src/Admin/AdminModule.php:933
+#: src/Admin/AdminModule.php:1355
 msgid "Optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:931
-#: src/Admin/AdminModule.php:3201
+#: src/Admin/AdminModule.php:934
+#: src/Admin/AdminModule.php:3210
 msgid "CSS Status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:932
-#: src/Admin/AdminModule.php:1514
+#: src/Admin/AdminModule.php:935
+#: src/Admin/AdminModule.php:1517
 msgid "Exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:933
-#: src/Admin/AdminModule.php:1052
-#: src/Admin/AdminModule.php:2248
+#: src/Admin/AdminModule.php:936
+#: src/Admin/AdminModule.php:1055
+#: src/Admin/AdminModule.php:2257
 msgid "Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:934
+#: src/Admin/AdminModule.php:937
 msgid "CDN"
 msgstr ""
 
-#: src/Admin/AdminModule.php:935
-#: src/Admin/AdminModule.php:1966
+#: src/Admin/AdminModule.php:938
+#: src/Admin/AdminModule.php:1975
 msgid "Object Cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:936
-#: src/Admin/AdminModule.php:2269
+#: src/Admin/AdminModule.php:939
+#: src/Admin/AdminModule.php:2278
 msgid "Database"
 msgstr ""
 
-#: src/Admin/AdminModule.php:937
-#: src/Admin/AdminModule.php:1916
+#: src/Admin/AdminModule.php:940
+#: src/Admin/AdminModule.php:1925
 msgid "Integrations"
 msgstr ""
 
-#: src/Admin/AdminModule.php:938
-#: src/Admin/AdminModule.php:2019
+#: src/Admin/AdminModule.php:941
+#: src/Admin/AdminModule.php:2028
 msgid "AI & MCP"
 msgstr ""
 
-#: src/Admin/AdminModule.php:939
-#: src/Admin/AdminModule.php:2166
+#: src/Admin/AdminModule.php:942
+#: src/Admin/AdminModule.php:2175
 msgid "Tools"
 msgstr ""
 
-#: src/Admin/AdminModule.php:956
+#: src/Admin/AdminModule.php:959
 msgid "Performance control center"
 msgstr ""
 
-#: src/Admin/AdminModule.php:957
+#: src/Admin/AdminModule.php:960
 msgid "Origin caching, server-side optimization, Cloudflare and custom CDN delivery, and commerce-safe controls in one place."
 msgstr ""
 
-#: src/Admin/AdminModule.php:961
+#: src/Admin/AdminModule.php:964
 msgid "GT Performance sections"
 msgstr ""
 
-#: src/Admin/AdminModule.php:973
+#: src/Admin/AdminModule.php:976
 msgid "Old diagnostic files could not be removed. Restore write access to the GT Performance cache directory so the plugin can remove them."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1005
+#: src/Admin/AdminModule.php:1008
 msgid "Dismiss this notice"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1014
+#: src/Admin/AdminModule.php:1017
 msgid "Why?"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1017
+#: src/Admin/AdminModule.php:1020
 msgid "Reported reason"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1047
+#: src/Admin/AdminModule.php:1050
 msgid "A quick read on the parts that affect real visitors."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1050
+#: src/Admin/AdminModule.php:1053
 msgid "Performance status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1051
-#: src/Admin/AdminModule.php:2047
+#: src/Admin/AdminModule.php:1054
+#: src/Admin/AdminModule.php:2056
 msgid "Page cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1051
+#: src/Admin/AdminModule.php:1054
 msgid "Host cache, optimize only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1051
+#: src/Admin/AdminModule.php:1054
 #: src/Licensing/LicenseModule.php:217
 msgid "Active"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1051
+#: src/Admin/AdminModule.php:1054
 msgid "Needs setup"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1052
+#: src/Admin/AdminModule.php:1055
 msgid "Connected"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1052
-#: src/Admin/AdminModule.php:2045
+#: src/Admin/AdminModule.php:1055
+#: src/Admin/AdminModule.php:2054
 msgid "Not connected"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1053
-#: src/Admin/AdminModule.php:1355
+#: src/Admin/AdminModule.php:1056
+#: src/Admin/AdminModule.php:1358
 msgid "Unused CSS"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1053
-#: src/Admin/AdminModule.php:2047
-#: src/Admin/AdminModule.php:2048
-#: src/Admin/AdminModule.php:2049
-#: src/Admin/AdminModule.php:2052
-#: src/Admin/AdminModule.php:3260
-#: src/Admin/AdminModule.php:4010
+#: src/Admin/AdminModule.php:1056
+#: src/Admin/AdminModule.php:2056
+#: src/Admin/AdminModule.php:2057
+#: src/Admin/AdminModule.php:2058
+#: src/Admin/AdminModule.php:2061
+#: src/Admin/AdminModule.php:3269
+#: src/Admin/AdminModule.php:4019
 msgid "Enabled"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1053
-#: src/Admin/AdminModule.php:1420
-#: src/Admin/AdminModule.php:2365
+#: src/Admin/AdminModule.php:1056
+#: src/Admin/AdminModule.php:1423
+#: src/Admin/AdminModule.php:2374
 msgid "Off"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1054
+#: src/Admin/AdminModule.php:1057
 msgid "CSS results ready"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1060
+#: src/Admin/AdminModule.php:1063
 msgid "Current configuration"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1061
+#: src/Admin/AdminModule.php:1064
 msgid "The settings most likely to change cache behavior."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1065
-#: src/Admin/AdminModule.php:1295
+#: src/Admin/AdminModule.php:1068
+#: src/Admin/AdminModule.php:1298
 msgid "Cache mode"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1065
+#: src/Admin/AdminModule.php:1068
 msgid "Optimize only: your host stores pages"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1065
-#: src/Admin/AdminModule.php:1154
+#: src/Admin/AdminModule.php:1068
+#: src/Admin/AdminModule.php:1157
 msgid "Store pages"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1066
-#: src/Admin/AdminModule.php:1316
+#: src/Admin/AdminModule.php:1069
+#: src/Admin/AdminModule.php:1319
 msgid "Fresh cache lifetime"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1067
+#: src/Admin/AdminModule.php:1070
 msgid "Stale retention"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1068
-#: src/Admin/AdminModule.php:3413
-#: src/Admin/AdminModule.php:3417
+#: src/Admin/AdminModule.php:1071
+#: src/Admin/AdminModule.php:3422
+#: src/Admin/AdminModule.php:3426
 msgid "CSS delivery"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1069
-#: src/Admin/AdminModule.php:1976
-#: src/Admin/AdminModule.php:2178
+#: src/Admin/AdminModule.php:1072
+#: src/Admin/AdminModule.php:1985
+#: src/Admin/AdminModule.php:2187
 msgid "Redis drop-in"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1070
-#: src/Admin/AdminModule.php:2179
+#: src/Admin/AdminModule.php:1073
+#: src/Admin/AdminModule.php:2188
 #: src/Setup/SetupReport.php:92
 msgid "Cache directory"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1070
-#: src/Admin/AdminModule.php:2179
-#: src/Admin/AdminModule.php:4014
+#: src/Admin/AdminModule.php:1073
+#: src/Admin/AdminModule.php:2188
+#: src/Admin/AdminModule.php:4023
 msgid "Writable"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1070
-#: src/Admin/AdminModule.php:2179
+#: src/Admin/AdminModule.php:1073
+#: src/Admin/AdminModule.php:2188
 msgid "Not writable"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1076
+#: src/Admin/AdminModule.php:1079
 msgid "Recommended next step"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1077
+#: src/Admin/AdminModule.php:1080
 msgid "Finish the first incomplete performance layer."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1081
+#: src/Admin/AdminModule.php:1084
 msgid "Run setup: it checks this server, detects your host's cache, picks the right cache mode, and confirms a real cached response."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1082
+#: src/Admin/AdminModule.php:1085
 msgid "Open setup"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1084
+#: src/Admin/AdminModule.php:1087
 msgid "Install the page-cache drop-in below, enable origin caching, then verify a public page before adding more optimizations."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1085
+#: src/Admin/AdminModule.php:1088
 msgid "Open cache settings"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1087
+#: src/Admin/AdminModule.php:1090
 msgid "Pages your host caches are optimized on their way into its cache. After changing optimizations, purge your host's cache so it stores the new version."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1089
+#: src/Admin/AdminModule.php:1092
 msgid "Origin caching is ready. Connect Cloudflare Free to cache eligible HTML closer to visitors."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1090
+#: src/Admin/AdminModule.php:1093
 msgid "Configure Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1092
+#: src/Admin/AdminModule.php:1095
 msgid "Unused CSS is enabled but no ready result exists yet. Visit a public page, then watch the CSS report."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1094
+#: src/Admin/AdminModule.php:1097
 msgid "The core layers are configured. Review exceptions before enabling aggressive JavaScript or media transformations."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1095
+#: src/Admin/AdminModule.php:1098
 msgid "Review exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1118
+#: src/Admin/AdminModule.php:1121
 msgid "Six steps from a fresh install to a verified cached page. Run it again any time; nothing here changes the site until you press a button."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1120
+#: src/Admin/AdminModule.php:1123
 msgid "1. This server"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1120
+#: src/Admin/AdminModule.php:1123
 msgid "What GT Performance needs before it can store anything."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1122
-#: src/Admin/AdminModule.php:3263
+#: src/Admin/AdminModule.php:1125
+#: src/Admin/AdminModule.php:3272
 #: src/Optimization/Css/ReportExplainer.php:38
 msgid "Ready"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1122
+#: src/Admin/AdminModule.php:1125
 msgid "Fix first"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1126
+#: src/Admin/AdminModule.php:1129
 msgid "2. Other caches"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1126
+#: src/Admin/AdminModule.php:1129
 msgid "A second page cache in front of this one decides what visitors get."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1128
+#: src/Admin/AdminModule.php:1131
 msgid "Page-cache plugins"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1130
+#: src/Admin/AdminModule.php:1133
 msgid "No other page-cache plugin is active."
 msgstr ""
 
 #. translators: %s: comma-separated plugin names.
-#: src/Admin/AdminModule.php:1132
+#: src/Admin/AdminModule.php:1135
 #, php-format
 msgid "Active: %s. Deactivate them, or let one own the cache: two page caches store and purge independently."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1133
-#: src/Admin/AdminModule.php:1206
-#: src/Admin/AdminModule.php:1215
+#: src/Admin/AdminModule.php:1136
+#: src/Admin/AdminModule.php:1209
+#: src/Admin/AdminModule.php:1218
 msgid "None"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1133
-#: src/Admin/AdminModule.php:1215
-#: src/Admin/AdminModule.php:2647
+#: src/Admin/AdminModule.php:1136
+#: src/Admin/AdminModule.php:1218
+#: src/Admin/AdminModule.php:2656
 msgid "Review"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1137
+#: src/Admin/AdminModule.php:1140
 msgid "Host page cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1139
+#: src/Admin/AdminModule.php:1142
 msgid "No host page cache answered for your home page."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1139
+#: src/Admin/AdminModule.php:1142
 msgid "Not checked yet. Detect fetches your home page once as a visitor."
 msgstr ""
 
 #. translators: %s: comma-separated host cache names.
-#: src/Admin/AdminModule.php:1141
+#: src/Admin/AdminModule.php:1144
 #, php-format
 msgid "Your host caches pages: %s. Optimize only is the right mode here."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1142
+#: src/Admin/AdminModule.php:1145
 msgid "None found"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1142
-#: src/Admin/AdminModule.php:1717
+#: src/Admin/AdminModule.php:1145
+#: src/Admin/AdminModule.php:1720
 msgid "Not checked"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1142
-#: src/Admin/AdminModule.php:3156
+#: src/Admin/AdminModule.php:1145
+#: src/Admin/AdminModule.php:3165
 msgid "Found"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1145
+#: src/Admin/AdminModule.php:1148
 msgid "Detect host cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1149
+#: src/Admin/AdminModule.php:1152
 msgid "3. Cache mode"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1149
-#: src/Admin/AdminModule.php:1296
+#: src/Admin/AdminModule.php:1152
+#: src/Admin/AdminModule.php:1299
 msgid "Who stores the pages."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1154
-#: src/Admin/AdminModule.php:1156
+#: src/Admin/AdminModule.php:1157
+#: src/Admin/AdminModule.php:1159
 msgid "(recommended here)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1155
+#: src/Admin/AdminModule.php:1158
 msgid "GT Performance serves cached pages before WordPress loads. Saving installs wp-content/advanced-cache.php and sets WP_CACHE in wp-config.php; deactivating the plugin removes both."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1156
+#: src/Admin/AdminModule.php:1159
 msgid "Optimize only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1157
+#: src/Admin/AdminModule.php:1160
 msgid "Your host's cache stores pages; GT Performance optimizes them on the way in and changes no server files."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1159
+#: src/Admin/AdminModule.php:1162
 msgid "Save cache mode"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1164
+#: src/Admin/AdminModule.php:1167
 msgid "Now: optimize only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1165
+#: src/Admin/AdminModule.php:1168
 msgid "Now: store pages, drop-in in place"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1165
+#: src/Admin/AdminModule.php:1168
 msgid "Now: store pages, drop-in or WP_CACHE missing"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1175
+#: src/Admin/AdminModule.php:1178
 msgid "4. Cloudflare (optional)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1175
+#: src/Admin/AdminModule.php:1178
 msgid "Cache pages at Cloudflare's edge on the Free plan. Skip this step if the site is not on Cloudflare."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1179
-#: src/Admin/AdminModule.php:1581
+#: src/Admin/AdminModule.php:1182
+#: src/Admin/AdminModule.php:1584
 msgid "Scoped API token"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1180
+#: src/Admin/AdminModule.php:1183
 msgid "Needs Zone Read, Cache Rules Edit, and Cache Purge. Leave blank to keep the saved token."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1184
-#: src/Admin/AdminModule.php:1586
+#: src/Admin/AdminModule.php:1187
+#: src/Admin/AdminModule.php:1589
 msgid "Create a Cloudflare API token"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1186
-#: src/Admin/AdminModule.php:1599
+#: src/Admin/AdminModule.php:1189
+#: src/Admin/AdminModule.php:1602
 msgid "Domain"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1186
+#: src/Admin/AdminModule.php:1189
 msgid "The zone to manage, such as example.com."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1192
+#: src/Admin/AdminModule.php:1195
 msgid "Connect Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1193
+#: src/Admin/AdminModule.php:1196
 msgid "After saving the token, create the managed cache rule. Your other rules are kept. The Cloudflare tab has the connection check, DNS and APO checks, and more options."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1195
-#: src/Admin/AdminModule.php:1621
-#: src/Admin/AdminModule.php:3017
+#: src/Admin/AdminModule.php:1198
+#: src/Admin/AdminModule.php:1624
+#: src/Admin/AdminModule.php:3026
 msgid "Connect/sync Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1199
+#: src/Admin/AdminModule.php:1202
 msgid "5. Shops, languages, and currencies"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1199
+#: src/Admin/AdminModule.php:1202
 msgid "What is kept out of the cache on this site, and what needs a decision from you."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1201
+#: src/Admin/AdminModule.php:1204
 msgid "Store plugins"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1203
+#: src/Admin/AdminModule.php:1206
 msgid "No store plugin is active."
 msgstr ""
 
 #. translators: %s: comma-separated store plugin names.
-#: src/Admin/AdminModule.php:1205
+#: src/Admin/AdminModule.php:1208
 #, php-format
 msgid "%s: cart, checkout, and account pages and shopper cookies bypass the cache automatically."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1206
-#: src/Admin/AdminModule.php:2134
+#: src/Admin/AdminModule.php:1209
+#: src/Admin/AdminModule.php:2143
 msgid "Protected"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1210
+#: src/Admin/AdminModule.php:1213
 #: src/Diagnostics/HealthReport.php:227
 msgid "Language and currency plugins"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1212
+#: src/Admin/AdminModule.php:1215
 msgid "No plugin that shows visitors different pages at the same URL is active."
 msgstr ""
 
 #. translators: %s: comma-separated plugin names.
-#: src/Admin/AdminModule.php:1214
+#: src/Admin/AdminModule.php:1217
 #, php-format
 msgid "%s can show visitors different pages at the same URL. The Integrations tab lists what to set for each before you rely on the cache."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1220
+#: src/Admin/AdminModule.php:1223
 msgid "6. Verify"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1220
+#: src/Admin/AdminModule.php:1223
 msgid "Fetches your home page as a visitor until the cache answers, up to four times."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1222
+#: src/Admin/AdminModule.php:1225
 msgid "Not run yet."
 msgstr ""
 
 #. translators: 1: result sentence, 2: origin cache status, 3: Cloudflare cache status, 4: date and time.
-#: src/Admin/AdminModule.php:1226
+#: src/Admin/AdminModule.php:1229
 #, php-format
 msgid "%1$s GT Performance: %2$s. Cloudflare: %3$s. Checked %4$s."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1234
+#: src/Admin/AdminModule.php:1237
 msgid "Cached home page"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1237
+#: src/Admin/AdminModule.php:1240
 msgid "Origin verified"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1237
+#: src/Admin/AdminModule.php:1240
 msgid "Passed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1238
+#: src/Admin/AdminModule.php:1241
 msgid "Not yet"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1238
+#: src/Admin/AdminModule.php:1241
 msgid "Not run"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1241
+#: src/Admin/AdminModule.php:1244
 msgid "Verify"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1288
+#: src/Admin/AdminModule.php:1291
 msgid "How pages are stored and served. Cart, checkout, and account pages are never cached."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1290
+#: src/Admin/AdminModule.php:1293
 msgid "Origin cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1290
+#: src/Admin/AdminModule.php:1293
 msgid "Keep safe public HTML ready on disk so WordPress does less work."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1291
+#: src/Admin/AdminModule.php:1294
 msgid "Enable origin page cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1291
+#: src/Admin/AdminModule.php:1294
 msgid "Cache eligible public GET requests after WordPress renders them once."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1299
+#: src/Admin/AdminModule.php:1302
 msgid "Store pages (GT Performance serves them)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1300
+#: src/Admin/AdminModule.php:1303
 msgid "Optimize only (my host already caches pages)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1302
+#: src/Admin/AdminModule.php:1305
 msgid "Choose optimize only on hosts with their own page cache, such as LiteSpeed, Hostinger, xCloud, or Kinsta. Pages that would be cached are optimized as WordPress sends them and your host stores the result; nothing is stored here and the drop-in is not used. Cache headers for those pages are left to your host. Pages GT Performance would not cache, such as carts, checkouts, searches, and your cache exceptions, are still sent as no-store, so your host and Cloudflare do not keep them either. Purge your host's cache after changing optimizations."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1304
+#: src/Admin/AdminModule.php:1307
 msgid "Separate cache for mobile HTML"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1304
+#: src/Admin/AdminModule.php:1307
 msgid "Store a separate copy for phones. Only needed if your site sends different HTML to them."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1304
+#: src/Admin/AdminModule.php:1307
 msgid "Leave this off for a normal responsive theme. It doubles everything that has to be stored and cleared."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1307
+#: src/Admin/AdminModule.php:1310
 msgid "Web server delivery"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1307
+#: src/Admin/AdminModule.php:1310
 msgid "Answer cache hits before PHP starts, and compress each page once instead of on every visit."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1308
+#: src/Admin/AdminModule.php:1311
 msgid "Store compressed copies"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1308
+#: src/Admin/AdminModule.php:1311
 msgid "Keep a gzip copy of each stored page, plus a Brotli copy when PHP has the brotli extension, and send the one the browser accepts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1308
+#: src/Admin/AdminModule.php:1311
 msgid "Uses roughly one more file per page and less CPU on every hit."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1309
+#: src/Admin/AdminModule.php:1312
 msgid "Let LiteSpeed cache pages"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1309
+#: src/Admin/AdminModule.php:1312
 msgid "On LiteSpeed or OpenLiteSpeed, mark each page GT Performance would cache so the server keeps it and answers hits without PHP. Edits, purges, and setting changes clear the server's copies too."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1309
+#: src/Admin/AdminModule.php:1312
 msgid "Signed-in visitors and shoppers get a _lscache_vary cookie so the server never hands them the public copy. Not used together with a separate mobile cache."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1310
+#: src/Admin/AdminModule.php:1313
 msgid "Keep copies the web server can serve"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1310
+#: src/Admin/AdminModule.php:1313
 msgid "Write each eligible page where Apache, LiteSpeed, or Nginx can serve it without PHP. Takes effect once the server rules below are added."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1310
+#: src/Admin/AdminModule.php:1313
 msgid "Pages that send their own security headers from PHP, pages with query strings, and mobile copies keep going through PHP."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1314
+#: src/Admin/AdminModule.php:1317
 msgid "Cache lifetime"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1314
+#: src/Admin/AdminModule.php:1317
 msgid "Shorter times suit sites that change often."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1316
+#: src/Admin/AdminModule.php:1319
 msgid "Seconds before a cached page needs regeneration."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1316
-#: src/Admin/AdminModule.php:1317
-#: src/Admin/AdminModule.php:1318
 #: src/Admin/AdminModule.php:1319
-#: src/Admin/AdminModule.php:1484
-#: src/Admin/AdminModule.php:1485
-#: src/Admin/AdminModule.php:1612
-#: src/Admin/AdminModule.php:1992
-#: src/Admin/AdminModule.php:1993
+#: src/Admin/AdminModule.php:1320
+#: src/Admin/AdminModule.php:1321
+#: src/Admin/AdminModule.php:1322
+#: src/Admin/AdminModule.php:1487
+#: src/Admin/AdminModule.php:1488
+#: src/Admin/AdminModule.php:1615
+#: src/Admin/AdminModule.php:2001
+#: src/Admin/AdminModule.php:2002
 msgid "seconds"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1316
+#: src/Admin/AdminModule.php:1319
 msgid "How long a stored page is served before WordPress builds it again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1317
+#: src/Admin/AdminModule.php:1320
 msgid "Stale cache retention"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1317
+#: src/Admin/AdminModule.php:1320
 msgid "How long an expired page remains available for background refresh."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1317
+#: src/Admin/AdminModule.php:1320
 msgid "After that, the old copy is kept a little longer so one visit can refresh it while everyone else still gets a page instantly."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1318
+#: src/Admin/AdminModule.php:1321
 msgid "Stale-on-error window"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1318
+#: src/Admin/AdminModule.php:1321
 msgid "How long stale HTML may be used when regeneration fails."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1318
+#: src/Admin/AdminModule.php:1321
 msgid "If your site errors, visitors keep getting the last good page instead of an error. Set to 0 to turn this off."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1319
+#: src/Admin/AdminModule.php:1322
 msgid "Browser cache lifetime"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1319
+#: src/Admin/AdminModule.php:1322
 msgid "How long a visitor browser may reuse HTML without checking again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1319
+#: src/Admin/AdminModule.php:1322
 msgid "Keep this short so visitors see your changes soon after you publish."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1322
+#: src/Admin/AdminModule.php:1325
 msgid "Automatic cache clearing"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1322
+#: src/Admin/AdminModule.php:1325
 msgid "Clear what changed, without throwing away the rest."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1326
+#: src/Admin/AdminModule.php:1329
 msgid "Cache clearing after publishing"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1327
+#: src/Admin/AdminModule.php:1330
 msgid "What to clear when you publish or update something."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1330
+#: src/Admin/AdminModule.php:1333
 msgid "Post and related pages (recommended)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1331
+#: src/Admin/AdminModule.php:1334
 msgid "Post URL only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1332
+#: src/Admin/AdminModule.php:1335
 msgid "Entire page and edge cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1333
+#: src/Admin/AdminModule.php:1336
 msgid "Do not clear automatically"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1335
+#: src/Admin/AdminModule.php:1338
 msgid "Related pages means the post itself, your homepage, and the archives it appears in. Clearing everything also rebuilds pages in the background."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1339
-#: src/Admin/AdminModule.php:2686
+#: src/Admin/AdminModule.php:1342
+#: src/Admin/AdminModule.php:2695
 #: src/Diagnostics/HealthReport.php:250
 #: src/Diagnostics/HealthReport.php:281
 msgid "Cache warming"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1339
+#: src/Admin/AdminModule.php:1342
 msgid "After clearing everything, rebuild pages in the background so visitors do not wait."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1340
+#: src/Admin/AdminModule.php:1343
 msgid "Warm cache after a full purge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1340
+#: src/Admin/AdminModule.php:1343
 msgid "Uses your sitemap to find pages worth rebuilding first."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1341
+#: src/Admin/AdminModule.php:1344
 msgid "URLs per warming batch"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1341
+#: src/Admin/AdminModule.php:1344
 msgid "How many preloads a warm run queues at a time. The next batch starts after this one reports."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1341
+#: src/Admin/AdminModule.php:1344
 msgid "URLs"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1341
+#: src/Admin/AdminModule.php:1344
 msgid "Set to 0 to stop rebuilding without turning caching off. A run stops at the cache entry budget, with recently changed pages first."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1342
+#: src/Admin/AdminModule.php:1345
 msgid "Sitemap sources"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1342
+#: src/Admin/AdminModule.php:1345
 msgid "One sitemap URL from this site per line, up to 10. Leave empty to use the WordPress sitemap and any sitemaps listed in robots.txt."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1342
+#: src/Admin/AdminModule.php:1345
 msgid "Nested indexes are followed five levels deep. Other domains are ignored."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1352
+#: src/Admin/AdminModule.php:1355
 msgid "Make pages smaller and faster: CSS, JavaScript, images, fonts, and WordPress cleanup."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1355
-#: src/Admin/AdminModule.php:1359
+#: src/Admin/AdminModule.php:1358
+#: src/Admin/AdminModule.php:1362
 msgid "Send only the CSS each page actually needs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1357
+#: src/Admin/AdminModule.php:1360
 msgid "See build results and regenerate CSS on CSS Status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1359
+#: src/Admin/AdminModule.php:1362
 msgid "Remove unused CSS"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1359
+#: src/Admin/AdminModule.php:1362
 msgid "This changes the CSS your site sends to visitors. Check a few pages after you turn it on, and again after you update a theme or plugin. Any stylesheet it cannot read safely is left exactly as it is."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1361
+#: src/Admin/AdminModule.php:1364
 msgid "Hybrid inline CSS limit"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1361
+#: src/Admin/AdminModule.php:1364
 msgid "The most CSS Hybrid puts in the page for its top part: the first 160 elements, plus site-wide rules such as design tokens and fonts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1361
+#: src/Admin/AdminModule.php:1364
 msgid "bytes"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1361
+#: src/Admin/AdminModule.php:1364
 msgid "When a page needs more than this, Hybrid inlines nothing and sends all of that page's CSS as one file, exactly like Generated file. Nothing breaks. CSS Status shows how often it happens and suggests a limit."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1362
+#: src/Admin/AdminModule.php:1365
 msgid "Preserve dynamic states"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1362
+#: src/Admin/AdminModule.php:1365
 msgid "Keep styles for hover, focus, and other states a visitor triggers."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1366
+#: src/Admin/AdminModule.php:1369
 msgid "Staged rollout"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1367
+#: src/Admin/AdminModule.php:1370
 msgid "Try the new CSS on a share of your pages first. Set it to 0% to go back to your original stylesheets straight away."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1370
+#: src/Admin/AdminModule.php:1373
 msgid "0% - original CSS only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1374
+#: src/Admin/AdminModule.php:1377
 msgid "100% - all eligible URLs"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1376
+#: src/Admin/AdminModule.php:1379
 msgid "A page always stays in the same group, so what you check is what visitors see."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1380
+#: src/Admin/AdminModule.php:1383
 msgid "JavaScript"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1380
+#: src/Admin/AdminModule.php:1383
 msgid "Cart, checkout, and payment scripts are never touched."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1381
+#: src/Admin/AdminModule.php:1384
 msgid "Minify local JavaScript"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1381
+#: src/Admin/AdminModule.php:1384
 msgid "Serve smaller copies of eligible local scripts. Cached results use WordPress storage; no JavaScript files are written."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1382
+#: src/Admin/AdminModule.php:1385
 msgid "Defer safe JavaScript"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1382
+#: src/Admin/AdminModule.php:1385
 msgid "Add defer to eligible external scripts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1383
+#: src/Admin/AdminModule.php:1386
 msgid "Delay selected third-party scripts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1383
+#: src/Admin/AdminModule.php:1386
 msgid "Hold listed scripts until someone interacts, or for five seconds."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1383
+#: src/Admin/AdminModule.php:1386
 msgid "Good for analytics and marketing scripts. Do not use it for consent banners, forms, or checkout."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1386
+#: src/Admin/AdminModule.php:1389
 msgid "Images and embeds"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1386
+#: src/Admin/AdminModule.php:1389
 msgid "Load images later when they are off screen, and make smaller modern versions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1387
+#: src/Admin/AdminModule.php:1390
 msgid "Lazy-load non-critical images"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1387
+#: src/Admin/AdminModule.php:1390
 msgid "Keep the first critical images eager and lazy-load later images."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1388
+#: src/Admin/AdminModule.php:1391
 msgid "Add missing image dimensions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1388
+#: src/Admin/AdminModule.php:1391
 msgid "Reduce layout shifts when attachment dimensions are known."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1389
+#: src/Admin/AdminModule.php:1392
 msgid "Images to load immediately"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1389
+#: src/Admin/AdminModule.php:1392
 msgid "Number of early images excluded from lazy loading."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1389
+#: src/Admin/AdminModule.php:1392
 msgid "images"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1389
+#: src/Admin/AdminModule.php:1392
 msgid "Counted from the top of the page. Include your main hero image."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1390
+#: src/Admin/AdminModule.php:1393
 msgid "Hero image rules"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1390
+#: src/Admin/AdminModule.php:1393
 msgid "One rule per line: scope => target, optionally followed by \"preload\". Scopes: *, front_page, post_type:<type>, template:<template>. Targets: attachment:<ID>, .<image class>, or url:<background image URL>. The first matching rule wins; a page's own GT Performance box overrides these."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1390
+#: src/Admin/AdminModule.php:1393
 msgid "The hero gets high fetch priority and, with preload, a responsive preload link. Attributes set by your theme or WordPress always win, and an existing preload is never duplicated."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1391
+#: src/Admin/AdminModule.php:1394
 msgid "Generate optimized variants"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1391
+#: src/Admin/AdminModule.php:1394
 msgid "Create the selected modern format when attachments are generated."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1392
+#: src/Admin/AdminModule.php:1395
 msgid "Serve optimized image variants"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1392
+#: src/Admin/AdminModule.php:1395
 msgid "Rewrite eligible attachment URLs to the generated WebP or AVIF files."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1392
+#: src/Admin/AdminModule.php:1395
 msgid "Turn on variant generation first. Images you already uploaded need regenerating before this can use them."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1396
+#: src/Admin/AdminModule.php:1399
 msgid "Generated format"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1397
+#: src/Admin/AdminModule.php:1400
 msgid "AVIF requires image-editor support on the server."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1404
+#: src/Admin/AdminModule.php:1407
 msgid "Image quality"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1404
+#: src/Admin/AdminModule.php:1407
 msgid "Higher values retain more detail and create larger files."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1405
+#: src/Admin/AdminModule.php:1408
 msgid "Lightweight YouTube previews"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1405
+#: src/Admin/AdminModule.php:1408
 msgid "Replace eligible embeds with a click-to-load preview."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1410
-#: src/Admin/AdminModule.php:1414
+#: src/Admin/AdminModule.php:1413
+#: src/Admin/AdminModule.php:1417
 msgid "Speculative loading"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1410
+#: src/Admin/AdminModule.php:1413
 msgid "WordPress prefetches a page when a visitor starts to click its link. GT Performance keeps it away from cart, checkout, account, and other uncached paths."
 msgstr ""
 
 #. translators: %s: plugin name.
-#: src/Admin/AdminModule.php:1415
+#: src/Admin/AdminModule.php:1418
 #, php-format
 msgid "%s controls how pages are prefetched; GT Performance adds only its safety exclusions."
 msgstr ""
 
 #. translators: %s: plugin name.
-#: src/Admin/AdminModule.php:1415
+#: src/Admin/AdminModule.php:1418
 msgid "Safety exclusions apply in both on modes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1418
+#: src/Admin/AdminModule.php:1421
 msgid "WordPress default, with safety exclusions (recommended)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1419
+#: src/Admin/AdminModule.php:1422
 msgid "Prefetch only when a link is pressed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1422
+#: src/Admin/AdminModule.php:1425
 msgid "Excluded: every cache bypass path (including commerce cart, checkout, and account pages) in addition to WordPress's own exclusions for admin, login, files, and query-string links."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1427
-#: src/Admin/AdminModule.php:1831
+#: src/Admin/AdminModule.php:1430
+#: src/Admin/AdminModule.php:1834
 msgid "Fonts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1427
+#: src/Admin/AdminModule.php:1430
 msgid "Keep font requests predictable and reduce render blocking."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1428
+#: src/Admin/AdminModule.php:1431
 msgid "Self-host Google Fonts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1428
+#: src/Admin/AdminModule.php:1431
 msgid "Copy Google Fonts to your own site so visitors never load them from Google."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1432
+#: src/Admin/AdminModule.php:1435
 msgid "Font display"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1433
+#: src/Admin/AdminModule.php:1436
 msgid "Swap is the safest default for readable text during loading."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1441
+#: src/Admin/AdminModule.php:1444
 msgid "Swap shows your fallback font straight away. Optional may skip the web font on a slow connection. Block can leave text invisible for a moment."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1445
+#: src/Admin/AdminModule.php:1448
 msgid "WordPress quick toggles"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1445
+#: src/Admin/AdminModule.php:1448
 msgid "Turn off things WordPress loads on every page that most sites never use."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1447
+#: src/Admin/AdminModule.php:1450
 msgid "Disable WordPress emoji assets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1447
+#: src/Admin/AdminModule.php:1450
 msgid "Remove the legacy emoji detection script and styles."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1448
+#: src/Admin/AdminModule.php:1451
 msgid "Disable Dashicons for visitors"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1448
+#: src/Admin/AdminModule.php:1451
 msgid "Keep Dashicons for logged-in users and remove them from public pages."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1449
+#: src/Admin/AdminModule.php:1452
 msgid "Disable WordPress embeds"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1449
+#: src/Admin/AdminModule.php:1452
 msgid "Remove oEmbed discovery and the frontend embed script."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1450
+#: src/Admin/AdminModule.php:1453
 msgid "Disable XML-RPC"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1450
+#: src/Admin/AdminModule.php:1453
 msgid "Disable legacy XML-RPC requests while leaving the REST API available."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1451
+#: src/Admin/AdminModule.php:1454
 msgid "Remove RSD link"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1451
+#: src/Admin/AdminModule.php:1454
 msgid "Remove the Really Simple Discovery link from the document head."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1452
+#: src/Admin/AdminModule.php:1455
 msgid "Remove jQuery Migrate for visitors"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1452
+#: src/Admin/AdminModule.php:1455
 msgid "Reduce a legacy dependency on public pages."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1452
+#: src/Admin/AdminModule.php:1455
 msgid "Some older themes and plugins still need this. Check menus, forms, sliders, and checkout after turning it on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1453
+#: src/Admin/AdminModule.php:1456
 msgid "Remove WordPress version"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1453
+#: src/Admin/AdminModule.php:1456
 msgid "Stop pages from advertising which WordPress version you run."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1454
+#: src/Admin/AdminModule.php:1457
 msgid "Remove shortlink"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1454
+#: src/Admin/AdminModule.php:1457
 msgid "Remove shortlink output from the document head and response headers."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1455
+#: src/Admin/AdminModule.php:1458
 msgid "Disable every RSS feed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1455
+#: src/Admin/AdminModule.php:1458
 msgid "Turn off every feed, including your main one. Leave this off if anyone subscribes to your site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1456
+#: src/Admin/AdminModule.php:1459
 msgid "Disable secondary feeds only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1456
+#: src/Admin/AdminModule.php:1459
 msgid "Keep your main feed at /feed/ and turn off the rest."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1457
+#: src/Admin/AdminModule.php:1460
 msgid "Remove every RSS feed link"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1457
+#: src/Admin/AdminModule.php:1460
 msgid "Feeds keep working, but browsers and readers stop finding them automatically."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1458
+#: src/Admin/AdminModule.php:1461
 msgid "Remove secondary RSS feed links"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1458
+#: src/Admin/AdminModule.php:1461
 msgid "Keep the link to your main feed and remove the others."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1459
+#: src/Admin/AdminModule.php:1462
 msgid "Disable self pingbacks"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1459
+#: src/Admin/AdminModule.php:1462
 msgid "Prevent WordPress from pinging links that point back to this site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1460
+#: src/Admin/AdminModule.php:1463
 msgid "Remove REST API links"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1460
+#: src/Admin/AdminModule.php:1463
 msgid "The REST API keeps working; pages just stop pointing at it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1461
+#: src/Admin/AdminModule.php:1464
 msgid "Disable Google Maps"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1461
+#: src/Admin/AdminModule.php:1464
 msgid "Remove Google Maps scripts except on paths listed in Exceptions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1462
+#: src/Admin/AdminModule.php:1465
 msgid "Disable password strength meter"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1462
+#: src/Admin/AdminModule.php:1465
 msgid "Removes the password strength meter. Check your sign-up and account forms after turning it on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1463
+#: src/Admin/AdminModule.php:1466
 msgid "Remove comment author URLs"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1463
+#: src/Admin/AdminModule.php:1466
 msgid "Discard author website links to reduce comment backlink spam."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1464
+#: src/Admin/AdminModule.php:1467
 msgid "Add a blank fallback favicon"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1464
+#: src/Admin/AdminModule.php:1467
 msgid "Prevent a missing favicon request when the site has no Site Icon."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1465
+#: src/Admin/AdminModule.php:1468
 msgid "Remove global styles"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1465
+#: src/Admin/AdminModule.php:1468
 msgid "Only use this if your theme does not rely on the WordPress default styles."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1466
+#: src/Admin/AdminModule.php:1469
 msgid "Load separate core block styles"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1466
+#: src/Admin/AdminModule.php:1469
 msgid "Load core block CSS only when the corresponding block is rendered."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1469
+#: src/Admin/AdminModule.php:1472
 msgid "Editor, comments, and APIs"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1469
+#: src/Admin/AdminModule.php:1472
 msgid "Revisions, autosaves, comments, and background admin requests."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1473
+#: src/Admin/AdminModule.php:1476
 msgid "Heartbeat behavior"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1474
+#: src/Admin/AdminModule.php:1477
 msgid "Fewer background requests, while editing still works normally."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1477
+#: src/Admin/AdminModule.php:1480
 msgid "WordPress default"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1478
+#: src/Admin/AdminModule.php:1481
 msgid "Reduce frequency (recommended)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1479
+#: src/Admin/AdminModule.php:1482
 msgid "Disable outside the editor"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1480
+#: src/Admin/AdminModule.php:1483
 msgid "Disable everywhere"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1482
+#: src/Admin/AdminModule.php:1485
 msgid "Turning this off everywhere can break autosave, post locking, and some plugins."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1484
+#: src/Admin/AdminModule.php:1487
 msgid "Heartbeat interval"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1484
+#: src/Admin/AdminModule.php:1487
 msgid "Slow the admin Heartbeat API without disabling autosave locks."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1485
+#: src/Admin/AdminModule.php:1488
 msgid "Autosave interval"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1485
+#: src/Admin/AdminModule.php:1488
 msgid "Increase the editor autosave interval to reduce background requests."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1489
+#: src/Admin/AdminModule.php:1492
 msgid "REST API access"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1490
+#: src/Admin/AdminModule.php:1493
 msgid "Turning the REST API off can break the block editor and other plugins."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1493
+#: src/Admin/AdminModule.php:1496
 msgid "Keep enabled"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1494
+#: src/Admin/AdminModule.php:1497
 msgid "Administrators only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1495
+#: src/Admin/AdminModule.php:1498
 msgid "Disable all requests"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1497
+#: src/Admin/AdminModule.php:1500
 msgid "Restricting it can break the block editor, the mobile app, and other plugins."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1499
+#: src/Admin/AdminModule.php:1502
 msgid "Disable comments"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1499
+#: src/Admin/AdminModule.php:1502
 msgid "Close comments and pingbacks across all public post types."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1502
+#: src/Admin/AdminModule.php:1505
 msgid "Diagnostics"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1502
+#: src/Admin/AdminModule.php:1505
 msgid "Only turn these on while you are troubleshooting."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1503
+#: src/Admin/AdminModule.php:1506
 msgid "Diagnostic logging"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1503
+#: src/Admin/AdminModule.php:1506
 msgid "Keep the last 100 redacted plugin events in the database, and add cache-decision headers and a script-decision comment to public pages."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1504
+#: src/Admin/AdminModule.php:1507
 msgid "Remove all data when the plugin is deleted"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1504
+#: src/Admin/AdminModule.php:1507
 msgid "Delete everything this plugin created when you delete the plugin."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1504
+#: src/Admin/AdminModule.php:1507
 msgid "Leave this off to keep your settings if you reinstall. With it off, deleting the plugin leaves its data behind, including saved Redis credentials."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1514
+#: src/Admin/AdminModule.php:1517
 msgid "Protect dynamic URLs and scripts, and preserve selectors that server-side analysis cannot discover from the initial HTML."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1517
+#: src/Admin/AdminModule.php:1520
 msgid "Cache exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1517
+#: src/Admin/AdminModule.php:1520
 msgid "Enter one path, cookie-name prefix, or parameter per line. Paths match complete URL segments and parameter names match exactly."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1518
+#: src/Admin/AdminModule.php:1521
 msgid "Paths that must stay dynamic"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1518
+#: src/Admin/AdminModule.php:1521
 msgid "Examples: /account/ or /members/. Core WordPress paths are included by default."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1518
+#: src/Admin/AdminModule.php:1521
 msgid "/account/ matches /account and its child paths, but does not match /accounting. Add only paths whose HTML varies by visitor or request."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1519
+#: src/Admin/AdminModule.php:1522
 msgid "Cookie prefixes that bypass cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1519
+#: src/Admin/AdminModule.php:1522
 msgid "Bypass when a request contains a cookie name beginning with one of these values."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1519
+#: src/Admin/AdminModule.php:1522
 msgid "Enter cookie names or stable prefixes, without cookie values. Example: membership_session_ matches every cookie whose name starts that way."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1520
+#: src/Admin/AdminModule.php:1523
 msgid "Never cache query parameters"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1520
+#: src/Admin/AdminModule.php:1523
 msgid "Bypass the cache whenever one of these parameters is present."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1521
+#: src/Admin/AdminModule.php:1524
 msgid "Cache each value separately"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1521
+#: src/Admin/AdminModule.php:1524
 msgid "Parameters that change the page, such as orderby, a product filter, or lang. Each value gets its own cached copy instead of bypassing the cache, up to 100 copies per page; values longer than 100 characters are not cached."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1521
+#: src/Admin/AdminModule.php:1524
 msgid "List a parameter here only if the page is the same for every visitor who sends the same value. A parameter that personalizes the page belongs under \"Never cache query parameters\"."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1522
+#: src/Admin/AdminModule.php:1525
 msgid "Parameters that do not change content"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1522
+#: src/Admin/AdminModule.php:1525
 msgid "Remove these parameters from the cache key so equivalent URLs share public HTML."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1522
+#: src/Admin/AdminModule.php:1525
 msgid "Only list tracking parameters that never alter the page. Ignoring a parameter that changes price, language, personalization, or content can serve the wrong HTML."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1525
+#: src/Admin/AdminModule.php:1528
 msgid "Unused CSS exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1525
+#: src/Admin/AdminModule.php:1528
 msgid "Use partial selector matches, regular expressions, or stylesheet URLs. Add the smallest stable pattern that protects the dynamic component."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1526
+#: src/Admin/AdminModule.php:1529
 msgid "Selector safelist"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1526
+#: src/Admin/AdminModule.php:1529
 msgid "One pattern per line. Plain text is a partial match; use a delimited expression such as /^\\.modal(?:--|\\b)/i for regex matching."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1527
+#: src/Admin/AdminModule.php:1530
 msgid "Excluded stylesheets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1527
+#: src/Admin/AdminModule.php:1530
 msgid "Leave matching external stylesheet URLs or inline style IDs untouched and loaded normally."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1530
+#: src/Admin/AdminModule.php:1533
 msgid "JavaScript exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1530
+#: src/Admin/AdminModule.php:1533
 msgid "Patterns are matched against script URLs. Transactional cart, checkout, and payment scripts are protected automatically."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1531
+#: src/Admin/AdminModule.php:1534
 msgid "Never optimize scripts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1531
+#: src/Admin/AdminModule.php:1534
 msgid "Skip minify, defer, and delay for matching scripts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1532
+#: src/Admin/AdminModule.php:1535
 msgid "Scripts to delay"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1532
+#: src/Admin/AdminModule.php:1535
 msgid "Delay only matching third-party scripts when JavaScript delay is enabled."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1535
+#: src/Admin/AdminModule.php:1538
 msgid "Media exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1535
+#: src/Admin/AdminModule.php:1538
 msgid "Selectors let interactive embeds keep their normal rendering behavior."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1536
+#: src/Admin/AdminModule.php:1539
 msgid "Lazy-render selectors"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1536
+#: src/Admin/AdminModule.php:1539
 msgid "CSS selectors for supported embeds or components that may render after interaction."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1539
+#: src/Admin/AdminModule.php:1542
 msgid "WordPress exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1539
+#: src/Admin/AdminModule.php:1542
 msgid "Keep Google Maps on URLs that require it while disabling the script everywhere else."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1540
+#: src/Admin/AdminModule.php:1543
 msgid "Google Maps path exceptions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1540
+#: src/Admin/AdminModule.php:1543
 msgid "Enter one path fragment per line, such as /contact/ or /store-locator/."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1550
+#: src/Admin/AdminModule.php:1553
 msgid "Cloudflare Free"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1550
+#: src/Admin/AdminModule.php:1553
 msgid "Synchronize one cache rule and targeted purges without requiring APO, Workers, Argo, or a paid Cloudflare plan."
 msgstr ""
 
 #. translators: %s: date and time the plugin was deactivated.
-#: src/Admin/AdminModule.php:1558
+#: src/Admin/AdminModule.php:1561
 #, php-format
 msgid "GT Performance deleted its Cloudflare cache rule when it was deactivated on %s, so Cloudflare is not caching pages for this site. Use Connect/sync Cloudflare below to restore it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1565
+#: src/Admin/AdminModule.php:1568
 msgid "Connection"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1565
+#: src/Admin/AdminModule.php:1568
 msgid "A scoped token is safer. Global API Key authentication remains available for legacy accounts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1566
+#: src/Admin/AdminModule.php:1569
 msgid "Enable Cloudflare integration"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1566
+#: src/Admin/AdminModule.php:1569
 msgid "Allow GT Performance to purge and maintain its managed cache rule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1570
+#: src/Admin/AdminModule.php:1573
 #: src/Cloudflare/ConnectionDiagnostics.php:106
 #: src/Cloudflare/ConnectionDiagnostics.php:115
 #: src/Cloudflare/ConnectionDiagnostics.php:127
 msgid "Authentication"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1571
+#: src/Admin/AdminModule.php:1574
 msgid "Use a token limited to Zone Read, Cache Rules Edit, and Cache Purge when possible."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1574
+#: src/Admin/AdminModule.php:1577
 msgid "Scoped API token (recommended)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1575
+#: src/Admin/AdminModule.php:1578
 msgid "Global API Key (legacy)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1582
+#: src/Admin/AdminModule.php:1585
 msgid "Leave blank to keep the encrypted token already saved."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1591
+#: src/Admin/AdminModule.php:1594
 msgid "Global API Key"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1592
+#: src/Admin/AdminModule.php:1595
 msgid "Requires the Cloudflare account email below. Leave blank to keep the saved key."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1596
+#: src/Admin/AdminModule.php:1599
 msgid "Find your Global API Key"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1598
+#: src/Admin/AdminModule.php:1601
 msgid "Cloudflare account email"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1598
+#: src/Admin/AdminModule.php:1601
 msgid "Required only for Global API Key authentication."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1599
+#: src/Admin/AdminModule.php:1602
 msgid "Used to discover the zone automatically when Zone ID is blank."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1603
+#: src/Admin/AdminModule.php:1606
 msgid "Zone ID"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1604
+#: src/Admin/AdminModule.php:1607
 msgid "Optional. Direct Zone ID avoids the discovery request."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1610
+#: src/Admin/AdminModule.php:1613
 msgid "Find your Zone ID"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1612
+#: src/Admin/AdminModule.php:1615
 msgid "Cloudflare edge cache lifetime"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1612
+#: src/Admin/AdminModule.php:1615
 msgid "How long eligible public HTML remains fresh at Cloudflare."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1612
+#: src/Admin/AdminModule.php:1615
 msgid "A positive value overrides the origin freshness value in the managed Cache Rule. Use 0 to respect the origin Cache-Control header instead."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1618
+#: src/Admin/AdminModule.php:1621
 msgid "Connect and synchronize"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1619
+#: src/Admin/AdminModule.php:1622
 msgid "Save credentials first, then discover the zone if needed and reconcile the managed Cloudflare cache rule. After upgrading, sync once to apply current purge compatibility and cache protections. Other rules are preserved."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1626
+#: src/Admin/AdminModule.php:1629
 msgid "Disconnect"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1627
+#: src/Admin/AdminModule.php:1630
 msgid "Deletes the cache rule GT Performance manages, purges this site's hostnames at Cloudflare so no page stored under it lingers, and turns the integration off. Your other rules and the saved credentials stay. Deactivating the plugin does the same, except the integration stays on for when you reactivate."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1629
+#: src/Admin/AdminModule.php:1632
 msgid "Disconnect Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1645
+#: src/Admin/AdminModule.php:1648
 msgid "Accepted by Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1646
+#: src/Admin/AdminModule.php:1649
 msgid "Failed; retry scheduled"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1647
+#: src/Admin/AdminModule.php:1650
 msgid "Failed; action needed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1651
+#: src/Admin/AdminModule.php:1654
 msgid "Latest Cloudflare purge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1652
-#: src/Admin/AdminModule.php:1883
-#: src/Admin/AdminModule.php:2046
+#: src/Admin/AdminModule.php:1655
+#: src/Admin/AdminModule.php:1887
+#: src/Admin/AdminModule.php:2055
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1655
+#: src/Admin/AdminModule.php:1658
 msgid "Transient failures are retried up to three times through WordPress cron. Successful batches are not repeated."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1678
+#: src/Admin/AdminModule.php:1681
 msgid "Get an API token"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1679
+#: src/Admin/AdminModule.php:1682
 msgid "The connection needs a token carrying exactly these three permissions, scoped to this site's zone:"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1689
+#: src/Admin/AdminModule.php:1692
 msgid "Create token at Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1691
+#: src/Admin/AdminModule.php:1694
 msgid "Opens the Create Token form with the name and zone filled in. Cloudflare does not currently preselect the permission groups, so pick the three above from the dropdowns, then paste the token into the Scoped API token field and save."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1696
+#: src/Admin/AdminModule.php:1699
 msgid "Or create it automatically"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1697
+#: src/Admin/AdminModule.php:1700
 msgid "A Global API Key is on file, so GT Performance can create the zone-scoped token for you and save it. The new token is tested before it replaces the current credentials. Clear the Global API Key afterwards: it grants far more than this plugin needs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1699
+#: src/Admin/AdminModule.php:1702
 msgid "Create scoped token"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1702
+#: src/Admin/AdminModule.php:1705
 msgid "Cloudflare does not allow an application to sign in to your account, so the token has to be created in the dashboard. Saving a Global API Key and account email here would let GT Performance mint the scoped token over the API instead."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1714
-#: src/Admin/AdminModule.php:2646
+#: src/Admin/AdminModule.php:1717
+#: src/Admin/AdminModule.php:2655
 msgid "Pass"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1715
-#: src/Admin/AdminModule.php:2313
-#: src/Admin/AdminModule.php:2709
-#: src/Admin/AdminModule.php:3267
+#: src/Admin/AdminModule.php:1718
+#: src/Admin/AdminModule.php:2322
+#: src/Admin/AdminModule.php:2718
+#: src/Admin/AdminModule.php:3276
 #: src/Optimization/Css/ReportExplainer.php:58
 msgid "Failed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1716
+#: src/Admin/AdminModule.php:1719
 msgid "Warning"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1729
+#: src/Admin/AdminModule.php:1732
 msgid "Connection check"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1730
+#: src/Admin/AdminModule.php:1733
 msgid "Walks credentials, authentication, zone lookup, whether visitors actually pass through Cloudflare, whether APO is also caching HTML, and cache-rule read and write in order, and reports the exact stage and reason for any failure. The write stage rewrites the managed rule with its own current contents, so it changes nothing."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1732
+#: src/Admin/AdminModule.php:1735
 msgid "Run connection check"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1735
+#: src/Admin/AdminModule.php:1738
 msgid "No connection check has been run yet."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1742
+#: src/Admin/AdminModule.php:1745
 msgid "Stage"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1743
+#: src/Admin/AdminModule.php:1746
 msgid "Result"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1744
-#: src/Admin/AdminModule.php:2661
+#: src/Admin/AdminModule.php:1747
+#: src/Admin/AdminModule.php:2670
 msgid "Detail"
 msgstr ""
 
 #. translators: %s: UTC timestamp of the last connection check.
-#: src/Admin/AdminModule.php:1763
+#: src/Admin/AdminModule.php:1766
 #, php-format
 msgid "Last checked %s UTC."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1778
+#: src/Admin/AdminModule.php:1781
 msgid "Content delivery network"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1779
+#: src/Admin/AdminModule.php:1782
 msgid "Serve selected static files from an origin-pull CDN URL while Cloudflare continues to cache public HTML independently."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1783
+#: src/Admin/AdminModule.php:1786
 msgid "Asset CDN"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1784
+#: src/Admin/AdminModule.php:1787
 msgid "GT Performance changes same-site asset URLs only. Configure the CDN provider to pull from this WordPress site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1789
+#: src/Admin/AdminModule.php:1792
 msgid "Enable CDN URL rewriting"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1790
+#: src/Admin/AdminModule.php:1793
 msgid "Rewrite eligible public asset URLs to the CDN address below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1792
+#: src/Admin/AdminModule.php:1795
 msgid "This does not upload files or configure a provider account. The CDN must be able to fetch the original WordPress paths."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1797
+#: src/Admin/AdminModule.php:1800
 msgid "CDN URL"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1798
+#: src/Admin/AdminModule.php:1801
 msgid "Use the HTTPS hostname or hostname plus path supplied by your CDN provider."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1802
+#: src/Admin/AdminModule.php:1805
 msgid "GT Performance preserves each original asset path, query string, and fragment after this base URL."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1811
+#: src/Admin/AdminModule.php:1814
 msgid "How this works with Cloudflare"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1812
+#: src/Admin/AdminModule.php:1815
 msgid "Cloudflare may cache the HTML page while the browser requests selected static files from the separate CDN hostname."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1816
+#: src/Admin/AdminModule.php:1819
 msgid "Only URLs hosted by this WordPress site are rewritten. Third-party files, HTML routes, API requests, data URLs, and unselected extensions remain unchanged."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1817
+#: src/Admin/AdminModule.php:1820
 msgid "GT Performance purges its origin page cache and Cloudflare when these settings change. Purge the separate CDN through its provider when replacing a file without changing its URL."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1829
+#: src/Admin/AdminModule.php:1832
 msgid "Images"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1830
+#: src/Admin/AdminModule.php:1833
 msgid "Styles and scripts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1832
+#: src/Admin/AdminModule.php:1835
 msgid "Video and audio"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1833
+#: src/Admin/AdminModule.php:1836
 msgid "Downloads"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1839
+#: src/Admin/AdminModule.php:1842
 msgid "Files served by the CDN"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1840
+#: src/Admin/AdminModule.php:1843
 msgid "Select exact extensions. Unselected file types keep their original WordPress URLs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1869
+#: src/Admin/AdminModule.php:1872
 msgid "Cloudflare Free rule compiler"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1870
+#: src/Admin/AdminModule.php:1873
 msgid "Preview rule usage, managed-rule drift, overlapping host rules, and the exact expression before changing Cloudflare."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1872
+#: src/Admin/AdminModule.php:1875
 msgid "Preview live plan"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1875
+#: src/Admin/AdminModule.php:1878
 msgid "No live rule plan has been checked yet."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1878
+#: src/Admin/AdminModule.php:1881
 msgid "Planned operation"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1879
+#: src/Admin/AdminModule.php:1882
 msgid "Free rule budget"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1880
+#: src/Admin/AdminModule.php:1883
+msgid "Expression size"
+msgstr ""
+
+#: src/Admin/AdminModule.php:1884
 msgid "Managed-rule drift"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1880
+#: src/Admin/AdminModule.php:1884
 msgid "Needs reconciliation"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1880
+#: src/Admin/AdminModule.php:1884
 msgid "In sync"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1881
+#: src/Admin/AdminModule.php:1885
 msgid "Potential overlaps"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1882
+#: src/Admin/AdminModule.php:1886
 msgid "Custom cache key"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1882
+#: src/Admin/AdminModule.php:1886
 msgid "Applied"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1882
+#: src/Admin/AdminModule.php:1886
 msgid "Not supported on this plan, so query-string exclusions are skipped"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1883
-#: src/Admin/AdminModule.php:2053
+#: src/Admin/AdminModule.php:1887
+#: src/Admin/AdminModule.php:2062
 msgid "Last checked"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1886
+#: src/Admin/AdminModule.php:1890
+msgid "This plan bypasses edge caching because the complete policy exceeds Cloudflare's expression limit. Simplify exclusions before synchronizing; no private-page protections were dropped."
+msgstr ""
+
+#: src/Admin/AdminModule.php:1892
+msgid "To fit the expression limit, this plan caches only URLs without query strings. All path and cookie exclusions remain protected."
+msgstr ""
+
+#: src/Admin/AdminModule.php:1895
 msgid "Other cache rules that also match this site"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1887
+#: src/Admin/AdminModule.php:1896
 msgid "These rules sit in the same phase and can override the managed rule. A rule that never names a hostname applies to every hostname in the zone."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1891
+#: src/Admin/AdminModule.php:1900
 msgid "Untitled rule"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1893
+#: src/Admin/AdminModule.php:1902
 msgid "(matches every hostname)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1896
+#: src/Admin/AdminModule.php:1905
 msgid "(bypasses cache)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1904
+#: src/Admin/AdminModule.php:1913
 msgid "Compiled expression"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1916
+#: src/Admin/AdminModule.php:1925
 msgid "Coordinate optimization ownership and protect plugin, host, and commerce state without overlapping work."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1919
+#: src/Admin/AdminModule.php:1928
 msgid "Optimization ownership"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1919
+#: src/Admin/AdminModule.php:1928
 msgid "GT Performance coordinates known overlap instead of letting two plugins rewrite the same response."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1920
+#: src/Admin/AdminModule.php:1929
 msgid "Automatic conflict protection"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1920
+#: src/Admin/AdminModule.php:1929
 msgid "Detect active performance plugins, preserve known dynamic state, and apply supported ownership filters."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1924
+#: src/Admin/AdminModule.php:1933
 msgid "Perfmatters ownership"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1925
+#: src/Admin/AdminModule.php:1934
 msgid "Automatic lets GT Performance own only the front-end features enabled here. Page cache, Cloudflare, commerce, and Redis remain independent."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1928
+#: src/Admin/AdminModule.php:1937
 msgid "Automatic per feature (recommended)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1929
+#: src/Admin/AdminModule.php:1938
 msgid "GT Performance owns front-end optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1930
+#: src/Admin/AdminModule.php:1939
 msgid "Perfmatters owns front-end optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1935
+#: src/Admin/AdminModule.php:1944
 msgid "xCloud and Cloudflare Enterprise"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1935
+#: src/Admin/AdminModule.php:1944
 msgid "Connect the xCloud API, detect the separate Cloudflare Enterprise add-on, show its edge traffic snapshot, and keep cache ownership explicit."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1936
+#: src/Admin/AdminModule.php:1945
 msgid "Enable xCloud cache integration"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1936
+#: src/Admin/AdminModule.php:1945
 msgid "Let GT Performance detect xCloud ownership and purge token-authenticated host cache layers after origin invalidation."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1936
+#: src/Admin/AdminModule.php:1945
 msgid "Cloudflare Enterprise is distinct from xCloud's free Edge Full Page Cache. The current xCloud Public API has no token-authenticated Enterprise purge, so GT Performance fails closed instead of sending the broad host purge-all request."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1937
+#: src/Admin/AdminModule.php:1946
 msgid "xCloud site domain"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1937
+#: src/Admin/AdminModule.php:1946
 msgid "Exact primary domain used to discover the xCloud site UUID. Leave blank to use this WordPress home domain."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1938
+#: src/Admin/AdminModule.php:1947
 msgid "xCloud site UUID"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1938
+#: src/Admin/AdminModule.php:1947
 msgid "Optional. Connect/refresh discovers and saves it from the exact domain."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1939
+#: src/Admin/AdminModule.php:1948
 msgid "xCloud API token"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1939
+#: src/Admin/AdminModule.php:1948
 msgid "Requires read:sites and write:sites scopes. Encrypted in WordPress; leave blank to keep the saved token."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1942
+#: src/Admin/AdminModule.php:1951
 msgid "Service safeguards"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1942
+#: src/Admin/AdminModule.php:1951
 msgid "These protections activate only when the matching plugin is active."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1943
+#: src/Admin/AdminModule.php:1952
 msgid "Protect Akismet assets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1943
+#: src/Admin/AdminModule.php:1952
 msgid "Keep the privacy notice and anti-spam front-end assets during CSS and JavaScript optimization."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1943
+#: src/Admin/AdminModule.php:1952
 msgid "This compatibility switch does not classify comments itself. Akismet remains responsible for spam checks; this option prevents optimizations from removing its required front-end output."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1944
+#: src/Admin/AdminModule.php:1953
 msgid "Jetpack compatibility"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1944
+#: src/Admin/AdminModule.php:1953
 msgid "Protect forms, comments, subscriptions, search, VideoPress, and visitor-state cookies from unsafe optimization or public caching."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1947
+#: src/Admin/AdminModule.php:1956
 msgid "Commerce safeguards"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1947
+#: src/Admin/AdminModule.php:1956
 msgid "Only active integrations contribute bypass rules. Custom cache exceptions remain available separately."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1948
+#: src/Admin/AdminModule.php:1957
 msgid "FluentCart"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1948
+#: src/Admin/AdminModule.php:1957
 msgid "Protect FluentCart cart, checkout, account, order, and customer-session state."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1949
+#: src/Admin/AdminModule.php:1958
 msgid "Easy Digital Downloads"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1949
+#: src/Admin/AdminModule.php:1958
 msgid "Protect EDD checkout, purchase history, receipts, and session state."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1950
+#: src/Admin/AdminModule.php:1959
 msgid "WooCommerce"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1950
+#: src/Admin/AdminModule.php:1959
 msgid "Protect WooCommerce cart, checkout, My Account, order, and session state."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1966
+#: src/Admin/AdminModule.php:1975
 msgid "Keep WordPress database query results in Redis between requests, through the GT Performance object-cache.php drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1971
+#: src/Admin/AdminModule.php:1980
 msgid "Drop-in status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1972
+#: src/Admin/AdminModule.php:1981
 msgid "GT Performance never overwrites an object-cache.php owned by another plugin."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1977
+#: src/Admin/AdminModule.php:1986
 msgid "PhpRedis extension"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1977
+#: src/Admin/AdminModule.php:1986
 msgid "Available"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1977
-#: src/Admin/AdminModule.php:4012
+#: src/Admin/AdminModule.php:1986
+#: src/Admin/AdminModule.php:4021
 msgid "Not installed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1982
-#: src/Admin/AdminModule.php:3019
+#: src/Admin/AdminModule.php:1991
+#: src/Admin/AdminModule.php:3028
 msgid "Redis object cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1982
+#: src/Admin/AdminModule.php:1991
 msgid "Use PhpRedis credentials or leave fields at their local defaults. GT Performance and standard Redis Object Cache constants override generated settings at runtime."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1983
+#: src/Admin/AdminModule.php:1992
 msgid "Enable Redis object cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1983
+#: src/Admin/AdminModule.php:1992
 msgid "Connect the GT Performance object-cache.php drop-in to Redis. Disable this before migrating to another object-cache owner."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1984
+#: src/Admin/AdminModule.php:1993
 msgid "Redis host or socket"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1984
+#: src/Admin/AdminModule.php:1993
 msgid "Hostname, IP address, or Unix socket path."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1985
+#: src/Admin/AdminModule.php:1994
 msgid "Redis port"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1985
+#: src/Admin/AdminModule.php:1994
 msgid "Use 6379 normally, or 0 with a Unix socket."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1986
+#: src/Admin/AdminModule.php:1995
 msgid "Redis database number"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1986
+#: src/Admin/AdminModule.php:1995
 msgid "Logical Redis database reserved for this site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1986
+#: src/Admin/AdminModule.php:1995
 msgid "Do not share this database with another site unless each installation uses a unique cache key prefix."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1987
+#: src/Admin/AdminModule.php:1996
 msgid "Redis username"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1987
+#: src/Admin/AdminModule.php:1996
 msgid "Optional ACL username. Leave blank for password-only authentication."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1988
+#: src/Admin/AdminModule.php:1997
 msgid "Redis password"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1988
+#: src/Admin/AdminModule.php:1997
 msgid "Encrypted in WordPress. Leave blank to keep the saved password."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1989
+#: src/Admin/AdminModule.php:1998
 msgid "Use TLS"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1989
+#: src/Admin/AdminModule.php:1998
 msgid "Connect with tls:// when the Redis provider requires encrypted transport."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1990
+#: src/Admin/AdminModule.php:1999
 msgid "Reuse Redis connections"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1990
+#: src/Admin/AdminModule.php:1999
 msgid "Keep a PhpRedis connection open between PHP requests when the host supports it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1990
+#: src/Admin/AdminModule.php:1999
 msgid "Persistent connections reduce connection overhead but may be unsuitable on hosts that tightly limit Redis clients."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1991
+#: src/Admin/AdminModule.php:2000
 msgid "Cache key prefix"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1991
+#: src/Admin/AdminModule.php:2000
 msgid "Optional. Leave blank for an automatic site-specific prefix."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1991
+#: src/Admin/AdminModule.php:2000
 msgid "Use a unique prefix whenever multiple WordPress installations share the same Redis database."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1992
+#: src/Admin/AdminModule.php:2001
 msgid "Connection timeout"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1992
+#: src/Admin/AdminModule.php:2001
 msgid "Fail back to request-local cache quickly when Redis is unavailable."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1993
+#: src/Admin/AdminModule.php:2002
 msgid "Read timeout"
 msgstr ""
 
-#: src/Admin/AdminModule.php:1993
+#: src/Admin/AdminModule.php:2002
 msgid "Maximum time to wait for a Redis response."
 msgstr ""
 
-#: src/Admin/AdminModule.php:1999
+#: src/Admin/AdminModule.php:2008
 msgid "Test Redis credentials"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2000
+#: src/Admin/AdminModule.php:2009
 msgid "Save first, then run a bounded connection, authentication, database selection, and ping check."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2006
+#: src/Admin/AdminModule.php:2015
 msgid "Install the drop-in"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2007
+#: src/Admin/AdminModule.php:2016
 msgid "Tests the saved credentials, then installs object-cache.php when no other drop-in conflicts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2009
-#: src/Admin/AdminModule.php:3019
+#: src/Admin/AdminModule.php:2018
+#: src/Admin/AdminModule.php:3028
 msgid "Test and install Redis"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2019
+#: src/Admin/AdminModule.php:2028
 msgid "Connect AI assistants over MCP or REST, ask the built-in adviser about diagnostics, and review the settings changes they propose."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2040
+#: src/Admin/AdminModule.php:2049
 msgid "xCloud cache status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2041
+#: src/Admin/AdminModule.php:2050
 msgid "Status is refreshed only on request. Enterprise settings and purge remain owned by the xCloud dashboard; GT Performance detects and reports the add-on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2045
+#: src/Admin/AdminModule.php:2054
 #: src/Core/Network.php:431
 msgid "Site"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2046
+#: src/Admin/AdminModule.php:2055
 msgid "Stack"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2047
-#: src/Admin/AdminModule.php:2048
-#: src/Admin/AdminModule.php:2049
-#: src/Admin/AdminModule.php:2052
-#: src/Admin/AdminModule.php:4011
+#: src/Admin/AdminModule.php:2056
+#: src/Admin/AdminModule.php:2057
+#: src/Admin/AdminModule.php:2058
+#: src/Admin/AdminModule.php:2061
+#: src/Admin/AdminModule.php:4020
 msgid "Disabled"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2048
+#: src/Admin/AdminModule.php:2057
 msgid "Redis"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2049
+#: src/Admin/AdminModule.php:2058
 msgid "Object Cache Pro"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2050
+#: src/Admin/AdminModule.php:2059
 msgid "Cloudflare Enterprise"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2050
+#: src/Admin/AdminModule.php:2059
 msgid "Active through xCloud"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2051
+#: src/Admin/AdminModule.php:2060
 msgid "Enterprise edge traffic (12h)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2052
+#: src/Admin/AdminModule.php:2061
 msgid "Free xCloud edge cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2053
-#: src/Admin/AdminModule.php:2054
+#: src/Admin/AdminModule.php:2062
+#: src/Admin/AdminModule.php:2063
 msgid "Never"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2054
+#: src/Admin/AdminModule.php:2063
 msgid "Last xCloud purge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2060
+#: src/Admin/AdminModule.php:2069
 msgid "Resolve edge ownership"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2061
+#: src/Admin/AdminModule.php:2070
 msgid "xCloud Cloudflare Enterprise and GT Performance direct Cloudflare are both enabled. xCloud owns purge routing; direct Cloudflare rule synchronization is blocked until only one edge owner remains."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2066
+#: src/Admin/AdminModule.php:2075
 msgid "Enterprise purge remains manual"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2067
+#: src/Admin/AdminModule.php:2076
 msgid "Enterprise analytics are available through the API token, but its purge action currently requires an xCloud dashboard session. Automatic Enterprise purge is intentionally disabled until xCloud publishes a token-authenticated endpoint."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2070
+#: src/Admin/AdminModule.php:2079
 msgid "Keep commerce HTML out of edge cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2071
+#: src/Admin/AdminModule.php:2080
 msgid "Keep xCloud Enterprise Edge Page Caching off unless xCloud provides request-level bypass rules. Live testing found its current page-cache rule overrides origin no-store directives and caches cart, checkout, account, and receipt HTML. Enterprise static caching, WAF, and the other add-on features can remain enabled."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2078
+#: src/Admin/AdminModule.php:2087
 msgid "Open this site in xCloud"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2080
+#: src/Admin/AdminModule.php:2089
 msgid "Connect/refresh xCloud"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2098
+#: src/Admin/AdminModule.php:2107
 msgid "Compatible wp-config.php overrides"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2099
+#: src/Admin/AdminModule.php:2108
 msgid "GT Performance reads the same WP_REDIS_* constants used by Till Krüss Redis Object Cache. GTPERF_REDIS_* constants remain supported and take highest precedence."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2104
+#: src/Admin/AdminModule.php:2113
 msgid "Add only the constants you need before the WordPress stop-editing comment. WP_REDIS_HOST or WP_REDIS_PATH enables Redis unless WP_REDIS_DISABLED is true. Existing GTPERF_REDIS_* constants do not need to be changed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2119
+#: src/Admin/AdminModule.php:2128
 msgid "Detected plugin compatibility"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2120
+#: src/Admin/AdminModule.php:2129
 msgid "Foreign cache drop-ins are never overwritten. Active optimization owners that need a manual choice are flagged here."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2131
+#: src/Admin/AdminModule.php:2140
 msgid "Not active"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2137
+#: src/Admin/AdminModule.php:2146
 msgid "Review ownership"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2140
+#: src/Admin/AdminModule.php:2149
 msgid "Review cache setup"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2142
+#: src/Admin/AdminModule.php:2151
 msgid "Perfmatters owns optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2166
+#: src/Admin/AdminModule.php:2175
 msgid "Runtime status, health, warming, purge receipts, settings history, and the background queue. The everyday operations live on the dashboard."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2171
+#: src/Admin/AdminModule.php:2180
 msgid "Runtime status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2172
+#: src/Admin/AdminModule.php:2181
 msgid "GT Performance never overwrites a drop-in owned by another plugin."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2176
+#: src/Admin/AdminModule.php:2185
 #: src/Diagnostics/HealthReport.php:164
 msgid "Page-cache drop-in"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2177
+#: src/Admin/AdminModule.php:2186
 msgid "WP_CACHE"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2181
+#: src/Admin/AdminModule.php:2190
 msgid "Install drop-ins, purge, and sync Cloudflare on the dashboard"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2201
-#: src/Admin/AdminModule.php:2206
+#: src/Admin/AdminModule.php:2210
+#: src/Admin/AdminModule.php:2215
 msgid "Not stored"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2203
+#: src/Admin/AdminModule.php:2212
 msgid "Stored and fresh"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2204
+#: src/Admin/AdminModule.php:2213
 msgid "Stored, stale (served while it is rebuilt)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2205
+#: src/Admin/AdminModule.php:2214
 msgid "Stored, expired (the next visit rebuilds it)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2213
+#: src/Admin/AdminModule.php:2222
 msgid "Why a URL is or is not cached, and what the origin and Cloudflare hold for it. Checked as a signed-out visitor; nothing is fetched or purged."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2219
+#: src/Admin/AdminModule.php:2228
 msgid "Page URL"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2221
+#: src/Admin/AdminModule.php:2230
 msgid "Explain"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2231
-#: src/Admin/AdminModule.php:2975
+#: src/Admin/AdminModule.php:2240
+#: src/Admin/AdminModule.php:2984
 msgid "URL"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2232
+#: src/Admin/AdminModule.php:2241
 msgid "Decision"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2236
+#: src/Admin/AdminModule.php:2245
 msgid "Cacheable"
 msgstr ""
 
 #. translators: %s: machine-readable bypass reason, such as path:/cart/.
-#: src/Admin/AdminModule.php:2238
+#: src/Admin/AdminModule.php:2247
 #, php-format
 msgid "Bypassed (%s)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2242
+#: src/Admin/AdminModule.php:2251
 msgid "Origin copy"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2243
+#: src/Admin/AdminModule.php:2252
 msgid "Stored"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2244
+#: src/Admin/AdminModule.php:2253
 msgid "Fresh until"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2245
+#: src/Admin/AdminModule.php:2254
 msgid "Size"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2246
+#: src/Admin/AdminModule.php:2255
 msgid "Cache key"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2252
+#: src/Admin/AdminModule.php:2261
 msgid "Agrees with the origin: may cache at the edge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2252
+#: src/Admin/AdminModule.php:2261
 msgid "Agrees with the origin: bypasses the edge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2259
+#: src/Admin/AdminModule.php:2268
 msgid "Open this page with every optimization off"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2269
+#: src/Admin/AdminModule.php:2278
 msgid "Clean up revisions, drafts, spam, expired transients, and table overhead now or on a schedule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2272
+#: src/Admin/AdminModule.php:2281
 msgid "Scheduled database optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2272
+#: src/Admin/AdminModule.php:2281
 msgid "Save cleanup tasks and run a bounded batch daily, weekly, or monthly."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2273
+#: src/Admin/AdminModule.php:2282
 msgid "Schedule database cleanup"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2273
+#: src/Admin/AdminModule.php:2282
 msgid "Run the selected database tasks automatically."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2277
+#: src/Admin/AdminModule.php:2286
 msgid "Cleanup schedule"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2278
+#: src/Admin/AdminModule.php:2287
 msgid "The schedule starts one hour after settings are saved."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2281
+#: src/Admin/AdminModule.php:2290
 msgid "Daily"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2282
+#: src/Admin/AdminModule.php:2291
 msgid "Weekly"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2283
+#: src/Admin/AdminModule.php:2292
 msgid "Monthly"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2286
+#: src/Admin/AdminModule.php:2295
 msgid "Scheduled revisions to retain"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2286
+#: src/Admin/AdminModule.php:2295
 msgid "How many recent revisions to keep per post when cleanup runs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2286
+#: src/Admin/AdminModule.php:2295
 msgid "revisions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2294
+#: src/Admin/AdminModule.php:2303
 msgid "Queue upgrade in progress"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2294
+#: src/Admin/AdminModule.php:2303
 msgid "New jobs wait until the queue schema and existing jobs are ready. Reload this screen to continue the bounded migration. Active workers keep their leases. If this persists, check database permissions and that the jobs table uses InnoDB."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2304
+#: src/Admin/AdminModule.php:2313
 #: src/Diagnostics/HealthReport.php:109
 #: src/Diagnostics/HealthReport.php:115
 msgid "Background queue"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2305
+#: src/Admin/AdminModule.php:2314
 msgid "Pause optional warming and generation. Cache invalidation keeps running."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2307
+#: src/Admin/AdminModule.php:2316
 msgid "Resume queue"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2307
+#: src/Admin/AdminModule.php:2316
 msgid "Pause optional work"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2311
+#: src/Admin/AdminModule.php:2320
 msgid "Pending"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2312
-#: src/Admin/AdminModule.php:2314
+#: src/Admin/AdminModule.php:2321
+#: src/Admin/AdminModule.php:2323
 msgid "Running"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2314
-#: src/Admin/AdminModule.php:2611
-#: src/Admin/AdminModule.php:2705
+#: src/Admin/AdminModule.php:2323
+#: src/Admin/AdminModule.php:2620
+#: src/Admin/AdminModule.php:2714
 msgid "State"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2314
+#: src/Admin/AdminModule.php:2323
 msgid "Paused"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2318
+#: src/Admin/AdminModule.php:2327
 msgid "No recent jobs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2321
+#: src/Admin/AdminModule.php:2330
 msgid "Job"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2321
-#: src/Admin/AdminModule.php:2661
-#: src/Admin/AdminModule.php:2976
-#: src/Admin/AdminModule.php:3308
+#: src/Admin/AdminModule.php:2330
+#: src/Admin/AdminModule.php:2670
+#: src/Admin/AdminModule.php:2985
+#: src/Admin/AdminModule.php:3317
 #: src/Licensing/LicenseModule.php:160
 msgid "Status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2321
+#: src/Admin/AdminModule.php:2330
 msgid "Attempts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2321
+#: src/Admin/AdminModule.php:2330
 msgid "Updated"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2321
-#: src/Admin/AdminModule.php:3308
+#: src/Admin/AdminModule.php:2330
+#: src/Admin/AdminModule.php:3317
 msgid "Action"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2326
+#: src/Admin/AdminModule.php:2335
 msgid "Cancellation requested"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2331
+#: src/Admin/AdminModule.php:2340
 msgid "Retry"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2333
+#: src/Admin/AdminModule.php:2342
 msgid "Cancel"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2352
+#: src/Admin/AdminModule.php:2361
 msgid "MCP and REST access"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2352
+#: src/Admin/AdminModule.php:2361
 msgid "Let an external AI assistant read cache, queue, and health evidence and, if you allow it, purge or preload URLs and propose settings for you to approve."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2354
+#: src/Admin/AdminModule.php:2363
 msgid "Requires WordPress 6.9 or later, which provides the Abilities API. Caching and every other feature work without it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2361
+#: src/Admin/AdminModule.php:2370
 msgid "Agent access"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2362
+#: src/Admin/AdminModule.php:2371
 msgid "Off hides GT Performance abilities and denies every call, even from a client that cached them earlier."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2366
+#: src/Admin/AdminModule.php:2375
 msgid "Read-only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2367
+#: src/Admin/AdminModule.php:2376
 msgid "Read and operate"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2369
+#: src/Admin/AdminModule.php:2378
 msgid "Operate allows purging and preloading up to 20 URLs at a time, regenerating CSS, retrying failed jobs, and proposing settings. Proposals change nothing until you apply them on this tab. Every call requires an administrator account."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2374
+#: src/Admin/AdminModule.php:2383
 msgid "REST API"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2374
+#: src/Admin/AdminModule.php:2383
 msgid "Works with no extra plugin: scripts, automations, and assistants that call HTTP APIs run abilities at …/abilities/gt-performance/<name>/run."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2375
+#: src/Admin/AdminModule.php:2384
 msgid "MCP"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2378
+#: src/Admin/AdminModule.php:2387
 msgid "Optional. MCP clients such as Claude, Codex, and Cursor need the official WordPress MCP Adapter plugin; it is not active."
 msgstr ""
 
 #. translators: 1: adapter version, 2: name of the plugin that bundles it.
-#: src/Admin/AdminModule.php:2380
+#: src/Admin/AdminModule.php:2389
 #, php-format
 msgid "MCP Adapter %1$s active, loaded by %2$s, which bundles it"
 msgstr ""
 
 #. translators: %s: adapter version.
-#: src/Admin/AdminModule.php:2382
+#: src/Admin/AdminModule.php:2391
 #, php-format
 msgid "MCP Adapter %s active"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2388
+#: src/Admin/AdminModule.php:2397
 msgid "Abilities"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2389
+#: src/Admin/AdminModule.php:2398
 msgid "Last read"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2389
+#: src/Admin/AdminModule.php:2398
 msgid "None yet"
 msgstr ""
 
 #. translators: 1: ability name, 2: user ID, 3: time since the call.
-#: src/Admin/AdminModule.php:2389
+#: src/Admin/AdminModule.php:2398
 #, php-format
 msgid "%1$s by user %2$d, %3$s ago"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2392
+#: src/Admin/AdminModule.php:2401
 msgid "Connect over HTTPS with a WordPress Application Password for a dedicated administrator account, and revoke it from that user's profile to disconnect. An Application Password carries the account's full WordPress privileges, and the adapter's shared server may list other plugins' abilities too; GT Performance controls only its own. On the server itself, the adapter's WP-CLI transport runs as the user you select."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2402
+#: src/Admin/AdminModule.php:2411
 msgid "AI adviser"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2402
+#: src/Admin/AdminModule.php:2411
 msgid "Ask an AI model, configured in WordPress, to explain diagnostics and suggest settings. Off by default; nothing is sent until you press Send."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2404
+#: src/Admin/AdminModule.php:2413
 msgid "Requires WordPress 7.0 or later, which includes the AI Client. Diagnostics work without it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2409
+#: src/Admin/AdminModule.php:2418
 msgid "Enable the AI adviser"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2409
+#: src/Admin/AdminModule.php:2418
 msgid "Administrators can send a redacted diagnostic report to your AI provider from this tab. Each request shows exactly what will be sent first."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2409
+#: src/Admin/AdminModule.php:2418
 msgid "Uses the provider and credentials configured in WordPress. GT Performance stores no AI keys. At most 20 requests per site per day."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2410
+#: src/Admin/AdminModule.php:2419
 msgid "Automatic (first configured provider)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2414
+#: src/Admin/AdminModule.php:2423
 msgid "Provider"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2414
+#: src/Admin/AdminModule.php:2423
 msgid "No AI provider is configured in WordPress yet. Add one through a provider plugin, then return here."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2414
+#: src/Admin/AdminModule.php:2423
 msgid "Which configured WordPress AI provider receives adviser requests."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2429
+#: src/Admin/AdminModule.php:2438
 msgid "Ask the adviser"
 msgstr ""
 
 #. translators: 1: requests used today, 2: daily limit.
-#: src/Admin/AdminModule.php:2433
+#: src/Admin/AdminModule.php:2442
 #, php-format
 msgid "Findings come from a model and may be wrong; each cites the report items it relies on. %1$d of %2$d requests used today."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2443
+#: src/Admin/AdminModule.php:2452
 msgid "Ask about"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2449
+#: src/Admin/AdminModule.php:2458
 msgid "Page URL, for explaining a page"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2450
+#: src/Admin/AdminModule.php:2459
 msgid "Post ID (purge)"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2450
+#: src/Admin/AdminModule.php:2459
 msgid "Post ID, for explaining a purge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2451
+#: src/Admin/AdminModule.php:2460
 msgid "Prepare request"
 msgstr ""
 
 #. translators: 1: byte count, 2: provider list.
-#: src/Admin/AdminModule.php:2458
+#: src/Admin/AdminModule.php:2467
 #, php-format
 msgid "Ready to send %1$s bytes to: %2$s"
 msgstr ""
 
 #. translators: 1: byte count, 2: provider list.
-#: src/Admin/AdminModule.php:2458
+#: src/Admin/AdminModule.php:2467
 msgid "no configured provider"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2461
+#: src/Admin/AdminModule.php:2470
 msgid "Exactly what will be sent"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2464
+#: src/Admin/AdminModule.php:2473
 msgid "Send"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2465
+#: src/Admin/AdminModule.php:2474
 msgid "Discard"
 msgstr ""
 
 #. translators: 1: time since, 2: provider, 3: model, 4: tokens.
-#: src/Admin/AdminModule.php:2483
+#: src/Admin/AdminModule.php:2492
 #, php-format
 msgid "%1$s ago · %2$s %3$s · %4$s tokens"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2490
+#: src/Admin/AdminModule.php:2499
 msgid "Not in the report:"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2515
+#: src/Admin/AdminModule.php:2524
 msgid "Create a proposal from these suggestions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2519
+#: src/Admin/AdminModule.php:2528
 msgid "Discarded from the answer:"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2574
+#: src/Admin/AdminModule.php:2583
 msgid "Assistant proposals and operations"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2575
+#: src/Admin/AdminModule.php:2584
 msgid "Settings an assistant proposed wait here for you. Applying re-checks that settings have not changed since the proposal; proposals expire after 15 minutes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2579
+#: src/Admin/AdminModule.php:2588
 msgid "No open proposals."
 msgstr ""
 
 #. translators: 1: proposal ID, 2: user ID, 3: time left.
-#: src/Admin/AdminModule.php:2586
+#: src/Admin/AdminModule.php:2595
 #, php-format
 msgid "Proposal #%1$d from user %2$d, expires in %3$s"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2591
+#: src/Admin/AdminModule.php:2600
 msgid "After applying, sync Cloudflare to apply the cache changes at the edge."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2595
+#: src/Admin/AdminModule.php:2604
 msgid "Apply"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2596
+#: src/Admin/AdminModule.php:2605
 msgid "Reject"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2611
+#: src/Admin/AdminModule.php:2620
 msgid "Operation"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2611
+#: src/Admin/AdminModule.php:2620
 msgid "Target"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2611
+#: src/Admin/AdminModule.php:2620
 msgid "Requested"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2618
-#: src/Admin/AdminModule.php:2668
-#: src/Admin/AdminModule.php:2774
+#: src/Admin/AdminModule.php:2627
+#: src/Admin/AdminModule.php:2677
+#: src/Admin/AdminModule.php:2783
 msgid "ago"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2648
+#: src/Admin/AdminModule.php:2657
 msgid "Fail"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2649
+#: src/Admin/AdminModule.php:2658
 msgid "Info"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2655
+#: src/Admin/AdminModule.php:2664
 msgid "Health"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2656
+#: src/Admin/AdminModule.php:2665
 msgid "Saved and local evidence only. This check requests no pages and contacts no edge provider."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2658
+#: src/Admin/AdminModule.php:2667
 msgid "Download support report"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2661
+#: src/Admin/AdminModule.php:2670
 msgid "Check"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2661
+#: src/Admin/AdminModule.php:2670
 msgid "Observed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2668
+#: src/Admin/AdminModule.php:2677
 msgid "Saved"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2687
+#: src/Admin/AdminModule.php:2696
 msgid "A successful response is not proof of a warm cache. Each URL reports whether the origin stored a fresh page or only the edge answered."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2689
+#: src/Admin/AdminModule.php:2698
 msgid "Start warm run"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2692
+#: src/Admin/AdminModule.php:2701
 msgid "No warm run yet. One starts automatically after a full purge when warming is on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2698
+#: src/Admin/AdminModule.php:2707
 msgid "Discovering"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2699
+#: src/Admin/AdminModule.php:2708
 msgid "Warming"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2700
+#: src/Admin/AdminModule.php:2709
 msgid "Complete"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2701
+#: src/Admin/AdminModule.php:2710
 msgid "Partial"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2702
+#: src/Admin/AdminModule.php:2711
 msgid "Capacity limited"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2703
+#: src/Admin/AdminModule.php:2712
 msgid "Superseded"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2706
+#: src/Admin/AdminModule.php:2715
 msgid "Origin ready"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2707
+#: src/Admin/AdminModule.php:2716
 msgid "Edge only"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2708
+#: src/Admin/AdminModule.php:2717
 msgid "Waiting"
 msgstr ""
 
 #. translators: 1: requested-only count, 2: skipped count, 3: sitemaps read, 4: sitemaps failed, 5: time since the run changed.
-#: src/Admin/AdminModule.php:2717
+#: src/Admin/AdminModule.php:2726
 #, php-format
 msgid "%1$s answered without a stored page, %2$s skipped. %3$s sitemap(s) read, %4$s failed. Updated %5$s ago."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2726
+#: src/Admin/AdminModule.php:2735
 msgid "Warnings:"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2745
+#: src/Admin/AdminModule.php:2754
 msgid "Settings history"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2746
+#: src/Admin/AdminModule.php:2755
 msgid "The last 20 saves, kept up to 90 days. Credentials, Cloudflare and xCloud identity, Redis, and agent access are never stored, exported, or restored."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2748
+#: src/Admin/AdminModule.php:2757
 msgid "Export settings"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2752
+#: src/Admin/AdminModule.php:2761
 msgid "Import preview"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2760
+#: src/Admin/AdminModule.php:2769
 msgid "Apply imported settings"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2766
+#: src/Admin/AdminModule.php:2775
 msgid "No earlier settings recorded yet. The next save starts the history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2769
+#: src/Admin/AdminModule.php:2778
 msgid "Replaced"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2769
+#: src/Admin/AdminModule.php:2778
 msgid "By"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2769
+#: src/Admin/AdminModule.php:2778
 msgid "Differences from now"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2778
+#: src/Admin/AdminModule.php:2787
 msgid "Same as current"
 msgstr ""
 
 #. translators: %d: number of changed settings.
-#: src/Admin/AdminModule.php:2784
+#: src/Admin/AdminModule.php:2793
 #, php-format
 msgid "%d setting"
 msgid_plural "%d settings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/AdminModule.php:2794
+#: src/Admin/AdminModule.php:2803
 msgid "Restore these values"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2808
+#: src/Admin/AdminModule.php:2817
 msgid "Import an exported settings file"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2810
+#: src/Admin/AdminModule.php:2819
 msgid "Preview import"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2821
+#: src/Admin/AdminModule.php:2830
 msgid "No differences from the current settings."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2965
+#: src/Admin/AdminModule.php:2974
 msgid "Verified purge receipts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2966
+#: src/Admin/AdminModule.php:2975
 msgid "What a purge actually removed, and what the public response looked like afterwards."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2970
+#: src/Admin/AdminModule.php:2979
 msgid "No purge has been verified yet. Use \"Purge and verify this URL\" in the admin bar."
 msgstr ""
 
-#: src/Admin/AdminModule.php:2977
+#: src/Admin/AdminModule.php:2986
 msgid "Edge"
 msgstr ""
 
-#: src/Admin/AdminModule.php:2978
+#: src/Admin/AdminModule.php:2987
 msgid "When"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3011
+#: src/Admin/AdminModule.php:3020
 msgid "Operations"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3012
+#: src/Admin/AdminModule.php:3021
 msgid "Install drop-ins, clear caches, and reconcile Cloudflare without leaving this screen."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3016
+#: src/Admin/AdminModule.php:3025
 msgid "Purge GT cache"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3016
+#: src/Admin/AdminModule.php:3025
 msgid "Remove every page GT Performance has stored, and purge Cloudflare or xCloud when connected."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3017
+#: src/Admin/AdminModule.php:3026
 msgid "Cloudflare rule"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3017
+#: src/Admin/AdminModule.php:3026
 msgid "Discover the zone when needed and reconcile the managed Cloudflare Free cache rule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3018
+#: src/Admin/AdminModule.php:3027
 msgid "Page cache drop-in"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3018
+#: src/Admin/AdminModule.php:3027
 msgid "Install or refresh GT Performance advanced-cache.php and safely manage WP_CACHE."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3018
+#: src/Admin/AdminModule.php:3027
 msgid "Install page-cache drop-in"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3019
+#: src/Admin/AdminModule.php:3028
 msgid "Test the saved Redis credentials, then install the owned object-cache.php when no other drop-in conflicts."
 msgstr ""
 
 #. translators: %s: what was found, such as "4 classes, 1 ID, 5 CSS rules".
-#: src/Admin/AdminModule.php:3088
+#: src/Admin/AdminModule.php:3097
 #, php-format
 msgid "Done. Found %s to keep."
 msgstr ""
 
 #. translators: %s: number of CSS classes.
-#: src/Admin/AdminModule.php:3099
+#: src/Admin/AdminModule.php:3108
 #, php-format
 msgid "%s class"
 msgid_plural "%s classes"
@@ -3432,7 +3444,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of element IDs.
-#: src/Admin/AdminModule.php:3101
+#: src/Admin/AdminModule.php:3110
 #, php-format
 msgid "%s ID"
 msgid_plural "%s IDs"
@@ -3440,177 +3452,177 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of CSS rules.
-#: src/Admin/AdminModule.php:3103
+#: src/Admin/AdminModule.php:3112
 #, php-format
 msgid "%s CSS rule"
 msgid_plural "%s CSS rules"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/AdminModule.php:3130
+#: src/Admin/AdminModule.php:3139
 msgid "Fetch important CSS classes"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3130
+#: src/Admin/AdminModule.php:3139
 msgid "Some parts of a page are added by JavaScript after it loads, like a table of contents, an ad, or a slider. Unused CSS cannot see them, so it could remove the styles they need. This check finds those parts on your pages so their styles are always kept."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3138
+#: src/Admin/AdminModule.php:3147
 msgid "Fetch classes now"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3139
+#: src/Admin/AdminModule.php:3148
 msgid "This runs by itself after you change unused CSS settings. It opens two recent pages from each public post type (up to eight types), on desktop and mobile, and usually takes one to three minutes. Keep this page open until it finishes. Parts that only appear after a click, like an open menu, still need a safelist entry."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3148
+#: src/Admin/AdminModule.php:3157
 msgid "No pages checked yet."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3154
+#: src/Admin/AdminModule.php:3163
 msgid "Post type"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3155
+#: src/Admin/AdminModule.php:3164
 msgid "Pages checked"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3157
+#: src/Admin/AdminModule.php:3166
 msgid "Checked"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3167
+#: src/Admin/AdminModule.php:3176
 msgid "Nothing to keep"
 msgstr ""
 
 #. translators: %s: time since the check, such as "5 mins".
-#: src/Admin/AdminModule.php:3190
-#: src/Admin/AdminModule.php:3318
+#: src/Admin/AdminModule.php:3199
+#: src/Admin/AdminModule.php:3327
 #, php-format
 msgid "%s ago"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3201
+#: src/Admin/AdminModule.php:3210
 msgid "What unused CSS generation has built, what is queued or failed, and how much CSS it removed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3205
+#: src/Admin/AdminModule.php:3214
 msgid "Change unused CSS settings on Optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3210
+#: src/Admin/AdminModule.php:3219
 msgid "Unused CSS status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3210
+#: src/Admin/AdminModule.php:3219
 msgid "Save settings before running a build. Background jobs use WordPress cron and the saved rollout and exclusions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3215
+#: src/Admin/AdminModule.php:3224
 msgid "Refresh status"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3222
+#: src/Admin/AdminModule.php:3231
 msgid "Public page URL"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3225
+#: src/Admin/AdminModule.php:3234
 msgid "Force regenerate URL"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3232
+#: src/Admin/AdminModule.php:3241
 msgid "Force regenerate all CSS"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3233
+#: src/Admin/AdminModule.php:3242
 msgid "Invalidates every CSS result and clears page caches. Rebuilds known eligible URLs in batches, starting with the homepage. Existing files stay available for cached pages."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3251
-#: src/Admin/AdminModule.php:3398
-#: src/Admin/AdminModule.php:4169
+#: src/Admin/AdminModule.php:3260
+#: src/Admin/AdminModule.php:3407
+#: src/Admin/AdminModule.php:4178
 msgid "Generated file"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3252
-#: src/Admin/AdminModule.php:3402
+#: src/Admin/AdminModule.php:3261
+#: src/Admin/AdminModule.php:3411
 msgid "Inline all used CSS"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3253
-#: src/Admin/AdminModule.php:3406
+#: src/Admin/AdminModule.php:3262
+#: src/Admin/AdminModule.php:3415
 msgid "Critical inline + remaining file"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3260
+#: src/Admin/AdminModule.php:3269
 msgid "Generation"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3260
+#: src/Admin/AdminModule.php:3269
 msgid "Needs cache setup"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3260
+#: src/Admin/AdminModule.php:3269
 msgid "Paused / disabled"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3264
+#: src/Admin/AdminModule.php:3273
 #: src/Optimization/Css/ReportExplainer.php:42
 msgid "Out of date"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3265
+#: src/Admin/AdminModule.php:3274
 #: src/Optimization/Css/ReportExplainer.php:46
 msgid "Queued"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3266
+#: src/Admin/AdminModule.php:3275
 #: src/Optimization/Css/ReportExplainer.php:50
 msgid "Building"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3268
+#: src/Admin/AdminModule.php:3277
 #: src/Optimization/Css/ReportExplainer.php:54
 msgid "Skipped"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3269
+#: src/Admin/AdminModule.php:3278
 msgid "Pages tracked"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3277
+#: src/Admin/AdminModule.php:3286
 msgid "Generation needs the GT Performance page-cache drop-in and WP_CACHE. Install or repair the drop-in from the dashboard."
 msgstr ""
 
 #. translators: 1: number of pages, 2: original CSS size, 3: generated CSS size, 4: reduction percentage.
-#: src/Admin/AdminModule.php:3280
+#: src/Admin/AdminModule.php:3289
 #, php-format
 msgid "Across %1$s ready pages: %2$s of CSS reduced to %3$s (%4$s%% less). These are sizes before compression, summed per page, not measured visitor bandwidth."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3282
+#: src/Admin/AdminModule.php:3291
 msgid "No page has current reduced CSS yet. Pages are built in the background after their first visit, or when you queue them below."
 msgstr ""
 
 #. translators: 1: delivery mode, 2: rollout percentage.
-#: src/Admin/AdminModule.php:3284
+#: src/Admin/AdminModule.php:3293
 #, php-format
 msgid "Delivery: %1$s. Rollout: %2$s%% of pages."
 msgstr ""
 
 #. translators: %s: UTC cron timestamp.
-#: src/Admin/AdminModule.php:3285
+#: src/Admin/AdminModule.php:3294
 #, php-format
 msgid "Next background queue run: %s UTC."
 msgstr ""
 
 #. translators: %s: UTC cron timestamp.
-#: src/Admin/AdminModule.php:3285
+#: src/Admin/AdminModule.php:3294
 msgid "The background queue is not scheduled. Reload after WordPress initializes it."
 msgstr ""
 
 #. translators: %s: number of pages.
-#: src/Admin/AdminModule.php:3289
+#: src/Admin/AdminModule.php:3298
 #, php-format
 msgid "%s page is out of date"
 msgid_plural "%s pages are out of date"
@@ -3618,743 +3630,743 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of pages.
-#: src/Admin/AdminModule.php:3290
+#: src/Admin/AdminModule.php:3299
 msgid "A settings save, plugin update, or CSS change happened after they were built. Visitors get the original CSS on those pages until the next visit queues a rebuild. Force regenerate all rebuilds known pages now."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3295
+#: src/Admin/AdminModule.php:3304
 msgid "Hybrid inline limit"
 msgstr ""
 
 #. translators: %s: number of results.
-#: src/Admin/AdminModule.php:3300
+#: src/Admin/AdminModule.php:3309
 #, php-format
 msgid "%s older result built for a different delivery mode is not counted."
 msgid_plural "%s older results built for a different delivery mode are not counted."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/AdminModule.php:3303
+#: src/Admin/AdminModule.php:3312
 msgid "No CSS results yet. Queue a public URL below. Generation needs an active page-cache drop-in and an eligible public HTML response."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3306
+#: src/Admin/AdminModule.php:3315
 msgid "The 50 most recent results, newest first."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3308
+#: src/Admin/AdminModule.php:3317
 msgid "Page"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3308
+#: src/Admin/AdminModule.php:3317
 msgid "What visitors get"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3308
+#: src/Admin/AdminModule.php:3317
 msgid "Last activity"
 msgstr ""
 
 #. translators: %s: build time in milliseconds.
-#: src/Admin/AdminModule.php:3318
+#: src/Admin/AdminModule.php:3327
 #, php-format
 msgid "built in %s ms"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3324
+#: src/Admin/AdminModule.php:3333
 msgid "Regenerate"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3338
+#: src/Admin/AdminModule.php:3347
 msgid "Maximum impact"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3339
+#: src/Admin/AdminModule.php:3348
 msgid "1h · 24h · 5m"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3346
+#: src/Admin/AdminModule.php:3355
 msgid "Balanced"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3347
+#: src/Admin/AdminModule.php:3356
 msgid "30m · 12h · 5m"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3354
+#: src/Admin/AdminModule.php:3363
 msgid "Frequently updated"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3355
+#: src/Admin/AdminModule.php:3364
 msgid "5m · 1h · 5m"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3365
+#: src/Admin/AdminModule.php:3374
 msgid "One-click presets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3366
+#: src/Admin/AdminModule.php:3375
 msgid "Times show fresh cache, shared retention, and browser max-age. Apply a preset, review the fields, then save changes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3368
+#: src/Admin/AdminModule.php:3377
 msgid "Cache lifetime presets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3399
+#: src/Admin/AdminModule.php:3408
 msgid "Smallest pages. Browsers can reuse the CSS file between visits."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3403
+#: src/Admin/AdminModule.php:3412
 msgid "Saves a request, but puts the CSS in every page, so pages are bigger."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3407
+#: src/Admin/AdminModule.php:3416
 msgid "Puts the CSS needed for the top of the page in the page itself, and the rest in a file."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3414
+#: src/Admin/AdminModule.php:3423
 msgid "Choose how the reduced, page-specific CSS is added to the response."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3438
+#: src/Admin/AdminModule.php:3447
 msgid "WordPress presets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3439
+#: src/Admin/AdminModule.php:3448
 msgid "The site baseline matches the active request-removal settings on gauravtiwari.org. It keeps the main feed live and indexable while disabling secondary feeds, and it does not change comments, global styles, Heartbeat, revisions, or REST access."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3441
+#: src/Admin/AdminModule.php:3450
 msgid "WordPress optimization presets"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3442
+#: src/Admin/AdminModule.php:3451
 msgid "Apply site baseline"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3443
+#: src/Admin/AdminModule.php:3452
 msgid "Clear quick toggles"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3458
+#: src/Admin/AdminModule.php:3467
 msgid "Scheduled tasks"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3459
+#: src/Admin/AdminModule.php:3468
 msgid "Choose what automatic maintenance may remove. Clearing all transients is available only as a manual action."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3489
+#: src/Admin/AdminModule.php:3498
 msgid "Manual database optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3490
+#: src/Admin/AdminModule.php:3499
 msgid "Scan results are current. Select only the cleanup tasks you want to run now."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3492
+#: src/Admin/AdminModule.php:3501
 msgid "Manual control"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3498
+#: src/Admin/AdminModule.php:3507
 msgid "Manual database optimization tasks"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3511
+#: src/Admin/AdminModule.php:3520
 msgid "These changes are permanent. Back up the database before deleting content or clearing all transients."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3512
+#: src/Admin/AdminModule.php:3521
 msgid "Run selected optimization"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3532
+#: src/Admin/AdminModule.php:3541
 msgid "Waiting for the background queue"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3533
+#: src/Admin/AdminModule.php:3542
 msgid "Running in the background"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3534
+#: src/Admin/AdminModule.php:3543
 msgid "Latest run finished"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3535
+#: src/Admin/AdminModule.php:3544
 msgid "Latest run was stopped"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3536
+#: src/Admin/AdminModule.php:3545
 msgid "Latest run failed"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3538
+#: src/Admin/AdminModule.php:3547
 msgid "Latest run stopped making progress"
 msgstr ""
 
 #. translators: 1: manual or scheduled, 2: time since.
-#: src/Admin/AdminModule.php:3547
+#: src/Admin/AdminModule.php:3556
 #, php-format
 msgid "%1$s run, updated %2$s ago."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3548
+#: src/Admin/AdminModule.php:3557
 msgid "Scheduled"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3548
+#: src/Admin/AdminModule.php:3557
 msgid "Manual"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3553
+#: src/Admin/AdminModule.php:3562
 msgid "It keeps going if you leave this page."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3556
+#: src/Admin/AdminModule.php:3565
 msgid "Nothing advanced it for 30 minutes, so a new run can start. Check the background queue on Tools."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3567
+#: src/Admin/AdminModule.php:3576
 msgid "working"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3567
+#: src/Admin/AdminModule.php:3576
 msgid "waiting"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3568
+#: src/Admin/AdminModule.php:3577
 msgid "done"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3570
+#: src/Admin/AdminModule.php:3579
 msgid "not run"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3580
+#: src/Admin/AdminModule.php:3589
 msgid "Stop after this batch"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3592
+#: src/Admin/AdminModule.php:3601
 msgid "Post revisions"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3593
+#: src/Admin/AdminModule.php:3602
 msgid "Delete saved revisions. Manual cleanup removes all selected revisions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3596
+#: src/Admin/AdminModule.php:3605
 msgid "Auto-drafts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3597
+#: src/Admin/AdminModule.php:3606
 msgid "Delete abandoned automatic drafts."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3600
+#: src/Admin/AdminModule.php:3609
 msgid "Spam comments"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3601
+#: src/Admin/AdminModule.php:3610
 msgid "Permanently delete comments marked as spam."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3604
+#: src/Admin/AdminModule.php:3613
 msgid "Trashed posts"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3605
+#: src/Admin/AdminModule.php:3614
 msgid "Permanently delete posts and pages in Trash."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3608
+#: src/Admin/AdminModule.php:3617
 msgid "Trashed comments"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3609
+#: src/Admin/AdminModule.php:3618
 msgid "Permanently delete comments in Trash."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3612
+#: src/Admin/AdminModule.php:3621
 msgid "Expired transients"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3613
+#: src/Admin/AdminModule.php:3622
 msgid "Remove expired temporary cache entries."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3616
+#: src/Admin/AdminModule.php:3625
 msgid "All transients"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3617
+#: src/Admin/AdminModule.php:3626
 msgid "Clear every transient row, including active temporary caches."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3620
+#: src/Admin/AdminModule.php:3629
 msgid "Database tables"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3621
+#: src/Admin/AdminModule.php:3630
 msgid "Optimize WordPress tables that report reclaimable space."
 msgstr ""
 
-#: src/Admin/AdminModule.php:3635
+#: src/Admin/AdminModule.php:3644
 msgid "Save changes"
 msgstr ""
 
-#: src/Admin/AdminModule.php:3837
+#: src/Admin/AdminModule.php:3846
 msgid "Saved; leave blank to keep"
 msgstr ""
 
 #. translators: 1: setting label, 2: brief help text.
-#: src/Admin/AdminModule.php:3873
+#: src/Admin/AdminModule.php:3882
 #, php-format
 msgid "More information about %1$s: %2$s"
 msgstr ""
 
-#: src/Admin/AdminModule.php:4009
+#: src/Admin/AdminModule.php:4018
 msgid "Installed by GT Performance"
 msgstr ""
 
-#: src/Admin/AdminModule.php:4013
+#: src/Admin/AdminModule.php:4022
 msgid "Owned by another plugin"
 msgstr ""
 
 #. translators: %s: number of database records removed.
-#: src/Admin/AdminModule.php:4030
+#: src/Admin/AdminModule.php:4039
 #, php-format
 msgid "Database cleanup removed %s record."
 msgid_plural "Database cleanup removed %s records."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/AdminModule.php:4038
+#: src/Admin/AdminModule.php:4047
 msgid "The page-cache drop-in was installed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4039
+#: src/Admin/AdminModule.php:4048
 msgid "The Redis object-cache drop-in was installed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4040
+#: src/Admin/AdminModule.php:4049
 msgid "Redis accepted the saved credentials and passed the connection test."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4041
+#: src/Admin/AdminModule.php:4050
 msgid "GT Performance cache was purged."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4042
+#: src/Admin/AdminModule.php:4051
 msgid "Server rules added. Stored pages are now served by the web server where the rules allow it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4043
+#: src/Admin/AdminModule.php:4052
 msgid "Server rules removed. Every hit goes through the PHP drop-in again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4044
+#: src/Admin/AdminModule.php:4053
 msgid "The local page cache was cleared, but Cloudflare could not finish its purge. Review the latest Cloudflare purge below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4045
+#: src/Admin/AdminModule.php:4054
 msgid "Cloudflare connected, the managed cache rule was synchronized, and this site's pages were purged from Cloudflare so nothing cached under an earlier rule is served."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4046
+#: src/Admin/AdminModule.php:4055
 msgid "The managed cache rule was synchronized, but purging this site's pages from Cloudflare failed. Pages Cloudflare stored earlier may be served until they expire; purge them from the Cloudflare tab."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4047
+#: src/Admin/AdminModule.php:4056
 msgid "Your home page was fetched as a visitor; the host cache results are below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4048
+#: src/Admin/AdminModule.php:4057
 msgid "This server could not fetch its own home page. Host caches found in the environment are still listed below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4049
+#: src/Admin/AdminModule.php:4058
 msgid "GT Performance now stores pages: the drop-in is installed and WP_CACHE is on. Verify below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4050
+#: src/Admin/AdminModule.php:4059
 msgid "Optimize-only mode is on. Your host's cache stores pages; purge it once so it keeps optimized copies."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4051
+#: src/Admin/AdminModule.php:4060
 msgid "Setup verified: the home page was served as expected."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4052
+#: src/Admin/AdminModule.php:4061
 msgid "Verification did not pass. The result below says which layer did not answer."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4053
+#: src/Admin/AdminModule.php:4062
 msgid "Cloudflare disconnected. The managed cache rule is gone and this site's pages were purged from Cloudflare."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4054
+#: src/Admin/AdminModule.php:4063
 msgid "Cloudflare disconnected and the managed cache rule is gone, but the Cloudflare purge failed. Purge this site's pages in the Cloudflare dashboard, or pages it stored stay until they expire."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4055
+#: src/Admin/AdminModule.php:4064
 msgid "The live Cloudflare rule plan was checked without changing it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4056
+#: src/Admin/AdminModule.php:4065
 msgid "Every Cloudflare connection stage passed, including writing cache rules."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4057
+#: src/Admin/AdminModule.php:4066
 msgid "A zone-scoped Cloudflare API token was created and saved. The Global API Key is no longer needed here and can be cleared."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4058
+#: src/Admin/AdminModule.php:4067
 msgid "The Cloudflare connection check stopped at a failing stage. The results below name the exact cause."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4059
+#: src/Admin/AdminModule.php:4068
 msgid "The origin artifact was removed and the refreshed public response passed verification."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4060
+#: src/Admin/AdminModule.php:4069
 msgid "The purge completed, but one or more verification signals need review."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4061
+#: src/Admin/AdminModule.php:4070
 msgid "CSS regeneration queued. The report will update when the build finishes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4062
+#: src/Admin/AdminModule.php:4071
 msgid "CSS results invalidated and page caches purged. Known eligible URLs will rebuild in the background; other pages rebuild when visited."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4063
+#: src/Admin/AdminModule.php:4072
 msgid "CSS could not be queued. Check that page caching and unused CSS are enabled, rollout includes the URL, and no build is already active."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4064
+#: src/Admin/AdminModule.php:4073
 msgid "Enter a valid public URL from this WordPress site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4065
+#: src/Admin/AdminModule.php:4074
 msgid "Review exactly what will be sent below, then send or discard it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4066
+#: src/Admin/AdminModule.php:4075
 msgid "The adviser answered. Findings are suggestions, not facts; each lists the report items it relies on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4067
+#: src/Admin/AdminModule.php:4076
 msgid "Nothing was sent."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4068
+#: src/Admin/AdminModule.php:4077
 msgid "A settings proposal was created. Review and apply it below within 15 minutes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4069
+#: src/Admin/AdminModule.php:4078
 msgid "The AI request failed. Details below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4070
+#: src/Admin/AdminModule.php:4079
 msgid "Today's adviser limit is used up."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4071
+#: src/Admin/AdminModule.php:4080
 msgid "Proposal applied. The replaced values were saved to settings history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4072
+#: src/Admin/AdminModule.php:4081
 msgid "Proposal applied locally. Sync Cloudflare to apply the cache changes at the edge."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4073
+#: src/Admin/AdminModule.php:4082
 msgid "Proposal rejected."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4074
+#: src/Admin/AdminModule.php:4083
 msgid "That proposal expired or settings changed since it was made, so nothing was applied."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4075
+#: src/Admin/AdminModule.php:4084
 msgid "Settings restored. The replaced values were saved to history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4076
+#: src/Admin/AdminModule.php:4085
 msgid "Settings restored locally. Sync Cloudflare to apply the cache changes at the edge; the managed rule was not changed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4077
+#: src/Admin/AdminModule.php:4086
 msgid "Settings imported. The replaced values were saved to history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4078
+#: src/Admin/AdminModule.php:4087
 msgid "Settings imported locally. Sync Cloudflare to apply the cache changes at the edge; the managed rule was not changed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4079
+#: src/Admin/AdminModule.php:4088
 #: src/Operations/ProposalService.php:102
 msgid "Those values already match the current settings."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4080
+#: src/Admin/AdminModule.php:4089
 msgid "Review the import below before applying it. The preview expires in 15 minutes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4081
+#: src/Admin/AdminModule.php:4090
 msgid "The import preview expired. Upload the file again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4082
+#: src/Admin/AdminModule.php:4091
 msgid "Settings changed after that preview, so nothing was applied. Review the current values and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4083
+#: src/Admin/AdminModule.php:4092
 msgid "Database cleanup started in the background. Progress updates below; you can leave this page."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4084
+#: src/Admin/AdminModule.php:4093
 msgid "The cleanup will stop after the batch it is working on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4085
+#: src/Admin/AdminModule.php:4094
 msgid "No database cleanup is running."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4086
+#: src/Admin/AdminModule.php:4095
 msgid "A database cleanup is already running."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4087
+#: src/Admin/AdminModule.php:4096
 #: src/Database/CleanupRun.php:55
 msgid "Select at least one cleanup task."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4088
+#: src/Admin/AdminModule.php:4097
 msgid "Warm run queued. Discovery and preloads run in bounded background jobs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4089
+#: src/Admin/AdminModule.php:4098
 msgid "Warming stores pages, and in optimize-only mode your host's cache stores them instead. Nothing was queued."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4090
+#: src/Admin/AdminModule.php:4099
 msgid "The warm run could not be queued. Check that the queue upgrade has finished."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4091
+#: src/Admin/AdminModule.php:4100
 msgid "Optional queue work is paused. Cache invalidation continues."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4092
+#: src/Admin/AdminModule.php:4101
 msgid "The background queue is running again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4093
+#: src/Admin/AdminModule.php:4102
 msgid "The failed job was queued for another attempt."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4094
+#: src/Admin/AdminModule.php:4103
 msgid "The job was cancelled. A running job stops at its next safe boundary."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4095
+#: src/Admin/AdminModule.php:4104
 msgid "That job could not be changed. Refresh and try the current row."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4096
+#: src/Admin/AdminModule.php:4105
 msgid "Enter a Cloudflare API token, save the settings, then connect again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4097
+#: src/Admin/AdminModule.php:4106
 msgid "Enter the Cloudflare account email used with the Global API Key."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4098
+#: src/Admin/AdminModule.php:4107
 msgid "Enter a Cloudflare Global API Key, save the settings, then connect again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4099
+#: src/Admin/AdminModule.php:4108
 msgid "No active Cloudflare zone matched this domain. Check the domain or enter the Zone ID."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4100
+#: src/Admin/AdminModule.php:4109
 msgid "Cloudflare returned an unreadable response. Try again in a moment."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4101
+#: src/Admin/AdminModule.php:4110
 msgid "Cloudflare rejected the request. Editing cache rules needs an API token with Zone → Cache Rules → Edit (permission group \"Cache Settings Write\"), plus Zone Read and Cache Purge. Run the connection check for the failing stage."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4102
+#: src/Admin/AdminModule.php:4111
 msgid "WordPress could not reach the Cloudflare API at all, so this is a network or firewall problem rather than a credential problem."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4103
+#: src/Admin/AdminModule.php:4112
 msgid "Cloudflare did not return the cache ruleset needed to finish setup."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4104
+#: src/Admin/AdminModule.php:4113
 msgid "The Cloudflare Free Cache Rules budget is full. Remove an unused rule or reconnect the existing GT Performance rule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4105
+#: src/Admin/AdminModule.php:4114
 msgid "Enter an xCloud API token with read:sites and write:sites scopes, save, then connect again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4106
+#: src/Admin/AdminModule.php:4115
 msgid "No exact xCloud site matched this domain or UUID."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4107
+#: src/Admin/AdminModule.php:4116
 msgid "xCloud did not expose the numeric site identifiers required by the Cloudflare Enterprise add-on. Refresh and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4108
+#: src/Admin/AdminModule.php:4117
 msgid "xCloud did not return cache-layer settings for this site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4109
+#: src/Admin/AdminModule.php:4118
 msgid "xCloud returned an unreadable response. Try again in a moment."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4110
+#: src/Admin/AdminModule.php:4119
 msgid "xCloud rejected the request. Check the token scopes and team permissions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4111
+#: src/Admin/AdminModule.php:4120
 msgid "Cloudflare Enterprise purge is not available through the xCloud Public API token. Use the Purge control in the xCloud Enterprise dashboard."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4112
+#: src/Admin/AdminModule.php:4121
 msgid "xCloud Cloudflare Enterprise is the active owner. Disable it or the direct Cloudflare integration before synchronizing another cache rule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4113
+#: src/Admin/AdminModule.php:4122
 msgid "xCloud site, host cache, and Cloudflare Enterprise status refreshed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4114
+#: src/Admin/AdminModule.php:4123
 msgid "xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4115
+#: src/Admin/AdminModule.php:4124
 msgid "Enter a valid URL from this WordPress site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4116
+#: src/Admin/AdminModule.php:4125
 msgid "The purge ran, but GT Performance could not fetch the public page for verification."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4117
+#: src/Admin/AdminModule.php:4126
 msgid ".htaccess could not be updated, so the server rules were not changed. Check its file permissions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4118
+#: src/Admin/AdminModule.php:4127
 msgid "Server rules were not added: LiteSpeed does not apply them reliably. Hits keep going through the PHP drop-in, with stored compressed copies."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4119
+#: src/Admin/AdminModule.php:4128
 msgid ".htaccess could not be read."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4120
+#: src/Admin/AdminModule.php:4129
 #: src/Cache/ServerRules.php:520
 msgid ".htaccess is a symbolic link, so GT Performance leaves it alone."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4121
+#: src/Admin/AdminModule.php:4130
 msgid "This file is shared by every site on the network. A network administrator has to install it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4122
+#: src/Admin/AdminModule.php:4131
 msgid "Cloudflare and xCloud edge rules are not available on a multisite network yet. Each site's own page cache still works."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4123
+#: src/Admin/AdminModule.php:4132
 msgid "The network site map could not be written. Check the cache directory permissions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4124
+#: src/Admin/AdminModule.php:4133
 msgid "Another plugin owns advanced-cache.php. Disable or migrate that cache before installing this drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4125
+#: src/Admin/AdminModule.php:4134
 msgid "The WordPress content directory is not writable, so the page-cache drop-in could not be installed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4126
+#: src/Admin/AdminModule.php:4135
 msgid "GT Performance could not write the page-cache drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4127
+#: src/Admin/AdminModule.php:4136
 msgid "GT Performance could not publish the page-cache drop-in safely."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4129
+#: src/Admin/AdminModule.php:4138
 #: src/Cache/WpCacheConstant.php:42
 msgid "GT Performance could not read wp-config.php."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4130
+#: src/Admin/AdminModule.php:4139
 msgid "wp-config.php contains a custom WP_CACHE declaration. Enable WP_CACHE manually, then try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4131
+#: src/Admin/AdminModule.php:4140
 #: src/Cache/WpCacheConstant.php:74
 msgid "GT Performance could not add WP_CACHE to wp-config.php."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4132
+#: src/Admin/AdminModule.php:4141
 msgid "wp-config.php is not writable. Add the WP_CACHE constant manually, then try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4133
+#: src/Admin/AdminModule.php:4142
 msgid "GT Performance could not write the temporary wp-config.php update."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4134
+#: src/Admin/AdminModule.php:4143
 msgid "GT Performance could not publish the wp-config.php update safely."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4135
+#: src/Admin/AdminModule.php:4144
 msgid "The PHP Redis extension is not installed on this server."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4136
+#: src/Admin/AdminModule.php:4145
 msgid "Enable Redis object caching and save the settings before testing the connection."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4137
+#: src/Admin/AdminModule.php:4146
 msgid "Redis could not be reached with the saved host, TLS, or credentials."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4138
+#: src/Admin/AdminModule.php:4147
 #: src/Redis/ConnectionTester.php:30
 msgid "Redis accepted the connection but did not answer the health check."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4139
+#: src/Admin/AdminModule.php:4148
 msgid "Another plugin owns object-cache.php. Remove that conflict before installing the Redis drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4140
+#: src/Admin/AdminModule.php:4149
 msgid "GT Performance could not install the Redis object-cache drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4141
+#: src/Admin/AdminModule.php:4150
 msgid "That quick action is not available."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4162
+#: src/Admin/AdminModule.php:4171
 msgid "The requested GT Performance action could not be completed. Check the settings and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4170
+#: src/Admin/AdminModule.php:4179
 msgid "Fully inline"
 msgstr ""
 
-#: src/Admin/AdminModule.php:4171
+#: src/Admin/AdminModule.php:4180
 msgid "Critical inline + file"
 msgstr ""
 
@@ -4762,11 +4774,11 @@ msgstr ""
 msgid "Cloudflare Zone ID is missing, so there is no rule to remove."
 msgstr ""
 
-#: src/Cloudflare/RuleManager.php:158
+#: src/Cloudflare/RuleManager.php:159
 msgid "Cloudflare did not return a cache ruleset ID."
 msgstr ""
 
-#: src/Cloudflare/RuleManager.php:166
+#: src/Cloudflare/RuleManager.php:167
 msgid "The Cloudflare Free Cache Rules budget is full. Remove an unused rule or let GT Performance update its existing managed rule."
 msgstr ""
 
@@ -5096,11 +5108,11 @@ msgstr ""
 msgid "The REST API is disabled by GT Performance."
 msgstr ""
 
-#: src/Diagnostics/CacheInspector.php:36
+#: src/Diagnostics/CacheInspector.php:37
 msgid "The URL could not be inspected."
 msgstr ""
 
-#: src/Diagnostics/CacheInspector.php:112
+#: src/Diagnostics/CacheInspector.php:115
 msgid "The managed rule matches this request and overrides origin freshness, so Cloudflare would cache a response the origin marks private. Set the Cloudflare edge cache lifetime to 0 to respect the origin."
 msgstr ""
 

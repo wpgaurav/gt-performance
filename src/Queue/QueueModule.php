@@ -284,9 +284,12 @@ final class QueueModule implements Module {
 				if ( $this->jobs->cancellationRequested( $id, $token ) ) {
 					$this->jobs->finishCancelled( $id, $token );
 				} else {
-					$result = $this->handle( (string) $job['type'], (array) $job['payload'] );
+					$result = $this->handle( (string) $job['type'], (array) $job['payload'], max( 0.0, 20 - ( microtime( true ) - $started ) ) );
 					if ( $this->jobs->cancellationRequested( $id, $token ) ) {
 						$this->jobs->finishCancelled( $id, $token );
+					} elseif ( 'deferred' === ( $result['status'] ?? '' ) ) {
+						$this->jobs->defer( $id, $token );
+						break;
 					} elseif ( ! $this->jobs->complete( $id, $token, (int) round( ( microtime( true ) - $jobStarted ) * 1000 ), $result ) ) {
 						$this->logger->log(
 							'warning',
@@ -347,7 +350,7 @@ final class QueueModule implements Module {
 	 * @return array<string, scalar> Bounded result metadata for the job row.
 	 * @phpstan-impure
 	 */
-	private function handle( string $type, array $payload ): array {
+	private function handle( string $type, array $payload, ?float $budgetSeconds = null ): array {
 		$url = isset( $payload['url'] ) ? esc_url_raw( (string) $payload['url'] ) : '';
 
 		// Job payloads are built from cached-entry metadata, whose URL was assembled
@@ -364,11 +367,14 @@ final class QueueModule implements Module {
 					throw new \RuntimeException( 'Missing preload URL.' );
 				}
 				$variant = 'mobile' === ( $payload['variant'] ?? '' ) ? 'mobile' : 'public';
-				$outcome = ( new Preloader() )->preload( $url, $variant );
+				$outcome = ( new Preloader() )->preload( $url, $variant, $budgetSeconds );
+				if ( 'deferred' === $outcome['status'] ) {
+					return $outcome;
+				}
 				$this->warmer->record( $url, $variant, $outcome );
 				if ( 'failed' === $outcome['status'] ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal queue exception; never rendered.
-					throw new \RuntimeException( 'Preload failed: ' . $outcome['detail'] . '.' );
+					throw new \RuntimeException( 'Preload failed: ' . $outcome['detail'] . '.' . ( isset( $outcome['error_code'] ) ? ' ' . $outcome['error_code'] . ': ' . ( $outcome['error_message'] ?? '' ) : '' ) );
 				}
 				return $outcome;
 

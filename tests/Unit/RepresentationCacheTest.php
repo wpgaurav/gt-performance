@@ -68,7 +68,7 @@ final class RepresentationCacheTest extends TestCase {
 		$expression = ( new RuleExpression() )->compile( 'example.com', array(), true );
 		self::assertStringContainsString( 'lower(http.request.headers["accept"][0])', $expression );
 		self::assertStringContainsString( 'http.request.headers["authorization"]', $expression );
-		self::assertStringContainsString( '"&format="', $expression );
+		self::assertStringContainsString( 'http.request.uri.query eq ""', $expression );
 	}
 
 	public function test_preload_reaches_origin_while_origin_policy_still_allows_its_public_page(): void {
