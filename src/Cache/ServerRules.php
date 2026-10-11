@@ -281,7 +281,24 @@ final class ServerRules {
 			// campaign link is answered from the page's one stored copy, as the
 			// drop-in answers it. OpenLiteSpeed reads these at startup.
 			$trim   = array_map( static fn ( string $parameter ): string => 'CacheKeyModify -qs:' . $parameter, $this->liteSpeedIgnoredParameters() );
-			$lookup = implode( "\n", array_merge( array( '<IfModule LiteSpeed>', 'CacheLookup on' ), $trim, array( '</IfModule>' ) ) ) . "\n";
+			$lookup = implode(
+				"\n",
+				array_merge(
+					array(
+						'<IfModule LiteSpeed>',
+						'CacheLookup on',
+					),
+					$trim,
+					array(
+						'RewriteEngine On',
+						'RewriteCond %{HTTP:Accept} text/(x-)?markdown [NC]',
+						'RewriteRule .* - [E=Cache-Control:no-cache]',
+						'RewriteCond %{HTTP:X-GT-Preload} !^$',
+						'RewriteRule .* - [E=Cache-Control:no-cache]',
+						'</IfModule>',
+					)
+				)
+			) . "\n";
 		}
 		if ( array() === $lines && '' === $lookup ) {
 			return '';
@@ -395,6 +412,7 @@ final class ServerRules {
 			'RewriteCond %{QUERY_STRING} ^$',
 			'RewriteCond %{HTTP:Authorization} ^$',
 			'RewriteCond %{HTTP:X-GT-Preload} ^$',
+			'RewriteCond %{HTTP:Accept} !text/(x-)?markdown [NC]',
 			'RewriteCond %{HTTP_COOKIE} !(' . implode( '|', array_map( $quote, $site['cookies'] ) ) . ') [NC]',
 		);
 		if ( 'https' === $site['scheme'] ) {
@@ -468,6 +486,7 @@ final class ServerRules {
 			'if ($args != "") { ' . $none . ' }',
 			'if ($http_authorization != "") { ' . $none . ' }',
 			'if ($http_x_gt_preload != "") { ' . $none . ' }',
+			'if ($http_accept ~* "text/(x-)?markdown") { ' . $none . ' }',
 			'if ($http_cookie ~* "(' . implode( '|', array_map( static fn ( string $cookie ): string => preg_quote( $cookie, '#' ), $cookies ) ) . ')") { ' . $none . ' }',
 			'',
 			'location / {',

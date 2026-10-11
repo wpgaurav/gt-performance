@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.1 - 2026-10-11
+
+- Warming reuses fresh origin artifacts without extra HTTP work. Cold preloads wait for a full request allowance within the worker budget; deferral preserves ownership and retry counts.
+- Preload transport failures retain redacted error codes and messages for diagnosis.
+- Compact Cloudflare query/path/cookie guards reduce expression size. Oversized policies restrict edge caching to query-free URLs or bypass it for the owned host, preserving every private-page exclusion.
+
+- Explicit Markdown and format requests now bypass HTML cache lookup before WordPress loads, even when a format parameter is configured as ignored.
+- Managed Cloudflare rules exclude Markdown negotiation and authenticated requests. Apache, Nginx and LiteSpeed rules protect Markdown requests from HTML cache entries.
+- Documents origin and edge invalidation after manual plugin or theme deployments.
+- Preload requests bypass Cloudflare and LiteSpeed lookup so stale origin pages can actually be rebuilt.
+- Restores card padding for Cloudflare purge status and queue-upgrade messages; admin CSS revisions refresh independently of the plugin version.
+- Corrects queue SQL annotation scope and makes CI enforce Plugin Check warnings and performance checks.
+
 ## 1.3.0 - 2026-10-08
 
 Multisite support, compressed copies of every stored page, LiteSpeed server-cache integration, web-server delivery on Apache and Nginx, and a fix for store cookies dropping out of the cache rules after an update.

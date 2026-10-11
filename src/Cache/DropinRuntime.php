@@ -16,6 +16,7 @@ final class DropinRuntime {
 	 * the context entirely.
 	 */
 	private const ELIGIBILITY_HEADERS = array(
+		'HTTP_ACCEPT'                    => 'accept',
 		'HTTP_AUTHORIZATION'             => 'authorization',
 		'HTTP_X_GT_PRELOAD'              => 'x-gt-preload',
 	);

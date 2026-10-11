@@ -21,6 +21,49 @@ final class QueueDatabaseTest extends TestCase {
 		$this->jobs = new JobRepository();
 	}
 
+	public function test_budget_deferral_releases_only_owned_work_without_spending_attempts(): void {
+		$id = $this->jobs->enqueue( 'preload_url', array( 'url' => home_url( '/budget/' ) ) );
+		$claimed = $this->jobs->claim();
+		self::assertNotNull( $claimed );
+		self::assertFalse( $this->jobs->defer( $id, 'not-the-owner', 0 ) );
+		self::assertTrue( $this->jobs->defer( $id, $claimed['lock_token'], 0 ) );
+		self::assertSame( $id, $this->jobs->enqueue( 'preload_url', array( 'url' => home_url( '/budget/' ) ) ) );
+		$next = $this->jobs->claim();
+		self::assertNotNull( $next );
+		self::assertSame( $id, (int) $next['id'] );
+		self::assertSame( 1, (int) $next['attempts'] );
+		self::assertNotSame( $claimed['lock_token'], $next['lock_token'] );
+		self::assertFalse( $this->jobs->defer( $id, $claimed['lock_token'], 0 ) );
+		self::assertTrue( $this->jobs->complete( $id, $next['lock_token'] ) );
+	}
+
+	public function test_runner_leaves_a_cold_preload_pending_after_spending_its_request_budget(): void {
+		$settings = \GTPerformance\Core\Settings::defaults();
+		$option = static fn (): array => $settings;
+		add_filter( 'pre_option_' . \GTPerformance\Core\Settings::OPTION, $option );
+		$slow = static function (): void { usleep( 5100000 ); };
+		add_action( 'gt_performance_job_consume_budget', $slow );
+		$httpCalls = 0;
+		$http = static function ( $pre ) use ( &$httpCalls ) { ++$httpCalls; return new \WP_Error( 'should_not_fetch', 'No request allowance remains.' ); };
+		add_filter( 'pre_http_request', $http );
+		try {
+			$this->jobs->enqueue( 'consume_budget', array(), 1 );
+			$id = $this->jobs->enqueue( 'preload_url', array( 'url' => home_url( '/budget-cold/' ) ), 50 );
+			$runner = new \GTPerformance\Queue\QueueModule( new \GTPerformance\Core\Logger() );
+			self::assertSame( 1, $runner->run( 2 ) );
+			self::assertSame( 0, $httpCalls );
+			global $wpdb;
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT status, attempts, lock_token FROM {$this->table} WHERE id = %d", $id ), ARRAY_A );
+			self::assertSame( 'pending', $row['status'] );
+			self::assertSame( 0, (int) $row['attempts'] );
+			self::assertNull( $row['lock_token'] );
+		} finally {
+			remove_filter( 'pre_option_' . \GTPerformance\Core\Settings::OPTION, $option );
+			remove_action( 'gt_performance_job_consume_budget', $slow );
+			remove_filter( 'pre_http_request', $http );
+		}
+	}
+
 	public function test_two_workers_select_one_row_but_only_one_claims_it(): void {
 		$id = $this->jobs->enqueue( 'preload_url', array( 'url' => home_url( '/a/' ) ) );
 		$results = $this->workers( 'claim' );

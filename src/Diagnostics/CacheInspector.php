@@ -14,6 +14,7 @@ use GTPerformance\Cache\Eligibility;
 use GTPerformance\Cache\FileStore;
 use GTPerformance\Cache\RequestContext;
 use GTPerformance\Cloudflare\RuleExpression;
+use GTPerformance\Cloudflare\RuleCompiler;
 use GTPerformance\Core\Settings;
 
 final class CacheInspector {
@@ -94,7 +95,8 @@ final class CacheInspector {
 		$edgeTtl  = max( 0, (int) Settings::get( 'cloudflare.edge_ttl', 0 ) );
 		$override = $edgeTtl > 0;
 		$rule     = new RuleExpression();
-		$matches  = $rule->matches( $request, $request->host, $cachePolicy, $override );
+		$plan = ( new RuleCompiler() )->expressionPlan( $request->host, $cachePolicy, $override );
+		$matches = $plan['cache'] && $rule->matches( $request, $request->host, $cachePolicy, $plan['require_empty_query'] );
 
 		// respect_origin leaves the origin's Cache-Control in charge, so a rule that
 		// matches a bypassed request still stores nothing. Only override_origin can
@@ -103,8 +105,9 @@ final class CacheInspector {
 
 		return array(
 			'enabled'         => (bool) Settings::get( 'cloudflare.enabled', false ),
-			'expression'      => $rule->compile( $request->host, $cachePolicy, $override ),
-			'expectation'     => $originCacheable ? 'eligible' : 'bypass',
+			'expression'      => $plan['expression'],
+			'expression_mode' => $plan['mode'],
+			'expectation'     => $originCacheable && $matches ? 'eligible' : 'bypass',
 			'edge_matches'    => $matches,
 			'override_origin' => $override,
 			'agrees'          => ! $unsafe,

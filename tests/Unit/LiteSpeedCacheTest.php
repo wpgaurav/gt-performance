@@ -134,6 +134,9 @@ final class LiteSpeedCacheTest extends TestCase {
 		self::assertSame( array( 'prefix' => LiteSpeedCache::prefix(), 'max_age' => 900, 'cookie_domain' => '' ), $compiled['litespeed'] ?? null );
 		$block = ( new ServerRules( sys_get_temp_dir() . '/gtperf-none/.htaccess' ) )->apacheBlock();
 		self::assertStringContainsString( "<IfModule LiteSpeed>\nCacheLookup on\nCacheKeyModify -qs:fbclid\n", $block );
+		self::assertStringContainsString( 'RewriteCond %{HTTP:Accept} text/(x-)?markdown [NC]', $block );
+		self::assertStringContainsString( 'RewriteRule .* - [E=Cache-Control:no-cache]', $block );
+		self::assertStringContainsString( 'RewriteCond %{HTTP:X-GT-Preload} !^$', $block );
 		self::assertStringContainsString( "CacheKeyModify -qs:utm_source\n", $block, 'Ignored parameters leave LiteSpeed\'s key as they leave the drop-in\'s.' );
 		self::assertStringNotContainsString( 'CacheKeyModify -qs:s' . "\n", $block, 'A search query is never dropped from the key.' );
 

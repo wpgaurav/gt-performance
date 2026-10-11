@@ -30,6 +30,26 @@ final class RequestContext {
 	}
 
 	/**
+	 * HTML cache entries cannot answer explicit alternate-format requests.
+	 * Bypass even rejected or lower-priority Markdown preferences: negotiation
+	 * belongs to the renderer, which must run before choosing the representation.
+	 */
+	public function alternateRepresentation(): bool {
+		$accept = strtolower( (string) ( $this->headers['accept'] ?? '' ) );
+		if ( str_contains( $accept, 'text/markdown' ) || str_contains( $accept, 'text/x-markdown' ) ) {
+			return true;
+		}
+
+		foreach ( array_keys( $this->query ) as $name ) {
+			if ( 'format' === strtolower( (string) $name ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Build the context for the current request inside WordPress.
 	 *
 	 * WordPress adds slashes to the superglobals in wp_magic_quotes(), which

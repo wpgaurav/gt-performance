@@ -274,6 +274,10 @@ summary.gtp-notice-pill:focus-visible {
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
+.gtp-panel--padded {
+	padding: 20px var(--gtp-inset);
+}
+
 .gtp-settings-form {
 	margin: 0 0 20px;
 }

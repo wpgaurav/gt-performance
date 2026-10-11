@@ -793,6 +793,11 @@ final class Command {
 		if ( 'ok' !== ( $result['gtperf_purge'] ?? 'ok' ) ) {
 			\WP_CLI::warning( 'The rule is synchronized, but purging this site\'s pages from Cloudflare failed: ' . $result['gtperf_purge'] . ' Pages Cloudflare stored earlier may be served until they expire.' );
 		}
+		if ( 'bypass' === ( $result['gtperf_expression_mode'] ?? '' ) ) {
+			\WP_CLI::warning( 'The full bypass policy exceeds Cloudflare\'s expression limit. Edge caching is disabled for this host; simplify exclusions and sync again.' );
+		} elseif ( 'queryless' === ( $result['gtperf_expression_mode'] ?? '' ) ) {
+			\WP_CLI::warning( 'The expression limit requires query-free edge caching. All path and cookie exclusions remain protected.' );
+		}
 		\WP_CLI::success( 'Cloudflare rule synchronized.' );
 	}
 

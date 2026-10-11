@@ -250,6 +250,7 @@ final class ServerDeliveryTest extends TestCase {
 		self::assertStringContainsString( 'RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$', $block );
 		self::assertStringContainsString( 'RewriteCond %{QUERY_STRING} ^$', $block );
 		self::assertStringContainsString( 'RewriteCond %{HTTP:X-GT-Preload} ^$', $block );
+		self::assertStringContainsString( 'RewriteCond %{HTTP:Accept} !text/(x-)?markdown [NC]', $block );
 		self::assertStringContainsString( 'custom_cart', $block, 'Compiled bypass cookies are carried into the rules.' );
 		self::assertStringContainsString( 'woocommerce_items_in_cart', $block, 'Store cookies bypass even before a store plugin is active.' );
 		self::assertStringContainsString( 'RewriteCond %{HTTP_HOST} ^(example\.com)$', $block );
@@ -329,6 +330,7 @@ final class ServerDeliveryTest extends TestCase {
 		self::assertStringContainsString( 'if ($gtperf_key ~ "^https://(example\.com)(/(?:', $snippet );
 		self::assertStringContainsString( 'try_files $gtperf_file $uri $uri/ /index.php?$args;', $snippet );
 		self::assertStringContainsString( 'if ($args != "")', $snippet );
+		self::assertStringContainsString( 'if ($http_accept ~* "text/(x-)?markdown")', $snippet );
 		self::assertStringContainsString( 'gzip_static on;', $snippet );
 	}
 }

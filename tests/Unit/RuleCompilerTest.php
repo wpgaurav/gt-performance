@@ -208,4 +208,30 @@ final class RuleCompilerTest extends TestCase {
 
 		self::assertSame( array(), $plan['conflicts'] );
 	}
+	public function test_large_query_policy_uses_queryless_caching_without_dropping_private_guards(): void {
+		$cache = $this->cachePolicy();
+		$cache['bypass_query_params'] = array_map( static fn( int $i ): string => 'private_parameter_' . $i, range( 1, 400 ) );
+		$compiler = new RuleCompiler();
+		$plan = $compiler->plan( 'example.com', $cache, array() );
+		self::assertSame( 'queryless', $plan['expression_mode'] );
+		self::assertLessThanOrEqual( RuleCompiler::EXPRESSION_LIMIT, $plan['expression_size'] );
+		self::assertStringContainsString( 'http.request.uri.query eq ""', $plan['expression'] );
+		self::assertStringContainsString( '/checkout', $plan['expression'] );
+		self::assertStringContainsString( 'session_', $plan['expression'] );
+		self::assertTrue( $plan['edge_cache_enabled'] );
+	}
+
+	public function test_unfittable_private_policy_disables_cache_for_only_the_owned_host(): void {
+		$cache = $this->cachePolicy();
+		$cache['bypass_paths'] = array_map( static fn( int $i ): string => '/private-section-' . $i . '/', range( 1, 200 ) );
+		$compiler = new RuleCompiler();
+		$plan = $compiler->plan( 'example.com', $cache, array(), 10, 86400 );
+		self::assertSame( 'bypass', $plan['expression_mode'] );
+		self::assertFalse( $plan['edge_cache_enabled'] );
+		self::assertFalse( $plan['override_origin'] );
+		self::assertSame( array( 'cache' => false ), $plan['rule']['action_parameters'] );
+		self::assertSame( '(http.host eq "example.com")', $plan['expression'] );
+		self::assertLessThanOrEqual( RuleCompiler::EXPRESSION_LIMIT, $plan['expression_size'] );
+		self::assertSame( 'none', $compiler->plan( 'example.com', $cache, array( $plan['rule'] ), 10, 86400 )['operation'] );
+	}
 }

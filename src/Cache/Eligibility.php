@@ -17,6 +17,9 @@ final class Eligibility {
 	 * @param array<string, mixed> $config Compiled cache configuration.
 	 */
 	public function decide( RequestContext $request, array $config ): Decision {
+		if ( $request->alternateRepresentation() ) {
+			return Decision::deny( 'alternate_representation' );
+		}
 		// Asset delivery must never collide with a cached HTML page, even when an
 		// administrator accidentally adds this parameter to the ignored-query list.
 		if ( array_key_exists( 'gtperf_js', $request->query ) ) {

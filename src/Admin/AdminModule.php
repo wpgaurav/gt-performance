@@ -17,6 +17,7 @@ use GTPerformance\Cloudflare\ClientFactory;
 use GTPerformance\Cloudflare\ConnectionDiagnostics;
 use GTPerformance\Cloudflare\Disconnector;
 use GTPerformance\Cloudflare\RuleManager;
+use GTPerformance\Cloudflare\RuleCompiler;
 use GTPerformance\Cloudflare\TokenProvisioner;
 use GTPerformance\Cloudflare\TokenCipher;
 use GTPerformance\Compatibility\PluginDetector;
@@ -207,12 +208,14 @@ final class AdminModule implements Module {
 		if ( $this->pageHook !== $hook ) {
 			return;
 		}
+		$cssFile = GTPERF_DIR . '/assets/admin.css';
+		$cssVersion = GTPERF_VERSION . '.' . ( is_file( $cssFile ) ? (string) filemtime( $cssFile ) : '0' );
 
 		wp_enqueue_style(
 			'gt-performance-admin',
 			plugins_url( 'assets/admin.css', GTPERF_FILE ),
 			array( 'dashicons' ),
-			GTPERF_VERSION
+			$cssVersion
 		);
 		wp_enqueue_script(
 			'gt-performance-admin',
@@ -1647,7 +1650,7 @@ final class AdminModule implements Module {
 			'failed' => __( 'Failed; action needed', 'gt-performance' ),
 		);
 		?>
-		<section class="gtp-panel">
+		<section class="gtp-panel gtp-panel--padded">
 			<h3><?php esc_html_e( 'Latest Cloudflare purge', 'gt-performance' ); ?></h3>
 			<p><strong><?php echo esc_html( $labels[ $result['status'] ?? '' ] ?? __( 'Unknown', 'gt-performance' ) ); ?></strong> · <?php echo esc_html( (string) ( $result['created_at'] ?? '' ) ); ?> UTC</p>
 			<p><?php echo esc_html( (string) ( $result['message'] ?? '' ) ); ?></p>
@@ -1877,11 +1880,17 @@ final class AdminModule implements Module {
 				<dl class="gtp-definition-list">
 					<div><dt><?php esc_html_e( 'Planned operation', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ucfirst( (string) ( $plan['operation'] ?? 'unknown' ) ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Free rule budget', 'gt-performance' ); ?></dt><dd><?php echo esc_html( sprintf( '%d / %d', (int) ( $plan['used'] ?? 0 ), (int) ( $plan['limit'] ?? 10 ) ) ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Expression size', 'gt-performance' ); ?></dt><dd><?php echo esc_html( sprintf( '%d / %d', (int) ( $plan['expression_size'] ?? 0 ), (int) ( $plan['expression_limit'] ?? RuleCompiler::EXPRESSION_LIMIT ) ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Managed-rule drift', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $plan['drift'] ) ? __( 'Needs reconciliation', 'gt-performance' ) : __( 'In sync', 'gt-performance' ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Potential overlaps', 'gt-performance' ); ?></dt><dd><?php echo esc_html( number_format_i18n( count( (array) ( $plan['conflicts'] ?? array() ) ) ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Custom cache key', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $plan['custom_key'] ) ? __( 'Applied', 'gt-performance' ) : __( 'Not supported on this plan, so query-string exclusions are skipped', 'gt-performance' ) ); ?></dd></div>
 					<div><dt><?php esc_html_e( 'Last checked', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $plan['checked_at'] ?? __( 'Unknown', 'gt-performance' ) ) ); ?></dd></div>
 				</dl>
+				<?php if ( 'bypass' === ( $plan['expression_mode'] ?? '' ) ) : ?>
+					<p class="gtp-panel-note gtp-text-danger"><?php esc_html_e( 'This plan bypasses edge caching because the complete policy exceeds Cloudflare\'s expression limit. Simplify exclusions before synchronizing; no private-page protections were dropped.', 'gt-performance' ); ?></p>
+				<?php elseif ( 'queryless' === ( $plan['expression_mode'] ?? '' ) ) : ?>
+					<p class="gtp-panel-note"><?php esc_html_e( 'To fit the expression limit, this plan caches only URLs without query strings. All path and cookie exclusions remain protected.', 'gt-performance' ); ?></p>
+				<?php endif; ?>
 					<?php if ( ! empty( $plan['conflicts'] ) ) : ?>
 						<h4 class="gtp-subhead"><?php esc_html_e( 'Other cache rules that also match this site', 'gt-performance' ); ?></h4>
 						<p class="gtp-panel-note"><?php esc_html_e( 'These rules sit in the same phase and can override the managed rule. A rule that never names a hostname applies to every hostname in the zone.', 'gt-performance' ); ?></p>
@@ -2291,7 +2300,7 @@ PHP;
 
 	private function renderQueue(): void {
 		if ( ! \GTPerformance\Core\Database::queueReady() ) {
-			echo '<section class="gtp-panel"><h3>' . esc_html__( 'Queue upgrade in progress', 'gt-performance' ) . '</h3><p>' . esc_html__( 'New jobs wait until the queue schema and existing jobs are ready. Reload this screen to continue the bounded migration. Active workers keep their leases. If this persists, check database permissions and that the jobs table uses InnoDB.', 'gt-performance' ) . '</p></section>';
+			echo '<section class="gtp-panel gtp-panel--padded"><h3>' . esc_html__( 'Queue upgrade in progress', 'gt-performance' ) . '</h3><p>' . esc_html__( 'New jobs wait until the queue schema and existing jobs are ready. Reload this screen to continue the bounded migration. Active workers keep their leases. If this persists, check database permissions and that the jobs table uses InnoDB.', 'gt-performance' ) . '</p></section>';
 			return;
 		}
 		$queue  = new QueueModule( new \GTPerformance\Core\Logger() );

@@ -23,6 +23,11 @@ final class RuleExpression {
 			'(http.host eq "' . $this->escape( $this->normalizeHost( $host ) ) . '")',
 			// Cloudflare evaluates cache rules for internal single-file PURGE requests.
 			'(http.request.method in {"GET" "HEAD" "PURGE"})',
+			// Alternate representations must reach their renderer, never a URL-only HTML cache.
+			'(not (lower(http.request.headers["accept"][0]) contains "text/markdown" or lower(http.request.headers["accept"][0]) contains "text/x-markdown"))',
+			'(not any(http.request.headers["authorization"][*] ne ""))',
+			// A signed preload must reach the origin to rebuild a stale disk entry.
+			'(not any(http.request.headers["x-gt-preload"][*] ne ""))',
 		);
 
 		// When the action overrides origin freshness, Cloudflare stops honouring the
@@ -35,42 +40,60 @@ final class RuleExpression {
 			$parts[] = '(http.request.uri.query eq "")';
 		}
 
+		$paths = array();
 		foreach ( (array) ( $cache['bypass_paths'] ?? array() ) as $path ) {
-			$prefix = rtrim( (string) $path, '/' );
-			if ( '' === $prefix ) {
-				if ( '' !== (string) $path ) {
-					$parts[] = '(not http.request.uri.path eq "/")';
-				}
-				continue;
+			if ( '' !== (string) $path ) {
+				$paths[] = rtrim( (string) $path, '/' );
 			}
-
-			// Match the bypass on segment boundaries so `/checkout/` also protects the
-			// canonical `/checkout` without matching siblings like `/checkout-summary`.
-			$escaped = $this->escape( $prefix );
-			$parts[] = '(not (http.request.uri.path eq "' . $escaped . '" or starts_with(http.request.uri.path, "' . $escaped . '/")))';
+		}
+		$paths = array_values( array_unique( $paths ) );
+		$paths = array_values(
+			array_filter(
+				$paths,
+				static function ( string $path ) use ( $paths ): bool {
+					foreach ( $paths as $parent ) {
+						if ( '' !== $parent && $parent !== $path && str_starts_with( $path, $parent . '/' ) ) {
+							return false;
+						}
+					}
+					return true;
+				}
+			)
+		);
+		if ( $paths ) {
+			$terms = array( 'http.request.uri.path in {' . implode( ' ', array_map( fn ( string $path ): string => '"' . $this->escape( '' === $path ? '/' : $path ) . '"', $paths ) ) . '}' );
+			foreach ( $paths as $path ) {
+				if ( '' !== $path ) {
+					$terms[] = 'starts_with(http.request.uri.path, "' . $this->escape( $path ) . '/")';
+				}
+			}
+			$parts[] = '(not (' . implode( ' or ', $terms ) . '))';
 		}
 
-		foreach ( (array) ( $cache['bypass_cookies'] ?? array() ) as $cookie ) {
-			$cookie = (string) $cookie;
-			if ( '' !== $cookie ) {
-				$parts[] = '(not http.cookie contains "' . $this->escape( $cookie ) . '")';
-			}
+		$cookies = array_values( array_unique( array_filter( array_map( 'strval', (array) ( $cache['bypass_cookies'] ?? array() ) ), static fn ( string $cookie ): bool => '' !== $cookie ) ) );
+		$cookies = array_values(
+			array_filter(
+				$cookies,
+				static function ( string $cookie ) use ( $cookies ): bool {
+					foreach ( $cookies as $parent ) {
+						if ( $parent !== $cookie && str_contains( $cookie, $parent ) ) {
+							return false;
+						}
+					}
+					return true;
+				}
+			)
+		);
+		if ( $cookies ) {
+			$parts[] = '(not (' . implode( ' or ', array_map( fn ( string $cookie ): string => 'http.cookie contains "' . $this->escape( $cookie ) . '"', $cookies ) ) . '))';
 		}
 
 		if ( ! $requireEmptyQuery ) {
-			foreach ( (array) ( $cache['bypass_query_params'] ?? array() ) as $parameter ) {
-				$parameter = (string) $parameter;
-				if ( '' !== $parameter ) {
-					// Anchor the match to a parameter boundary so bypass `s` does not also
-					// exclude `?utms=` or `?forms=`. Prefixing a separator with
-					// concat("&", …) expresses this in one term, but Cloudflare rejects any
-					// expression that calls concat more than once (error 20127), so a rule
-					// with several bypass parameters can never be saved. Testing the first
-					// parameter and the later ones separately is equivalent and calls no
-					// functions Cloudflare rations.
-					$name    = $this->escape( rawurlencode( $parameter ) );
-					$parts[] = '(not (starts_with(http.request.uri.query, "' . $name . '=") or http.request.uri.query contains "&' . $name . '="))';
-				}
+			$parameters = array_values( array_unique( array_filter( array_map( 'strtolower', array_map( 'strval', array_merge( array( 'format' ), (array) ( $cache['bypass_query_params'] ?? array() ) ) ) ), static fn ( string $name ): bool => '' !== $name ) ) );
+			if ( $parameters ) {
+				// Decode before matching, as PHP does. A set matches whole parameter
+				// names (including empty values) without repeating the query field.
+				$parts[] = '(not any(lower(url_decode(http.request.uri.args.names[*])[*])[*] in {' . implode( ' ', array_map( fn ( string $name ): string => '"' . $this->escape( $name ) . '"', $parameters ) ) . '}))';
 			}
 		}
 
@@ -91,6 +114,12 @@ final class RuleExpression {
 		}
 
 		if ( ! in_array( $request->method, array( 'GET', 'HEAD', 'PURGE' ), true ) ) {
+			return false;
+		}
+		if ( $request->alternateRepresentation() || '' !== trim( (string) ( $request->headers['authorization'] ?? '' ) ) ) {
+			return false;
+		}
+		if ( '' !== trim( (string) ( $request->headers['x-gt-preload'] ?? '' ) ) ) {
 			return false;
 		}
 
@@ -129,14 +158,9 @@ final class RuleExpression {
 		}
 
 		if ( ! $requireEmptyQuery ) {
-			foreach ( (array) ( $cache['bypass_query_params'] ?? array() ) as $parameter ) {
-				$parameter = (string) $parameter;
-				if ( '' === $parameter ) {
-					continue;
-				}
-
-				$name = rawurlencode( $parameter );
-				if ( str_starts_with( $query, $name . '=' ) || str_contains( $query, '&' . $name . '=' ) ) {
+			$parameters = array_map( 'strtolower', array_map( 'strval', (array) ( $cache['bypass_query_params'] ?? array() ) ) );
+			foreach ( array_keys( $request->query ) as $name ) {
+				if ( in_array( strtolower( (string) $name ), $parameters, true ) ) {
 					return false;
 				}
 			}
