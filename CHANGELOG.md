@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 - 2026-10-11
+
+- Explicit Markdown and format requests now bypass HTML cache lookup before WordPress loads, even when a format parameter is configured as ignored.
+- Managed Cloudflare rules exclude Markdown negotiation and authenticated requests. Apache, Nginx and LiteSpeed rules protect Markdown requests from HTML cache entries.
+- Documents origin and edge invalidation after manual plugin or theme deployments.
+
 ## 1.3.0 - 2026-10-08
 
 Multisite support, compressed copies of every stored page, LiteSpeed server-cache integration, web-server delivery on Apache and Nginx, and a fix for store cookies dropping out of the cache rules after an update.

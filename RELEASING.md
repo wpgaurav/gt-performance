@@ -39,6 +39,12 @@ php bin/release-metadata.php
 
 Test the generated ZIP in WordPress Studio before the tag is created.
 
+Manual plugin/theme file deployments do not fire WordPress's upgrader hooks.
+After replacing files and compiling the theme assets, run
+`wp gt-performance cache purge`, then warm a bounded set of public URLs. Verify
+the current runtime markers at the origin and edge, including cache hits on
+internal pages. A Cloudflare-only purge can refill the edge with stale origin HTML.
+
 ## Publish
 
 After the release commit is on `main`, create and push an annotated tag:

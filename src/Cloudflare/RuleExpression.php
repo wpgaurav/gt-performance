@@ -23,6 +23,10 @@ final class RuleExpression {
 			'(http.host eq "' . $this->escape( $this->normalizeHost( $host ) ) . '")',
 			// Cloudflare evaluates cache rules for internal single-file PURGE requests.
 			'(http.request.method in {"GET" "HEAD" "PURGE"})',
+			// Alternate representations must reach their renderer, never a URL-only HTML cache.
+			'(not (lower(http.request.headers["accept"][0]) contains "text/markdown" or lower(http.request.headers["accept"][0]) contains "text/x-markdown"))',
+			'(not any(http.request.headers["authorization"][*] ne ""))',
+			'(not (starts_with(lower(http.request.uri.query), "format=") or lower(http.request.uri.query) contains "&format="))',
 		);
 
 		// When the action overrides origin freshness, Cloudflare stops honouring the
@@ -91,6 +95,9 @@ final class RuleExpression {
 		}
 
 		if ( ! in_array( $request->method, array( 'GET', 'HEAD', 'PURGE' ), true ) ) {
+			return false;
+		}
+		if ( $request->alternateRepresentation() || '' !== trim( (string) ( $request->headers['authorization'] ?? '' ) ) ) {
 			return false;
 		}
 
