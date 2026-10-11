@@ -26,6 +26,8 @@ final class RuleExpression {
 			// Alternate representations must reach their renderer, never a URL-only HTML cache.
 			'(not (lower(http.request.headers["accept"][0]) contains "text/markdown" or lower(http.request.headers["accept"][0]) contains "text/x-markdown"))',
 			'(not any(http.request.headers["authorization"][*] ne ""))',
+			// A signed preload must reach the origin to rebuild a stale disk entry.
+			'(not any(http.request.headers["x-gt-preload"][*] ne ""))',
 			'(not (starts_with(lower(http.request.uri.query), "format=") or lower(http.request.uri.query) contains "&format="))',
 		);
 
@@ -98,6 +100,9 @@ final class RuleExpression {
 			return false;
 		}
 		if ( $request->alternateRepresentation() || '' !== trim( (string) ( $request->headers['authorization'] ?? '' ) ) ) {
+			return false;
+		}
+		if ( '' !== trim( (string) ( $request->headers['x-gt-preload'] ?? '' ) ) ) {
 			return false;
 		}
 

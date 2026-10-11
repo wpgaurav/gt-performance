@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-11T00:45:53+00:00\n"
+"POT-Creation-Date: 2026-10-11T01:08:34+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: gt-performance\n"
@@ -4259,7 +4259,7 @@ msgid ".htaccess could not be read."
 msgstr ""
 
 #: src/Admin/AdminModule.php:4120
-#: src/Cache/ServerRules.php:516
+#: src/Cache/ServerRules.php:520
 msgid ".htaccess is a symbolic link, so GT Performance leaves it alone."
 msgstr ""
 
@@ -4506,15 +4506,15 @@ msgstr ""
 msgid "No such post."
 msgstr ""
 
-#: src/Cache/ServerRules.php:521
+#: src/Cache/ServerRules.php:525
 msgid "GT Performance could not read .htaccess."
 msgstr ""
 
-#: src/Cache/ServerRules.php:529
+#: src/Cache/ServerRules.php:533
 msgid ".htaccess is not writable, so the server rules could not be updated."
 msgstr ""
 
-#: src/Cache/ServerRules.php:533
+#: src/Cache/ServerRules.php:537
 msgid ".htaccess could not be updated. The previous file was preserved."
 msgstr ""
 

@@ -5,6 +5,7 @@
 - Explicit Markdown and format requests now bypass HTML cache lookup before WordPress loads, even when a format parameter is configured as ignored.
 - Managed Cloudflare rules exclude Markdown negotiation and authenticated requests. Apache, Nginx and LiteSpeed rules protect Markdown requests from HTML cache entries.
 - Documents origin and edge invalidation after manual plugin or theme deployments.
+- Preload requests bypass Cloudflare and LiteSpeed lookup so stale origin pages can actually be rebuilt.
 
 ## 1.3.0 - 2026-10-08
 

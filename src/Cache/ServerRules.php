@@ -293,6 +293,8 @@ final class ServerRules {
 						'RewriteEngine On',
 						'RewriteCond %{HTTP:Accept} text/(x-)?markdown [NC]',
 						'RewriteRule .* - [E=Cache-Control:no-cache]',
+						'RewriteCond %{HTTP:X-GT-Preload} !^$',
+						'RewriteRule .* - [E=Cache-Control:no-cache]',
 						'</IfModule>',
 					)
 				)

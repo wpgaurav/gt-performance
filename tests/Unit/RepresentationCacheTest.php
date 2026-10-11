@@ -70,4 +70,12 @@ final class RepresentationCacheTest extends TestCase {
 		self::assertStringContainsString( 'http.request.headers["authorization"]', $expression );
 		self::assertStringContainsString( '"&format="', $expression );
 	}
+
+	public function test_preload_reaches_origin_while_origin_policy_still_allows_its_public_page(): void {
+		$request = RequestContext::fromUrl( 'https://example.com/post/', array(), array( 'X-GT-Preload' => 'timestamp.signature' ) );
+		self::assertNotNull( $request );
+		self::assertTrue( ( new Eligibility() )->decide( $request, array( 'enabled' => true ) )->cacheable );
+		self::assertFalse( ( new RuleExpression() )->matches( $request, 'example.com', array() ) );
+		self::assertStringContainsString( 'http.request.headers["x-gt-preload"]', ( new RuleExpression() )->compile( 'example.com', array() ) );
+	}
 }
