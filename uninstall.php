@@ -127,11 +127,12 @@ $gt_performance_root_safe  = false !== $gt_performance_cache_root
 	&& ! is_link( $gt_performance_content . '/cache/gt-performance' );
 
 /*
- * Generated scripts go whether or not a site asked for its data to be removed.
- * They are derived output with no use once the plugin is gone, and an install
- * writes them again on first use. Pages, styles and configuration follow the
- * data-removal choice below. Each directory must still resolve inside the cache
- * root, so a link anywhere along the path is never followed.
+ * Script files go whether or not a site asked for its data to be removed. The
+ * plugin no longer writes them; they are leftovers from builds before 1.0.11 and
+ * from the retired self-hosted package, with no use once the plugin is gone.
+ * Pages, styles and configuration follow the data-removal choice below. Each
+ * directory must still resolve inside the cache root, so a link anywhere along
+ * the path is never followed.
  */
 if ( $gt_performance_root_safe ) {
 	$gt_performance_site_scripts = glob( $gt_performance_cache_root . '/sites/*/assets/js', GLOB_ONLYDIR );

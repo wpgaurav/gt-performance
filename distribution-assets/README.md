@@ -14,7 +14,7 @@ These files are distribution and marketing assets. They are intentionally exclud
 | `wordpress-org/screenshot-2.png` | Browser capture | Cache presets and lifetime controls |
 | `wordpress-org/screenshot-3.png` | Browser capture | Server-side CSS delivery controls |
 | `wordpress-org/screenshot-4.png` | Browser capture | Live unused-CSS reports |
-| `wordpress-org/screenshot-5.png` | Browser capture | FluentCart license and protected updates |
+| `wordpress-org/screenshot-5.png` | Browser capture | Script, media, and WordPress exceptions |
 
 The screenshot captions live in `readme.txt` under `== Screenshots ==`.
 
@@ -37,4 +37,4 @@ The Magnific-generated master mark and brand field are in `magnific/`. The final
 
 The GT monogram is original artwork and does not use the WordPress or Cloudflare logo. The PNG directory icons are the source of truth; an unrelated vector fallback is intentionally not shipped.
 
-Run `build-product-page.php` with the verified FluentCart direct-checkout URL to create the WordPress-ready `marketers-delight/inline-page-block` stored in `fluentcart/product-page.wordpress.html`. The builder prepends the canonical GTDS token layer from the `gt-design` skill and includes the accessible, no-network interactive product demo from `fluentcart/product-page.js`; use `--tokens-path` when that skill lives elsewhere.
+The FluentCart product on gauravtiwari.org is an external listing (GT Extensions) that links to WordPress.org; the live page is a Page Blocks Builder page. Run `build-product-page.php` with `--checkout-url=https://wordpress.org/plugins/gt-performance/` to create the WordPress-ready `marketers-delight/inline-page-block` stored in `fluentcart/product-page.wordpress.html`. The builder prepends the canonical GTDS token layer from the `gt-design` skill and includes the accessible, no-network interactive product demo from `fluentcart/product-page.js`; use `--tokens-path` when that skill lives elsewhere.

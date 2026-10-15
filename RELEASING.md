@@ -81,41 +81,29 @@ if [[ "$(gh repo view --json visibility --jq .visibility)" == "PUBLIC" ]]; then
 fi
 ```
 
-## Two packages ship from one tree
+## One package
 
-`./bin/build-package.sh all` produces both. `wporg` and `fluentcart` build them
-individually.
+`./bin/build-package.sh` builds `dist/gt-performance-<v>.zip`, the WordPress.org
+package. It is the only distribution channel. The self-hosted FluentCart package
+(`src/Licensing` for license keys and its own update client, `src/SelfHosted` for
+static minified-script files) was retired in 1.3.2, and the FluentCart product on
+gauravtiwari.org now links to the directory.
 
-| | `dist/gt-performance-<v>.zip` | `dist/gt-performance-<v>-fluentcart.zip` |
-|---|---|---|
-| Channel | WordPress.org submission | Self-hosted, sold through gauravtiwari.org |
-| `src/Licensing/` | excluded | included |
-| `src/SelfHosted/` (static minified scripts) | excluded | included |
-| Update path | WordPress.org, once listed | FluentCart `get_license_version` |
-| `Plugin URI` | `/gt-performance/` | `/product/gt-performance/` |
-| `Update URI` | omitted for directory update authority | `false`; FluentCart updater supplies updates |
+The package is the one a reviewer reads, so the build proves rather than assumes
+that it is clean. It fails if `src/Licensing` or `src/SelfHosted` comes back, if
+any file in `src/` or the main file mentions licensing or the update client, if the
+header carries `Update URI` or a `/product/` Plugin URI, or if an unexpected entry
+appears at the top level. That last check exists because a scratch directory in the
+repo root once shipped into a production install and served 531 KB of internal
+notes over HTTP. `DistributionChannelTest` checks the same rules in CI.
 
-The WordPress.org artifact is the one a reviewer reads, so the build proves rather
-than assumes that it is clean: it fails if `src/Licensing` survived, if any shared
-file mentions licensing, or if an unexpected entry appears at the top level. That
-last check exists because a scratch directory in the repo root once shipped into a
-production install and served 531 KB of internal notes over HTTP.
-
-Shared code must never name the licensing subsystem, because the WordPress.org
-package does not contain it. A channel adds itself through `src/<Area>/channel.php`,
-which `gt-performance.php` discovers by shape, and extends the admin through
-`gt_performance_admin_tabs`, `gt_performance_admin_tab_labels`,
-`gt_performance_render_tab_<tab>` and `gt_performance_admin_notices`.
-`DistributionChannelTest` enforces the separation.
-
-The FluentCart endpoint keys on the **product** id (1170147), not a variation id;
-a variation id answers "Product not found". The update check itself is
-unauthenticated, but the download URL is only returned for an activated license,
-which is why the self-hosted package needs the licenser at all.
+Add-ons can still extend the admin through `gt_performance_admin_tabs`,
+`gt_performance_admin_tab_labels`, `gt_performance_render_tab_<tab>` and
+`gt_performance_admin_notices`.
 
 ## Deploy to WordPress.org
 
-The slug `gt-performance` is approved in the WordPress.org plugin directory; the SVN repository is `https://plugins.svn.wordpress.org/gt-performance/`. 1.0.14 was the first directory release. Stable tags pushed to GitHub are deployed to SVN by the Release workflow's `wordpress-org` job (trunk, the version tag, and `assets/` from `distribution-assets/wordpress-org/`); prereleases are not. Directory installs receive updates from WordPress.org. The self-hosted source and FluentCart package ship `Update URI: false`, so the directory never pushes updates to those installs. The WordPress.org package omits that header, as required by Plugin Check.
+The slug `gt-performance` is approved in the WordPress.org plugin directory; the SVN repository is `https://plugins.svn.wordpress.org/gt-performance/`. 1.0.14 was the first directory release. Stable tags pushed to GitHub are deployed to SVN by the Release workflow's `wordpress-org` job (trunk, the version tag, and `assets/` from `distribution-assets/wordpress-org/`); prereleases are not. Every install receives updates from WordPress.org. The plugin header carries no `Update URI`, as Plugin Check requires. Installs of the retired self-hosted package keep `Update URI: false`, so they move to directory updates only when the WordPress.org package is installed over them.
 
 The first commit needs the SVN credentials of the WordPress.org account that owns the plugin. Commit `assets/` (banners, icons, screenshots) with or before the first tag, so the listing appears complete.
 

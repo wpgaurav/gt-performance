@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: GT Performance
-Plugin URI: https://gauravtiwari.org/product/gt-performance/
+Plugin URI: https://gauravtiwari.org/gt-performance/
 Description: Safe WordPress page caching, server-side optimization, Cloudflare orchestration, and commerce-aware performance controls.
 Version: 1.3.2
 Requires at least: 6.6
@@ -11,7 +11,6 @@ Author URI: https://gauravtiwari.org/
 Text Domain: gt-performance
 Domain Path: /languages
 License: GPL-2.0-or-later
-Update URI: false
 */
 
 /**
@@ -50,14 +49,6 @@ spl_autoload_register(
 // The bundled libraries load when one of their classes is first used, not on every
 // request. Prepended, as Composer's own loader was.
 spl_autoload_register( array( \GTPerformance\Core\Vendor::class, 'autoload' ), true, true );
-
-// Distribution channels add capabilities by dropping a channel.php into their own
-// area of src/. A package that ships none matches nothing here, so what a channel
-// adds is decided by what the build includes rather than by a runtime flag.
-$gt_performance_channels = glob( GTPERF_DIR . '/src/*/channel.php' );
-foreach ( is_array( $gt_performance_channels ) ? $gt_performance_channels : array() as $gt_performance_channel ) {
-	require_once $gt_performance_channel;
-}
 
 register_activation_hook( __FILE__, array( \GTPerformance\Core\Activator::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( \GTPerformance\Core\Deactivator::class, 'deactivate' ) );

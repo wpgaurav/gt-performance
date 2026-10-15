@@ -79,9 +79,8 @@ final class AdminModule implements Module {
 	/**
 	 * Tabs this build offers.
 	 *
-	 * A distribution channel can add one without shared code naming it. The
-	 * FluentCart package uses this for its License screen; the WordPress.org package
-	 * ships no channel, so the list is exactly self::TABS.
+	 * An add-on can register one through `gt_performance_admin_tabs`. Without one,
+	 * the list is exactly self::TABS.
 	 *
 	 * @return list<string>
 	 */

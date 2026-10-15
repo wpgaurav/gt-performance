@@ -1,39 +1,30 @@
 #!/usr/bin/env bash
 
-# Build the distribution packages.
+# Build the WordPress.org package: dist/gt-performance-<version>.zip.
 #
-# Two channels ship from one tree:
+# WordPress.org is the only distribution channel. The self-hosted FluentCart
+# package (licensing, its own update client, static script files) was retired in
+# 1.3.2, so there is one artifact, and it is the one a directory reviewer reads.
 #
-#   wporg      The WordPress.org submission artifact. Carries no licensing code,
-#              no update client and no remote call of its own. src/Licensing is
-#              excluded outright, so the reviewed package cannot contain it.
-#              src/SelfHosted is excluded too: review asked for minification
-#              without generated JavaScript files, and that area writes them.
-#   fluentcart The self-hosted package sold through gauravtiwari.org. Includes
-#              src/Licensing, because FluentCart's get_license_version endpoint
-#              only returns a download URL for an activated license, so without
-#              it a self-hosted install has no update path at all. Includes
-#              src/SelfHosted, which publishes minified scripts as static files.
-#
-# Usage: build-package.sh [wporg|fluentcart|all]
+# Usage: build-package.sh [wporg]
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${GTPERF_PACKAGE_VERSION:-1.3.2}"
-CHANNELS="${1:-all}"
 
-build_channel() {
-	local channel="$1"
-	local build_root="${ROOT}/build/package-${channel}"
+case "${1:-wporg}" in
+	wporg) ;;
+	*)
+		printf 'Unknown channel "%s". WordPress.org (wporg) is the only package.\n' "$1" >&2
+		exit 1
+		;;
+esac
+
+build_package() {
+	local build_root="${ROOT}/build/package-wporg"
 	local plugin_dir="${build_root}/gt-performance"
-	local archive
-
-	if [[ "${channel}" == "wporg" ]]; then
-		archive="${ROOT}/dist/gt-performance-${VERSION}.zip"
-	else
-		archive="${ROOT}/dist/gt-performance-${VERSION}-${channel}.zip"
-	fi
+	local archive="${ROOT}/dist/gt-performance-${VERSION}.zip"
 
 	rm -rf "${build_root}"
 	mkdir -p "${plugin_dir}" "${ROOT}/dist"
@@ -66,11 +57,6 @@ build_channel() {
 		--exclude 'VALIDATION.md'
 		--exclude 'vendor'
 	)
-
-	# The structural difference between the channels: their own areas of src/.
-	if [[ "${channel}" == "wporg" ]]; then
-		excludes+=(--exclude 'src/Licensing' --exclude 'src/SelfHosted')
-	fi
 
 	rsync -a "${excludes[@]}" "${ROOT}/" "${plugin_dir}/"
 
@@ -105,13 +91,16 @@ build_channel() {
 		"${plugin_dir}/PRODUCT-PLAN.md" \
 		"${plugin_dir}/composer.lock"
 
-	# Point each package at the home its users actually update from. The directory
-	# reads Plugin URI as the plugin's canonical page, and a /product/ path on a free
-	# GPL submission is the commercial-residue signal a reviewer stops on.
-	if [[ "${channel}" == "wporg" ]]; then
-		perl -0pi -e 's{^Plugin URI: .*$}{Plugin URI: https://gauravtiwari.org/gt-performance/}m' "${plugin_dir}/gt-performance.php"
-		# Directory-hosted plugins must use WordPress.org update authority.
-		perl -0pi -e 's{^Update URI: .*\n}{}m' "${plugin_dir}/gt-performance.php"
+	# Directory-hosted plugins must use WordPress.org update authority, and the
+	# directory reads Plugin URI as the plugin's canonical page: a /product/ path on a
+	# free GPL submission is the commercial-residue signal a reviewer stops on.
+	if grep -q '^Update URI:' "${plugin_dir}/gt-performance.php"; then
+		printf 'The WordPress.org package must not carry an Update URI header.\n' >&2
+		exit 1
+	fi
+	if grep -q '^Plugin URI: .*/product/' "${plugin_dir}/gt-performance.php"; then
+		printf 'Plugin URI must not point at a /product/ page.\n' >&2
+		exit 1
 	fi
 
 	# An exclude list only stops what it already knows about. A scratch directory in
@@ -130,8 +119,8 @@ build_channel() {
 		fi
 	done
 	if [[ -n "${unexpected}" ]]; then
-		printf 'Unexpected top-level entries in the %s package:\n%s\nAdd them to the allowlist in bin/build-package.sh if they belong.\n' \
-			"${channel}" "${unexpected}" >&2
+		printf 'Unexpected top-level entries in the package:\n%s\nAdd them to the allowlist in bin/build-package.sh if they belong.\n' \
+			"${unexpected}" >&2
 		exit 1
 	fi
 
@@ -146,40 +135,24 @@ build_channel() {
 			! -iname 'LICENSE' ! -iname 'LICENSE.*' ! -iname 'COPYING'
 	)"
 	if [[ -n "${unpermitted}" ]]; then
-		printf 'Unpermitted files in %s package:\n%s\n' "${channel}" "${unpermitted}" >&2
+		printf 'Unpermitted files in the package:\n%s\n' "${unpermitted}" >&2
 		exit 1
 	fi
 
 	# The WordPress.org artifact is the one a reviewer reads. Prove, rather than
-	# assume, that nothing licensing-related survived into it.
-	if [[ "${channel}" == "wporg" ]]; then
-		if [[ -d "${plugin_dir}/src/Licensing" ]]; then
-			printf 'The WordPress.org package must not contain src/Licensing.\n' >&2
-			exit 1
-		fi
-		if [[ -d "${plugin_dir}/src/SelfHosted" ]] || grep -rlq 'SelfHosted' "${plugin_dir}/src" "${plugin_dir}/gt-performance.php" 2>/dev/null; then
-			printf 'The WordPress.org package must not contain or name src/SelfHosted.\n' >&2
-			exit 1
-		fi
-		local residue
-		# Deliberately not matching "fluent-cart": Commerce/FluentCartAdapter protects a
-		# FluentCart store's cart and checkout from being cached and belongs in both
-		# packages. What must not appear is licensing and update-client code.
-		residue="$(grep -rlE 'Licensing|license_key|get_license_version|activation_hash' \
-			"${plugin_dir}/src" "${plugin_dir}/gt-performance.php" 2>/dev/null || true)"
-		if [[ -n "${residue}" ]]; then
-			printf 'Licensing residue in the WordPress.org package:\n%s\n' "${residue}" >&2
-			exit 1
-		fi
-	fi
-
-	# And the FluentCart artifact is useless without the updater it exists for.
-	if [[ "${channel}" == "fluentcart" ]] && [[ ! -f "${plugin_dir}/src/Licensing/Updater.php" ]]; then
-		printf 'The FluentCart package must contain src/Licensing/Updater.php.\n' >&2
+	# assume, that no licensing, update-client or static-script code came back.
+	if [[ -d "${plugin_dir}/src/Licensing" ]] || [[ -d "${plugin_dir}/src/SelfHosted" ]]; then
+		printf 'The package must not contain src/Licensing or src/SelfHosted.\n' >&2
 		exit 1
 	fi
-	if [[ "${channel}" == "fluentcart" ]] && [[ ! -f "${plugin_dir}/src/SelfHosted/channel.php" ]]; then
-		printf 'The FluentCart package must contain src/SelfHosted/channel.php.\n' >&2
+	local residue
+	# Deliberately not matching "fluent-cart": Commerce/FluentCartAdapter protects a
+	# FluentCart store's cart and checkout from being cached and belongs here. What
+	# must not appear is licensing and update-client code.
+	residue="$(grep -rlE 'Licensing|SelfHosted|license_key|get_license_version|activation_hash' \
+		"${plugin_dir}/src" "${plugin_dir}/gt-performance.php" 2>/dev/null || true)"
+	if [[ -n "${residue}" ]]; then
+		printf 'Licensing residue in the package:\n%s\n' "${residue}" >&2
 		exit 1
 	fi
 
@@ -193,16 +166,4 @@ build_channel() {
 	printf '%s\n' "${archive}"
 }
 
-case "${CHANNELS}" in
-	wporg|fluentcart)
-		build_channel "${CHANNELS}"
-		;;
-	all)
-		build_channel wporg
-		build_channel fluentcart
-		;;
-	*)
-		printf 'Unknown channel "%s". Use wporg, fluentcart, or all.\n' "${CHANNELS}" >&2
-		exit 1
-		;;
-esac
+build_package
