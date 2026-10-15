@@ -68,17 +68,53 @@ final class JavaScriptMinifier {
 			$cached = array(
 				'body' => $code,
 				'hash' => hash( 'sha256', $code ),
+				// The signed fallback for a delivery URL that no longer resolves.
+				'source' => $url,
 			);
 			if ( ! set_transient( self::CACHE_PREFIX . $id, $cached, self::CACHE_TTL ) ) {
 				return null;
 			}
 		}
 
+		$endpoint = $this->endpointUrl( $id, $url );
+
+		/**
+		 * Filters the URL a page uses for a minified script.
+		 *
+		 * The signed endpoint is the default and stays the fallback. A distribution
+		 * channel may publish the prepared result as a static file and return that
+		 * file's URL, so the web server answers without starting PHP.
+		 *
+		 * @param string $endpoint Signed endpoint URL.
+		 * @param string $id       Artifact id: 64 lowercase hexadecimal characters.
+		 * @param string $body     Minified, hash-verified JavaScript.
+		 */
+		$delivered = apply_filters( 'gt_performance_minified_script_url', $endpoint, $id, $cached['body'] );
+
+		return is_string( $delivered ) && '' !== $delivered ? $delivered : $endpoint;
+	}
+
+	/**
+	 * A cached, hash-verified artifact by id, or null once evicted or altered.
+	 *
+	 * @return array{body:string,hash:string,source?:string}|null
+	 */
+	public function artifact( string $id ): ?array {
+		if ( ! preg_match( '/^[a-f0-9]{64}$/D', $id ) ) {
+			return null;
+		}
+		$artifact = get_transient( self::CACHE_PREFIX . $id );
+
+		return $this->validArtifact( $artifact ) ? $artifact : null;
+	}
+
+	/** The signed endpoint for an artifact, with the original script as its fallback. */
+	public function endpointUrl( string $id, string $source ): string {
 		return add_query_arg(
 			array(
 				self::PARAM => $id,
-				self::SOURCE_PARAM => rawurlencode( $url ),
-				self::SIGNATURE_PARAM => $this->signature( $id, $url ),
+				self::SOURCE_PARAM => rawurlencode( $source ),
+				self::SIGNATURE_PARAM => $this->signature( $id, $source ),
 			),
 			home_url( '/' )
 		);
@@ -216,11 +252,12 @@ final class JavaScriptMinifier {
 	}
 
 	/**
-	 * @phpstan-assert-if-true array{body:string,hash:string} $artifact
+	 * @phpstan-assert-if-true array{body:string,hash:string,source?:string} $artifact
 	 */
 	private function validArtifact( mixed $artifact ): bool {
 		return is_array( $artifact ) && isset( $artifact['body'], $artifact['hash'] )
 			&& is_string( $artifact['body'] ) && is_string( $artifact['hash'] )
+			&& ( ! isset( $artifact['source'] ) || is_string( $artifact['source'] ) )
 			&& '' !== $artifact['body'] && strlen( $artifact['body'] ) <= self::MAX_BYTES
 			&& hash_equals( hash( 'sha256', $artifact['body'] ), $artifact['hash'] );
 	}

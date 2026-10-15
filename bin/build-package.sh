@@ -7,17 +7,20 @@
 #   wporg      The WordPress.org submission artifact. Carries no licensing code,
 #              no update client and no remote call of its own. src/Licensing is
 #              excluded outright, so the reviewed package cannot contain it.
+#              src/SelfHosted is excluded too: review asked for minification
+#              without generated JavaScript files, and that area writes them.
 #   fluentcart The self-hosted package sold through gauravtiwari.org. Includes
 #              src/Licensing, because FluentCart's get_license_version endpoint
 #              only returns a download URL for an activated license, so without
-#              it a self-hosted install has no update path at all.
+#              it a self-hosted install has no update path at all. Includes
+#              src/SelfHosted, which publishes minified scripts as static files.
 #
 # Usage: build-package.sh [wporg|fluentcart|all]
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTPERF_PACKAGE_VERSION:-1.3.1}"
+VERSION="${GTPERF_PACKAGE_VERSION:-1.3.2}"
 CHANNELS="${1:-all}"
 
 build_channel() {
@@ -64,9 +67,9 @@ build_channel() {
 		--exclude 'vendor'
 	)
 
-	# The one structural difference between the channels.
+	# The structural difference between the channels: their own areas of src/.
 	if [[ "${channel}" == "wporg" ]]; then
-		excludes+=(--exclude 'src/Licensing')
+		excludes+=(--exclude 'src/Licensing' --exclude 'src/SelfHosted')
 	fi
 
 	rsync -a "${excludes[@]}" "${ROOT}/" "${plugin_dir}/"
@@ -154,6 +157,10 @@ build_channel() {
 			printf 'The WordPress.org package must not contain src/Licensing.\n' >&2
 			exit 1
 		fi
+		if [[ -d "${plugin_dir}/src/SelfHosted" ]] || grep -rlq 'SelfHosted' "${plugin_dir}/src" "${plugin_dir}/gt-performance.php" 2>/dev/null; then
+			printf 'The WordPress.org package must not contain or name src/SelfHosted.\n' >&2
+			exit 1
+		fi
 		local residue
 		# Deliberately not matching "fluent-cart": Commerce/FluentCartAdapter protects a
 		# FluentCart store's cart and checkout from being cached and belongs in both
@@ -169,6 +176,10 @@ build_channel() {
 	# And the FluentCart artifact is useless without the updater it exists for.
 	if [[ "${channel}" == "fluentcart" ]] && [[ ! -f "${plugin_dir}/src/Licensing/Updater.php" ]]; then
 		printf 'The FluentCart package must contain src/Licensing/Updater.php.\n' >&2
+		exit 1
+	fi
+	if [[ "${channel}" == "fluentcart" ]] && [[ ! -f "${plugin_dir}/src/SelfHosted/channel.php" ]]; then
+		printf 'The FluentCart package must contain src/SelfHosted/channel.php.\n' >&2
 		exit 1
 	fi
 

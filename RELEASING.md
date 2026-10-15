@@ -88,6 +88,7 @@ individually.
 |---|---|---|
 | Channel | WordPress.org submission | Self-hosted, sold through gauravtiwari.org |
 | `src/Licensing/` | excluded | included |
+| `src/SelfHosted/` (static minified scripts) | excluded | included |
 | Update path | WordPress.org, once listed | FluentCart `get_license_version` |
 | `Plugin URI` | `/gt-performance/` | `/product/gt-performance/` |
 | `Update URI` | omitted for directory update authority | `false`; FluentCart updater supplies updates |

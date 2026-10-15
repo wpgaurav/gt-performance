@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -278,6 +278,10 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.2 =
+* Adds the `gt_performance_minified_script_url` filter, so the URL that delivers a minified script can be changed. The signed endpoint remains the default and the fallback.
+* Uninstall always removes generated script files, whether or not data removal is enabled.
 
 = 1.3.1 =
 * Avoids redundant warming requests and defers cold preloads safely near the worker deadline.

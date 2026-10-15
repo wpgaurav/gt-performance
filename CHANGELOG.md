@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.2 - 2026-10-15
+
+Minified JavaScript no longer needs PHP in the self-hosted package.
+
+- The self-hosted (FluentCart) package writes each minified script once to `wp-content/cache/gt-performance/assets/js/<id>.js` and links that file. LiteSpeed, Apache, or Nginx answers it without starting WordPress, and Cloudflare caches it by its `.js` extension. Before this, every request that missed the browser and edge caches booted WordPress through `/?gtperf_js=`: about 650 an hour across gauravtiwari.org and anantamias.com on 2026-10-15, until a Cloudflare cache rule hid them.
+- The transient stays the source of truth and the signed endpoint the fallback. A cache directory that cannot be written, or is a link, keeps the endpoint URL. Purge All deletes the published files; a page cached elsewhere that still names one is answered by WordPress, which writes the file again and redirects to the signed endpoint. Rendering a page refreshes its files' modification time once a day, so garbage collection only reclaims files no current page links.
+- The WordPress.org package is unchanged in behavior. Directory review asked for minification without generated JavaScript files, so `src/SelfHosted` is excluded from that build, and the build fails if it survives or is named in shared code. Shared code gains only the `gt_performance_minified_script_url` filter and two read-only helpers on `JavaScriptMinifier` (`artifact()`, `endpointUrl()`).
+- Minified artifacts now record the URL they came from, which the missing-file fallback uses as the endpoint's signed original.
+- Uninstall always removes generated script directories, on every site of a network, whether or not data removal is enabled. Pages, styles, and configuration still follow that choice. Seven orphaned `.js` files from builds before 1.0.11 were still on gauravtiwari.org.
+
 ## 1.3.1 - 2026-10-11
 
 - Warming reuses fresh origin artifacts without extra HTTP work. Cold preloads wait for a full request allowance within the worker budget; deferral preserves ownership and retry counts.

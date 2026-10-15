@@ -85,6 +85,33 @@ final class DistributionChannelTest extends TestCase {
 	}
 
 	/**
+	 * Directory review asked for JavaScript minification without generated script
+	 * files. Static publication lives in its own area, which the WordPress.org
+	 * build excludes, and shared code only offers the filter it hooks.
+	 */
+	public function test_static_script_files_ship_only_in_the_self_hosted_package(): void {
+		$offenders = array();
+		$root      = $this->root() . '/src';
+		$iterator  = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root, \FilesystemIterator::SKIP_DOTS ) );
+		foreach ( $iterator as $file ) {
+			$path = str_replace( $root . '/', '', $file->getPathname() );
+			if ( ! $file->isFile() || 'php' !== $file->getExtension() || str_starts_with( $path, 'SelfHosted/' ) ) {
+				continue;
+			}
+			if ( str_contains( (string) file_get_contents( $file->getPathname() ), 'SelfHosted' ) ) {
+				$offenders[] = $path;
+			}
+		}
+		$build = (string) file_get_contents( $this->root() . '/bin/build-package.sh' );
+
+		self::assertSame( array(), $offenders );
+		self::assertFileExists( $this->root() . '/src/SelfHosted/channel.php' );
+		self::assertStringContainsString( "--exclude 'src/SelfHosted'", $build );
+		self::assertStringNotContainsString( 'SelfHosted', (string) file_get_contents( $this->root() . '/gt-performance.php' ) );
+		self::assertStringNotContainsString( 'file_put_contents', (string) file_get_contents( $root . '/Optimization/JavaScriptMinifier.php' ) );
+	}
+
+	/**
 	 * A scratch directory in the repo root shipped into a production install and
 	 * served 531 KB of internal audit notes over HTTP. An exclude list only stops
 	 * what it already knows about, so the build allowlists the top level instead.

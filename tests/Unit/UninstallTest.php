@@ -49,6 +49,13 @@ final class UninstallTest extends TestCase {
 		file_put_contents( $cache . '/pages/ab/abcd.html', '<html>' );
 		file_put_contents( $cache . '/pages/ab/abcd.meta.json', '{}' );
 		file_put_contents( $cache . '/logs/gt-performance.log', 'log' );
+		mkdir( $cache . '/assets/js', 0o777, true );
+		mkdir( $cache . '/assets/css', 0o777, true );
+		mkdir( $cache . '/sites/2/assets/js', 0o777, true );
+		file_put_contents( $cache . '/assets/js/' . str_repeat( 'a', 64 ) . '.js', 'window.a=1;' );
+		file_put_contents( $cache . '/assets/js/index.html', '' );
+		file_put_contents( $cache . '/assets/css/' . str_repeat( 'b', 64 ) . '-used.css', 'a{}' );
+		file_put_contents( $cache . '/sites/2/assets/js/' . str_repeat( 'c', 64 ) . '.js', 'window.c=1;' );
 
 		return $cache;
 	}
@@ -93,13 +100,29 @@ final class UninstallTest extends TestCase {
 		self::assertDirectoryExists( $this->root . '/wp-content/cache' );
 	}
 
-	public function test_not_opting_in_keeps_everything(): void {
+	public function test_not_opting_in_keeps_everything_but_generated_scripts(): void {
 		$cache  = $this->seedCache();
 		$output = $this->runUninstall( false );
 
 		self::assertStringEndsWith( 'OK', trim( $output ) );
 		self::assertFileExists( $cache . '/config.json.php' );
 		self::assertFileExists( $cache . '/pages/ab/abcd.html' );
+		self::assertFileExists( $cache . '/assets/css/' . str_repeat( 'b', 64 ) . '-used.css' );
+		self::assertDirectoryDoesNotExist( $cache . '/assets/js', 'Generated scripts must not outlive the plugin.' );
+		self::assertDirectoryDoesNotExist( $cache . '/sites/2/assets/js' );
+	}
+
+	public function test_a_linked_script_directory_is_never_followed(): void {
+		$cache   = $this->seedCache();
+		$foreign = $this->root . '/foreign-js';
+		mkdir( $foreign );
+		file_put_contents( $foreign . '/keep.js', 'keep' );
+		symlink( $foreign, $cache . '/sites/2/assets/js-link' );
+		rename( $cache . '/sites/2/assets/js', $cache . '/sites/2/assets/js-real' );
+		rename( $cache . '/sites/2/assets/js-link', $cache . '/sites/2/assets/js' );
+
+		self::assertStringEndsWith( 'OK', trim( $this->runUninstall( false ) ) );
+		self::assertFileExists( $foreign . '/keep.js' );
 	}
 
 	public function test_missing_cache_directory_is_not_an_error(): void {

@@ -122,6 +122,23 @@ $gt_performance_root_safe  = false !== $gt_performance_cache_root
 	&& ! is_link( $gt_performance_content . '/cache/gt-performance' );
 
 /*
+ * Generated scripts go whether or not a site asked for its data to be removed.
+ * They are derived output with no use once the plugin is gone, and an install
+ * writes them again on first use. Pages, styles and configuration follow the
+ * data-removal choice below. Each directory must still resolve inside the cache
+ * root, so a link anywhere along the path is never followed.
+ */
+if ( $gt_performance_root_safe ) {
+	$gt_performance_site_scripts = glob( $gt_performance_cache_root . '/sites/*/assets/js', GLOB_ONLYDIR );
+	foreach ( array_merge( array( $gt_performance_cache_root . '/assets/js' ), is_array( $gt_performance_site_scripts ) ? $gt_performance_site_scripts : array() ) as $gt_performance_scripts ) {
+		$gt_performance_scripts_real = realpath( $gt_performance_scripts );
+		if ( false !== $gt_performance_scripts_real && ! is_link( $gt_performance_scripts ) && str_starts_with( $gt_performance_scripts_real, $gt_performance_cache_root . DIRECTORY_SEPARATOR ) ) {
+			$gt_performance_delete_tree( $gt_performance_scripts_real );
+		}
+	}
+}
+
+/*
  * On a network every site decides for itself. A site that opted in loses its
  * options, tables, and its own directory under sites/; the shared files (the
  * drop-in configuration, the site map, Redis settings) go only when the main
