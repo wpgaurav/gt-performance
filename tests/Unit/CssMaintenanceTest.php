@@ -63,12 +63,25 @@ final class CssMaintenanceTest extends TestCase {
 		self::assertSame( $request, UnusedCssOptimizer::publicRequest( $request ) );
 	}
 
-	public function test_url_invalidation_changes_the_reuse_key_even_without_a_report(): void {
+	public function test_url_invalidation_drops_every_shape_even_without_a_report(): void {
 		$engine = new UnusedCssOptimizer( new Logger() );
-		$key = new \ReflectionMethod( $engine, 'reuseKey' );
-		$before = $key->invoke( $engine, '<html>same</html>', 'inline' );
+		$token  = ( new \ReflectionMethod( $engine, 'generatorToken' ) )->invoke( null );
+		$pages  = array(
+			'<html><head><style>.a{color:red}.unused{color:blue}</style></head><body><p class="a">Desktop</p></body></html>',
+			'<html><head><style>.a{color:red}.unused{color:blue}</style></head><body><p class="a m">Mobile</p></body></html>',
+		);
+		foreach ( $pages as $html ) {
+			$_GET[ UnusedCssOptimizer::GENERATOR_PARAM ] = $token;
+			$engine->optimize( $html );
+			unset( $_GET[ UnusedCssOptimizer::GENERATOR_PARAM ] );
+			self::assertStringNotContainsString( '.unused', $engine->optimize( $html ), 'Both shapes of the URL are reusable.' );
+		}
+
 		( new ReportRepository() )->invalidateUrl( 'https://example.com/css-test/' );
-		self::assertNotSame( $before, $key->invoke( $engine, '<html>same</html>', 'inline' ) );
+
+		foreach ( $pages as $html ) {
+			self::assertSame( $html, $engine->optimize( $html ), 'A forced rebuild leaves no older shape behind.' );
+		}
 	}
 
 	public function test_failed_queue_inserts_do_not_create_queued_reports(): void {
@@ -116,7 +129,8 @@ final class CssMaintenanceTest extends TestCase {
 		$engine = new UnusedCssOptimizer( new Logger() );
 		$html = '<html><head><style>.present{color:red}</style></head><body><p class="present">Test</p></body></html>';
 		$key = ( new \ReflectionMethod( $engine, 'reuseKey' ) )->invoke( $engine, $html, 'inline' );
-		set_transient( 'gtperf_css_reuse_' . $key, array( 'markup' => '<style>stale-forced-result</style>', 'markers' => array() ) );
+		set_transient( 'gtperf_css_shapes_' . hash( 'sha256', 'https://example.com/css-test/' ), array( $key => array( 'placements' => array( '0' => '<style>stale-forced-result</style>' ), 'markers' => array( '0' ), 'files' => array() ) ) );
+		self::assertStringContainsString( 'stale-forced-result', $engine->optimize( $html ), 'A visitor is served the stored shape.' );
 		$_GET[ UnusedCssOptimizer::GENERATOR_PARAM ] = ( new \ReflectionMethod( $engine, 'generatorToken' ) )->invoke( null );
 		self::assertStringNotContainsString( 'stale-forced-result', $engine->optimize( $html ) );
 	}

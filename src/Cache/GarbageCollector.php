@@ -33,8 +33,14 @@ final class GarbageCollector {
 	/** Entries to keep before the oldest are evicted, unless configured otherwise. */
 	private const DEFAULT_ENTRY_BUDGET = 5000;
 
-	/** Generated CSS/JS/font artifacts are reclaimed once nothing has read them for this long. */
+	/** Generated CSS/JS/font artifacts are reclaimed once no render has linked them for this long. */
 	private const ARTIFACT_MAX_AGE = 14 * DAY_IN_SECONDS;
+
+	/**
+	 * When this site's renders began refreshing the files they link. A file written
+	 * before then was never refreshed, so its age counts from this moment instead.
+	 */
+	public const KEEPALIVE_SINCE_OPTION = 'gt_performance_artifact_keepalive_since';
 
 
 	public function __construct(
@@ -156,17 +162,28 @@ final class GarbageCollector {
 	}
 
 	/**
-	 * Reclaim generated CSS, JavaScript and font files nothing has requested lately.
+	 * Reclaim generated CSS, JavaScript and font files no render has linked lately.
 	 *
 	 * Artifact filenames are content hashes, so a stale one is never referenced by
-	 * freshly generated HTML. Access time is the honest signal, with modification
-	 * time as the fallback on filesystems mounted noatime.
+	 * freshly generated HTML. Every render refreshes the modification time of the
+	 * files it links (ArtifactKeepAlive), so a file whose modification time is older
+	 * than the longest a page can be served is linked by nothing. Access time is not
+	 * consulted: a nightly backup reads every file, and under relatime that kept
+	 * every artifact looking used, so nothing was ever reclaimed.
 	 */
 	private function collectArtifacts( int $now ): int {
 		$root = Paths::assets();
 		if ( ! is_dir( $root ) ) {
 			return 0;
 		}
+
+		$cutoff = $now - $this->artifactMaxIdle();
+		if ( $this->keepAliveSince( $now ) >= $cutoff ) {
+			return 0;
+		}
+
+		$fonts = $root . '/fonts';
+		$inUse = $this->fontsInUse( $fonts, $cutoff );
 
 		$removed = 0;
 
@@ -179,16 +196,94 @@ final class GarbageCollector {
 				continue;
 			}
 
-			if ( in_array( $item->getFilename(), array( 'index.html', '.htaccess' ), true ) ) {
+			$name = $item->getFilename();
+			if ( in_array( $name, array( 'index.html', '.htaccess' ), true ) || (int) $item->getMTime() >= $cutoff ) {
 				continue;
 			}
 
-			$touched = max( (int) $item->getATime(), (int) $item->getMTime() );
-			if ( ( $now - $touched ) > self::ARTIFACT_MAX_AGE && @unlink( $item->getPathname() ) ) {
+			// A font file is named by a localized stylesheet, never by a page, so it is
+			// in use for as long as a stylesheet this pass keeps still names it.
+			if ( $fonts === $item->getPath() && ! str_ends_with( $name, '.css' ) && ( null === $inUse || isset( $inUse[ $name ] ) ) ) {
+				continue;
+			}
+
+			if ( @unlink( $item->getPathname() ) ) {
 				++$removed;
 			}
 		}
 
 		return $removed;
+	}
+
+	/**
+	 * When renders began refreshing the files they link, recorded on the first pass.
+	 *
+	 * Files written before this release were never refreshed, so on upgrade every one
+	 * would look abandoned, including those a cached page still links. Counting their
+	 * age from this moment gives every live page the full window to refresh its own.
+	 */
+	private function keepAliveSince( int $now ): int {
+		$since = (int) get_option( self::KEEPALIVE_SINCE_OPTION, 0 );
+		if ( $since <= 0 ) {
+			$since = $now;
+			update_option( self::KEEPALIVE_SINCE_OPTION, $since, false );
+		}
+
+		return $since;
+	}
+
+	/**
+	 * How long a file may go without a render linking it before it is reclaimed.
+	 *
+	 * A render leaves each file it links at most ArtifactKeepAlive::INTERVAL older
+	 * than itself, and the page it produced can then be served from this store, a
+	 * browser, and the Cloudflare edge for their configured lifetimes. Defaults add up
+	 * to about four days, so ARTIFACT_MAX_AGE governs unless a site keeps pages longer.
+	 */
+	private function artifactMaxIdle(): int {
+		$settings = Settings::all();
+		$cache    = is_array( $settings['cache'] ?? null ) ? $settings['cache'] : array();
+		$served   = 0;
+		foreach ( array( 'fresh_ttl', 'stale_ttl', 'stale_if_error', 'browser_ttl' ) as $key ) {
+			$served += max( 0, (int) ( $cache[ $key ] ?? 0 ) );
+		}
+
+		$cloudflare = is_array( $settings['cloudflare'] ?? null ) ? $settings['cloudflare'] : array();
+		if ( ! empty( $cloudflare['enabled'] ) ) {
+			$served += max( 0, (int) ( $cloudflare['edge_ttl'] ?? 0 ) );
+		}
+
+		// A day of margin for a collection run or a clock that is late.
+		return max( self::ARTIFACT_MAX_AGE, $served + ArtifactKeepAlive::INTERVAL + DAY_IN_SECONDS );
+	}
+
+	/**
+	 * Font files named by the localized stylesheets this pass keeps, or null when one
+	 * of them cannot be read and no font file can safely be called unused.
+	 *
+	 * @return array<string, true>|null
+	 */
+	private function fontsInUse( string $directory, int $cutoff ): ?array {
+		$named       = array();
+		$stylesheets = glob( $directory . '/*.css' );
+		foreach ( is_array( $stylesheets ) ? $stylesheets : array() as $stylesheet ) {
+			$modified = @filemtime( $stylesheet );
+			if ( false !== $modified && $modified < $cutoff ) {
+				continue;
+			}
+
+			$css = @file_get_contents( $stylesheet );
+			if ( ! is_string( $css ) ) {
+				return null;
+			}
+
+			if ( preg_match_all( '#/fonts/([a-f0-9]{64}\.(?:woff2|woff|otf|ttf))\b#', $css, $matches ) ) {
+				foreach ( $matches[1] as $file ) {
+					$named[ $file ] = true;
+				}
+			}
+		}
+
+		return $named;
 	}
 }

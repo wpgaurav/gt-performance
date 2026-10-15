@@ -6,7 +6,7 @@ GT Performance is an independent WordPress performance plugin for safe page cach
 
 [Try it in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wpgaurav/gt-performance/main/distribution-assets/wordpress-org/blueprints/blueprint.json) · [GT Performance Community](https://gauravtiwari.org/portal/) · [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/)
 
-The current release is `1.3.1`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.3.2`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
@@ -48,9 +48,9 @@ Use **Force regenerate URL** or a row’s **Regenerate** button to invalidate th
 
 GT Performance processes the final anonymous HTML response on the WordPress server. It collects eligible same-origin stylesheets and inline style blocks, parses them into a CSS syntax tree, matches selectors against the rendered document, and keeps configured safelist and dynamic-state selectors conservatively. Safelist lines use partial matching by default and accept validated delimited regular expressions such as `/^\.modal(?:--|\b)/i`. Excluded or cross-origin stylesheets remain untouched.
 
-Generated styles and bundled frontend loaders use WordPress registration, enqueue, and printing APIs. Inline CSS uses CSS escapes for less-than characters so stylesheet text cannot close its HTML style element. The completed response is transformed after its capture buffer closes, so core asset filters can run safely. Opt-in JavaScript minification processes eligible local classic scripts in memory and caches smaller results through WordPress transients, which use the database or an installed object cache. A signed same-origin endpoint serves the result with a versioned URL, browser caching, and ETag revalidation; it never writes JavaScript files or executes JavaScript on the server. Scripts remain external so defer and delay keep their normal execution timing. If the transient is evicted or minification is disabled, the signed URL falls back to the original script.
+Generated styles and bundled frontend loaders use WordPress registration, enqueue, and printing APIs. Inline CSS uses CSS escapes for less-than characters so stylesheet text cannot close its HTML style element. The completed response is transformed after its capture buffer closes, so core asset filters can run safely. Opt-in JavaScript minification processes eligible local classic scripts in memory and caches smaller results through WordPress transients, which use the database or an installed object cache. A signed same-origin endpoint serves the result with a versioned URL, browser caching, and ETag revalidation; in the WordPress.org package it never writes JavaScript files, and no package executes JavaScript on the server. Scripts remain external so defer and delay keep their normal execution timing. If the transient is evicted or minification is disabled, the signed URL falls back to the original script.
 
-The first uncached request for a minified script boots WordPress, so this delivery method trades a PHP request for smaller transferred code and avoids generated executable files. Browser caches can reuse the response. Already minified scripts, modules, scripts with integrity attributes, scripts that depend on their own URL, cross-origin or query-driven scripts, unsafe paths, and files over 2 MB are left unchanged. Existing exclusions and commerce-script protection remain in force.
+The first uncached request for a minified script boots WordPress, so this delivery method trades a PHP request for smaller transferred code and avoids generated executable files. Browser caches can reuse the response, and an edge cache rule for `gtperf_js` lets Cloudflare answer repeats. Already minified scripts, modules, scripts with integrity attributes, scripts that depend on their own URL, cross-origin or query-driven scripts, unsafe paths, and files over 2 MB are left unchanged. Existing exclusions and commerce-script protection remain in force.
 
 After a non-empty used-CSS result is verified, the original collected style nodes are replaced according to the selected delivery mode:
 
@@ -181,7 +181,7 @@ Only explicitly selected extensions are rewritten. Third-party URLs, extensionle
 
 ## Updates
 
-GT Performance is free software with no license key or activation. The WordPress.org slug `gt-performance` belongs to this plugin. Installs from the plugin directory receive updates from WordPress.org. The source in this repository and the FluentCart package keep `Update URI: false` and are updated from their own channel.
+GT Performance is free software with no license key or activation. The WordPress.org slug `gt-performance` belongs to this plugin. Installs from the plugin directory receive updates from WordPress.org. Every install, including one built from this repository, takes updates from WordPress.org.
 
 ## Background queue controls
 

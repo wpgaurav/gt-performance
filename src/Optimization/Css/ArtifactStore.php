@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\Optimization\Css;
 
+use GTPerformance\Cache\ArtifactKeepAlive;
 use GTPerformance\Core\Paths;
 
 final class ArtifactStore {
@@ -35,6 +36,9 @@ final class ArtifactStore {
 			if ( ! \GTPerformance\Core\AtomicFile::write( $path, $css ) ) {
 				throw new \RuntimeException( 'Unable to publish generated CSS atomically.' );
 			}
+		} else {
+			// A build that arrives at an existing file links it again.
+			ArtifactKeepAlive::refresh( $path );
 		}
 
 		return array(

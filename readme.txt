@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -278,6 +278,11 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.2 =
+* Uninstall always removes leftover generated script files, whether or not data removal is enabled.
+* Garbage collection reclaims unused generated CSS and font files again. It now uses modification time, which pages refresh when they link a file, instead of access time, which backups refresh. Files from before the update get 14 days from the first collection after it.
+* Unused CSS is rebuilt far less often. Renaming a stylesheet the engine leaves in place, such as a versioned CDN or excluded stylesheet, no longer rebuilds every page, and neither does a plugin update that leaves the CSS engine unchanged. Builds stay reusable for a week instead of a day. Each page is rebuilt once after the update.
 
 = 1.3.1 =
 * Avoids redundant warming requests and defers cold preloads safely near the worker deadline.

@@ -62,6 +62,7 @@ $gt_performance_remove_site = static function (): bool {
 	delete_option( 'gt_performance_site_revision' );
 	delete_option( 'gt_performance_server_rules' );
 	delete_option( 'gt_performance_server_rules_error' );
+	delete_option( 'gt_performance_artifact_keepalive_since' );
 	// Written by builds distributed before the WordPress.org release.
 	delete_option( 'gt_performance_license' );
 	delete_option( 'gt_performance_remove_data_on_uninstall' );
@@ -71,6 +72,10 @@ $gt_performance_remove_site = static function (): bool {
 	global $wpdb;
 	// SQLite advisory lock rows (NamedLock); MySQL locks leave no rows.
 	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'gtperf_lock_' ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// Reusable CSS builds live for a week; nothing else would remove them.
+	foreach ( array( '_transient_gtperf_css_', '_transient_timeout_gtperf_css_' ) as $gt_performance_prefix ) {
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $gt_performance_prefix ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
 
 	$gt_performance_tables = array(
 		$wpdb->prefix . 'gtperf_jobs',
@@ -120,6 +125,24 @@ $gt_performance_root_safe  = false !== $gt_performance_cache_root
 	&& $gt_performance_cache_root === $gt_performance_content . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'gt-performance'
 	&& ! is_link( $gt_performance_content . '/cache' )
 	&& ! is_link( $gt_performance_content . '/cache/gt-performance' );
+
+/*
+ * Script files go whether or not a site asked for its data to be removed. The
+ * plugin no longer writes them; they are leftovers from builds before 1.0.11 and
+ * from the retired self-hosted package, with no use once the plugin is gone.
+ * Pages, styles and configuration follow the data-removal choice below. Each
+ * directory must still resolve inside the cache root, so a link anywhere along
+ * the path is never followed.
+ */
+if ( $gt_performance_root_safe ) {
+	$gt_performance_site_scripts = glob( $gt_performance_cache_root . '/sites/*/assets/js', GLOB_ONLYDIR );
+	foreach ( array_merge( array( $gt_performance_cache_root . '/assets/js' ), is_array( $gt_performance_site_scripts ) ? $gt_performance_site_scripts : array() ) as $gt_performance_scripts ) {
+		$gt_performance_scripts_real = realpath( $gt_performance_scripts );
+		if ( false !== $gt_performance_scripts_real && ! is_link( $gt_performance_scripts ) && str_starts_with( $gt_performance_scripts_real, $gt_performance_cache_root . DIRECTORY_SEPARATOR ) ) {
+			$gt_performance_delete_tree( $gt_performance_scripts_real );
+		}
+	}
+}
 
 /*
  * On a network every site decides for itself. A site that opted in loses its

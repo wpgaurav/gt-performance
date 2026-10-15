@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\Optimization;
 
+use GTPerformance\Cache\ArtifactKeepAlive;
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Paths;
 use GTPerformance\Core\Settings;
@@ -75,14 +76,20 @@ final class FontOptimizer {
 	 * Resolve an already-localized stylesheet, or null when it has not been built.
 	 *
 	 * The filename is derived from the source URL rather than the response body, so
-	 * this lookup is a single is_file() with no manifest and no network access.
+	 * this lookup is a single stat with no manifest and no network access.
 	 */
 	private function localUrl( string $href ): ?string {
 		$file = $this->fileName( $href );
+		$path = Paths::assets() . '/fonts/' . $file;
+		if ( ! is_file( $path ) ) {
+			return null;
+		}
 
-		return is_file( Paths::assets() . '/fonts/' . $file )
-			? Paths::assetsUrl( 'fonts/' . $file )
-			: null;
+		// The page about to link this stylesheet keeps it, and through it the font
+		// files it names, out of garbage collection.
+		ArtifactKeepAlive::refresh( $path );
+
+		return Paths::assetsUrl( 'fonts/' . $file );
 	}
 
 	private function fileName( string $href ): string {
@@ -182,6 +189,10 @@ final class FontOptimizer {
 					if ( ! \GTPerformance\Core\AtomicFile::write( $directory . '/' . $file, $body ) ) {
 						return $matches[0];
 					}
+				} else {
+					// An idle file this stylesheet is about to name again must not be
+					// reclaimed before the stylesheet that names it is written.
+					ArtifactKeepAlive::refresh( $directory . '/' . $file );
 				}
 
 				return 'url("' . Paths::assetsUrl( 'fonts/' . $file ) . '")';

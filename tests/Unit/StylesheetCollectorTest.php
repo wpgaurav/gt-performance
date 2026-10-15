@@ -59,6 +59,50 @@ final class StylesheetCollectorTest extends TestCase {
 		self::assertSame( 1, $document->getElementsByTagName( 'noscript' )->length );
 	}
 
+	/**
+	 * The reuse key keeps only the hrefs of stylesheets a build reads, so reads()
+	 * must agree with collect() on every link. Otherwise a key could ignore a
+	 * stylesheet the build depends on.
+	 */
+	public function testReadsAgreesWithCollectOnEveryLink(): void {
+		$hrefs    = array(
+			'/middle.css'                                        => true,
+			'https://example.com/wp-content/a.css?ver=1&amp;b=2' => true,
+			'//example.com/b.css'                                => true,
+			'https://cdn.example.net/wp-content/c.css?ver=9'     => false,
+			'https://example.com/wp-content/excluded.css?ver=3'  => false,
+			'data:text/css,.x{}'                                 => false,
+		);
+		$document = new \DOMDocument();
+		$document->loadHTML(
+			'<!doctype html><html><head>'
+			. implode( '', array_map( static fn( string $href ): string => '<link rel="stylesheet" href="' . $href . '">', array_keys( $hrefs ) ) )
+			. '</head><body></body></html>'
+		);
+
+		$collector = new StylesheetCollector();
+		$read      = array_map(
+			static fn( \DOMElement $node ): string => $node->getAttribute( 'href' ),
+			$collector->collect( $document, array( 'excluded.css' ) )['nodes']
+		);
+
+		foreach ( $hrefs as $href => $expected ) {
+			$value = html_entity_decode( $href, ENT_QUOTES | ENT_HTML5 );
+			self::assertSame( $expected, in_array( $value, $read, true ), 'collect(): ' . $href );
+			self::assertSame( $expected, $collector->reads( $value, array( 'excluded.css' ) ), 'reads(): ' . $href );
+		}
+	}
+
+	public function testAConfiguredCdnHostIsRead(): void {
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = array( 'cdn' => array( 'url' => 'https://cdn.example.net' ) );
+
+		try {
+			self::assertTrue( ( new StylesheetCollector() )->reads( 'https://cdn.example.net/wp-content/c.css?ver=9' ) );
+		} finally {
+			unset( $GLOBALS['gtperf_test_options']['gt_performance_settings'] );
+		}
+	}
+
 	public function testInlineStyleCanBeExcludedByWordPressStyleId(): void {
 		$document = new \DOMDocument();
 		$document->loadHTML(
