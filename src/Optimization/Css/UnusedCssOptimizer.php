@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\Optimization\Css;
 
 use GTPerformance\Core\Logger;
+use GTPerformance\Cache\ArtifactKeepAlive;
 use GTPerformance\Cache\RequestContext;
 use GTPerformance\Core\Settings;
 use GTPerformance\Optimization\BufferedAssets;
@@ -48,8 +49,30 @@ final class UnusedCssOptimizer {
 	 */
 	private const TIME_BUDGET_MS = 20000;
 
-	/** Transient prefix for reusable generated markup. */
-	private const REUSE_PREFIX = 'gtperf_css_reuse_';
+	/**
+	 * Bump when the same page and stylesheets can build different output: a change to
+	 * the pruner, the collector, or the markup a build places. The plugin version
+	 * stood here, so every release rebuilt every page, releases that touched only
+	 * JavaScript included.
+	 */
+	public const ENGINE = '1';
+
+	/**
+	 * Transient prefix for one URL's reusable builds. A URL has one entry holding its
+	 * recent page shapes, so a forced rebuild can drop all of them at once and a
+	 * longer lifetime cannot pile up an entry per superseded shape.
+	 */
+	private const REUSE_PREFIX = 'gtperf_css_shapes_';
+
+	/** Page shapes kept per URL: mobile and desktop markup, plus a change in flight. */
+	private const REUSE_SHAPES = 4;
+
+	/**
+	 * How long a build stays reusable. Every input that decides selector matching is
+	 * part of the key, so this only bounds a stylesheet edited behind an unchanged
+	 * URL. At one day, an unchanged page was rebuilt every day it was visited.
+	 */
+	private const REUSE_TTL = WEEK_IN_SECONDS;
 
 	public const JOB_TYPE = 'generate_css';
 	public const JOB_HOOK = 'gt_performance_job_generate_css';
@@ -87,7 +110,8 @@ final class UnusedCssOptimizer {
 		// already exists and is applied, or one is queued and this response goes out
 		// unchanged. The generator's own loopback request is the only caller that
 		// actually builds one.
-		$reuseKey = $this->reuseKey( $html, $mode );
+		$stylesheetExclusions = $this->stylesheetExclusions( $url );
+		$reuseKey             = $this->reuseKey( $html, $mode, $stylesheetExclusions );
 		$reused   = self::isGeneratorRequest() ? null : $this->reusableOutput( $html, $reuseKey );
 		if ( null !== $reused ) {
 			return $reused;
@@ -115,22 +139,6 @@ final class UnusedCssOptimizer {
 				throw new \RuntimeException( 'The HTML document could not be parsed.' );
 			}
 
-			$stylesheetExclusions = array_map(
-				'strval',
-				(array) Settings::get( 'css.excluded_stylesheets', array() )
-			);
-			$stylesheetExclusions = array_values(
-				array_filter(
-					array_map(
-						'strval',
-						(array) apply_filters(
-							'gt_performance_css_stylesheet_exclusions',
-							$stylesheetExclusions,
-							$url
-						)
-					)
-				)
-			);
 			$collected             = $this->collector->collect( $document, $stylesheetExclusions );
 			if ( ! $collected['stylesheets'] ) {
 				$this->reports->complete(
@@ -474,17 +482,38 @@ final class UnusedCssOptimizer {
 	}
 
 	/**
-	 * Reuse only the same URL, selector inputs and current CSS revisions.
+	 * Stylesheets the engine leaves in place for this URL.
+	 *
+	 * @return list<string> URL or inline style ID fragments.
 	 */
-	private function reuseKey( string $html, string $mode ): string {
+	private function stylesheetExclusions( string $url ): array {
+		return array_values(
+			array_filter(
+				array_map(
+					'strval',
+					(array) apply_filters(
+						'gt_performance_css_stylesheet_exclusions',
+						array_map( 'strval', (array) Settings::get( 'css.excluded_stylesheets', array() ) ),
+						$url
+					)
+				)
+			)
+		);
+	}
+
+	/**
+	 * Reuse only the same URL, selector inputs and current CSS revisions.
+	 *
+	 * @param list<string> $exclusions Stylesheets the engine leaves in place.
+	 */
+	private function reuseKey( string $html, string $mode, array $exclusions = array() ): string {
 		// Attribute values, IDs and DOM relationships affect selector matching too.
 		// Keep reuse scoped to the URL and exact markup to avoid cross-page pruning.
 		return hash(
 			'sha256',
-			GTPERF_VERSION . '|' . $this->requestUrl() . '|' . $mode . '|'
+			self::ENGINE . '|' . $this->requestUrl() . '|' . $mode . '|'
 			. (int) Settings::get( 'generation', 1 ) . '|'
-			. (string) get_option( 'gtperf_css_revision', 1 ) . '|'
-			. (string) get_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $this->requestUrl() ) ) . '|' . self::stableMarkup( $html )
+			. (string) get_option( 'gtperf_css_revision', 1 ) . '|' . $this->stableMarkup( $html, $exclusions )
 		);
 	}
 
@@ -496,37 +525,83 @@ final class UnusedCssOptimizer {
 	 * match, but while it was part of the key a visitor's page never equalled the one
 	 * its build saw: pages with a comment form were never served their CSS, and every
 	 * uncached visit queued another build.
+	 *
+	 * @param list<string> $exclusions Stylesheets the engine leaves in place.
 	 */
-	private static function stableMarkup( string $html ): string {
+	private function stableMarkup( string $html, array $exclusions = array() ): string {
 		$html = (string) preg_replace( '#<script\b[^>]*>.*?</script\s*>#is', '<script></script>', $html );
 		$html = (string) preg_replace( '#<!--.*?-->#s', '', $html );
 		$html = (string) preg_replace( '#\snonce\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $html );
-
-		return (string) preg_replace_callback(
+		$html = (string) preg_replace_callback(
 			'#<input\b[^>]*>#i',
 			static fn( array $input ): string => 1 === preg_match( '#\stype\s*=\s*["\']?hidden["\'\s/>]#i', $input[0] )
 				? (string) preg_replace( '#\svalue\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $input[0] )
 				: $input[0],
 			$html
 		);
+
+		// A stylesheet the engine never reads counts for where it stands, not for the
+		// file it names. gatilab.com's theme stylesheets come from a CDN host the
+		// engine does not read, and their versioned and content-hashed URLs changed
+		// with every deploy: each change rebuilt every page, and 1,923 of 2,001 builds
+		// produced a file that already existed.
+		return (string) preg_replace_callback(
+			'#<link\b[^>]*>#i',
+			fn( array $link ): string => $this->readsLink( $link[0], $exclusions )
+				? $link[0]
+				: (string) preg_replace( '#\shref\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $link[0] ),
+			$html
+		);
+	}
+
+	/**
+	 * Whether the collector reads this link's stylesheet into a build.
+	 *
+	 * Mirrors collect()'s own test of rel and href. A disabled link or one inside
+	 * <noscript> counts as read, which only costs reuse, never correctness.
+	 *
+	 * @param list<string> $exclusions Stylesheets the engine leaves in place.
+	 */
+	private function readsLink( string $tag, array $exclusions ): bool {
+		$value = static fn( string $name ): ?string => 1 === preg_match( '#\s' . $name . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))#i', $tag, $match )
+			? html_entity_decode( implode( '', array_slice( $match, 1 ) ), ENT_QUOTES | ENT_HTML5 )
+			: null;
+		$href  = $value( 'href' );
+
+		return null !== $href
+			&& 'stylesheet' === strtolower( (string) preg_replace( '/\s+/', ' ', trim( (string) $value( 'rel' ) ) ) )
+			&& $this->collector->reads( $href, $exclusions );
+	}
+
+	/**
+	 * Drop every reusable build of a URL, so its next render waits for a new build.
+	 */
+	public static function forget( string $url ): void {
+		delete_transient( self::reuseSlot( $url ) );
+	}
+
+	private static function reuseSlot( string $url ): string {
+		return self::REUSE_PREFIX . hash( 'sha256', $url );
 	}
 
 	/**
 	 * Serve a previously generated artifact for an identical page shape.
 	 */
 	private function reusableOutput( string $html, string $key ): ?string {
-		$cached = get_transient( self::REUSE_PREFIX . $key );
+		$shapes = get_transient( self::reuseSlot( $this->requestUrl() ) );
+		$cached = is_array( $shapes ) ? ( $shapes[ $key ] ?? null ) : null;
 		if ( ! is_array( $cached ) || ! isset( $cached['placements'], $cached['markers'] ) || ! is_array( $cached['placements'] ) ) {
 			return null;
 		}
 
 		foreach ( (array) ( $cached['files'] ?? array() ) as $file ) {
-			// An artifact reclaimed by garbage collection must not be linked again.
+			// An artifact reclaimed by garbage collection must not be linked again. The
+			// build this miss queues replaces the shape.
 			if ( ! is_file( (string) $file ) ) {
-				delete_transient( self::REUSE_PREFIX . $key );
-
 				return null;
 			}
+			// Linking it again keeps it out of garbage collection.
+			ArtifactKeepAlive::refresh( (string) $file );
 		}
 
 		return $this->replaceStylesheets( $html, array_map( 'strval', (array) $cached['markers'] ), array_map( 'strval', $cached['placements'] ) );
@@ -545,15 +620,18 @@ final class UnusedCssOptimizer {
 			}
 		}
 
-		set_transient(
-			self::REUSE_PREFIX . $key,
-			array(
-				'placements' => $placements,
-				'markers'    => $markers,
-				'files'      => $files,
-			),
-			DAY_IN_SECONDS
+		$slot   = self::reuseSlot( $this->requestUrl() );
+		$shapes = get_transient( $slot );
+		$shapes = is_array( $shapes ) ? $shapes : array();
+		// The newest shape goes last, so the one dropped is the one built longest ago.
+		unset( $shapes[ $key ] );
+		$shapes[ $key ] = array(
+			'placements' => $placements,
+			'markers'    => $markers,
+			'files'      => $files,
 		);
+
+		set_transient( $slot, array_slice( $shapes, -self::REUSE_SHAPES, null, true ), self::REUSE_TTL );
 	}
 
 	/**

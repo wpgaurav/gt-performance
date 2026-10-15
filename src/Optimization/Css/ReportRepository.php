@@ -155,16 +155,8 @@ final class ReportRepository {
 	public function invalidateUrl( string $url ): int {
 		global $wpdb;
 
-		// Outlive reusable markup so older variants cannot reappear after a forced build.
-		set_transient( 'gtperf_css_url_revision_' . hash( 'sha256', $url ), wp_generate_uuid4(), 2 * DAY_IN_SECONDS );
-
-		foreach ( array( 'file', 'inline', 'hybrid' ) as $mode ) {
-			$report = $this->find( $url, $mode );
-			$key = (string) ( $report['metadata']['reuse_key'] ?? '' );
-			if ( '' !== $key ) {
-				delete_transient( 'gtperf_css_reuse_' . $key );
-			}
-		}
+		// Every shape of the URL goes, so no older variant can reappear after a forced build.
+		UnusedCssOptimizer::forget( $url );
 
 		$table        = $wpdb->prefix . 'gtperf_artifacts';
 		$fingerprints = array_map(

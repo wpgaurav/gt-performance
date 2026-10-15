@@ -330,6 +330,91 @@ final class UnusedCssEngineTest extends TestCase {
 		self::assertSame( $out, $this->optimizeAsVisitor( $html ), 'A visitor is served the same placement.' );
 	}
 
+	/**
+	 * gatilab.com: the theme's stylesheets come from a CDN host the engine does not
+	 * read, and deploys renamed them (?ver= timestamps, content-hashed bundles). Each
+	 * rename was a new reuse key, so every page was rebuilt: over three days, 1,923
+	 * of 2,001 builds produced a CSS file that already existed.
+	 */
+	public function test_renaming_a_stylesheet_the_engine_never_reads_keeps_the_build(): void {
+		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['excluded_stylesheets'] = array( 'excluded-theme.css' );
+		$page = fn( string $version ): string => $this->page(
+			'<link rel="stylesheet" id="md-globals-css" href="https://cdn.example.net/wp-content/uploads/md-assets/' . $version . '.css" media="all">'
+			. "<link rel='stylesheet' href='https://cdn.example.net/wp-content/themes/md/md-compiled.css?ver=" . $version . "'>"
+			. '<link rel="stylesheet" href="https://example.com/wp-content/excluded-theme.css?ver=' . $version . '">'
+			. '<link rel="preload" as="font" href="https://cdn.example.net/font.woff2?ver=' . $version . '" crossorigin>'
+			. '<style>.renamed-card{color:red}.unused-renamed{color:#000}</style>',
+			'<div class="renamed-card">y</div>'
+		);
+		$this->optimize( $page( 'a1b2c3d4' ) );
+
+		$out = $this->optimizeAsVisitor( $page( 'e5f6a7b8' ) );
+		self::assertStringNotContainsString( 'unused-renamed', $out, 'The deploy did not cost a rebuild.' );
+		self::assertStringContainsString( 'md-assets/e5f6a7b8.css', $out, "The visitor's own links go out unchanged." );
+		self::assertStringContainsString( 'excluded-theme.css?ver=e5f6a7b8', $out );
+
+		$moved = $this->optimizeAsVisitor( str_replace( '<link rel="preload"', '<link rel="stylesheet" href="https://cdn.example.net/new.css"><link rel="preload"', $page( 'e5f6a7b8' ) ) );
+		self::assertStringContainsString( 'unused-renamed', $moved, 'Where stylesheets stand still counts.' );
+	}
+
+	/**
+	 * The other side of the same key: a stylesheet the build read is part of the
+	 * CSS it pruned, so a new version of it must wait for its own build.
+	 */
+	public function test_a_new_version_of_a_stylesheet_the_build_read_waits_for_its_own_build(): void {
+		$directory = WP_CONTENT_DIR . '/gtperf-reuse-test';
+		wp_mkdir_p( $directory );
+		file_put_contents( $directory . '/site.css', '.read-card{color:red}.unused-read{color:#000}' );
+		$page = fn( string $version ): string => $this->page(
+			'<link rel="stylesheet" href="https://example.com/wp-content/gtperf-reuse-test/site.css?ver=' . $version . '">',
+			'<div class="read-card">y</div>'
+		);
+
+		try {
+			$built = $this->optimize( $page( '1' ) );
+			self::assertStringNotContainsString( 'unused-read', $built );
+			self::assertStringNotContainsString( 'site.css', $built, 'The stylesheet was read into the build.' );
+			self::assertSame( $built, $this->optimizeAsVisitor( $page( '1' ) ) );
+			self::assertSame( $page( '2' ), $this->optimizeAsVisitor( $page( '2' ) ) );
+		} finally {
+			unlink( $directory . '/site.css' );
+			rmdir( $directory );
+		}
+	}
+
+	/**
+	 * A URL keeps its recent shapes in one entry, so a week-long lifetime cannot
+	 * leave an entry behind for every shape a page ever had.
+	 */
+	public function test_a_url_keeps_its_four_most_recent_shapes(): void {
+		$previous               = $_SERVER['REQUEST_URI'] ?? null;
+		$_SERVER['REQUEST_URI'] = '/shapes/';
+		$slot                   = 'gtperf_css_shapes_' . hash( 'sha256', 'https://example.com/shapes/' );
+		$pages                  = array_map(
+			fn( int $shape ): string => $this->page( '<style>.shape{color:red}.unused-shape{color:#000}</style>', '<div class="shape s' . $shape . '">y</div>' ),
+			range( 1, 5 )
+		);
+
+		try {
+			foreach ( $pages as $html ) {
+				$this->optimize( $html );
+			}
+
+			self::assertCount( 4, (array) get_transient( $slot ) );
+			self::assertSame( $pages[0], $this->optimizeAsVisitor( $pages[0] ), 'The oldest shape made room.' );
+			foreach ( array_slice( $pages, 1 ) as $html ) {
+				self::assertStringNotContainsString( 'unused-shape', $this->optimizeAsVisitor( $html ) );
+			}
+		} finally {
+			UnusedCssOptimizer::forget( 'https://example.com/shapes/' );
+			if ( null === $previous ) {
+				unset( $_SERVER['REQUEST_URI'] );
+			} else {
+				$_SERVER['REQUEST_URI'] = $previous;
+			}
+		}
+	}
+
 	public function test_a_hybrid_build_over_the_limit_records_how_far_over_it_was(): void {
 		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['mode']            = 'hybrid';
 		$GLOBALS['gtperf_test_options']['gt_performance_settings']['css']['critical_budget'] = 8;

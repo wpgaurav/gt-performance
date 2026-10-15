@@ -9,9 +9,14 @@ declare(strict_types=1);
 
 namespace GTPerformance\Tests\Unit;
 
+use GTPerformance\Cache\ArtifactKeepAlive;
 use GTPerformance\Cache\FileStore;
 use GTPerformance\Cache\GarbageCollector;
+use GTPerformance\Core\Logger;
 use GTPerformance\Core\Paths;
+use GTPerformance\Optimization\Css\ArtifactStore;
+use GTPerformance\Optimization\Css\UnusedCssOptimizer;
+use GTPerformance\Optimization\FontOptimizer;
 use PHPUnit\Framework\TestCase;
 
 final class GarbageCollectorTest extends TestCase {
@@ -25,6 +30,36 @@ final class GarbageCollectorTest extends TestCase {
 			}
 		}
 		$this->store->purgeAll();
+		// Renders have refreshed the files they link for long enough that only age decides.
+		$GLOBALS['gtperf_test_options'][ GarbageCollector::KEEPALIVE_SINCE_OPTION ] = time() - 90 * DAY_IN_SECONDS;
+	}
+
+	protected function tearDown(): void {
+		unset(
+			$GLOBALS['gtperf_test_options'][ GarbageCollector::KEEPALIVE_SINCE_OPTION ],
+			$GLOBALS['gtperf_test_options']['gt_performance_settings']
+		);
+	}
+
+	/**
+	 * Write a generated file last modified $age seconds ago and read a moment ago,
+	 * the way a nightly backup leaves it under relatime. Never under js/: other tests
+	 * prove the WordPress.org build never creates that directory.
+	 */
+	private function artifact( string $relative, int $age, string $body = 'x' ): string {
+		$path = Paths::assets() . '/' . $relative;
+		if ( ! is_dir( dirname( $path ) ) ) {
+			mkdir( dirname( $path ), 0o777, true );
+		}
+		file_put_contents( $path, $body );
+		touch( $path, time() - $age, time() );
+		clearstatcache( true, $path );
+
+		return $path;
+	}
+
+	private static function hex( string $seed ): string {
+		return hash( 'sha256', $seed . uniqid( '', true ) );
 	}
 
 	/**
@@ -134,5 +169,186 @@ final class GarbageCollectorTest extends TestCase {
 		( new GarbageCollector() )->collect();
 
 		self::assertFileDoesNotExist( $temp, 'A crashed write must not leave a permanent orphan.' );
+	}
+
+	/**
+	 * A nightly backup read every artifact, so access time said they were all in use
+	 * and nothing was reclaimed: seven scripts orphaned on 2026-08-29 were still on a
+	 * live server on 2026-10-15, read at 03:22 the night before.
+	 */
+	public function test_an_artifact_a_backup_read_last_night_is_still_reclaimed(): void {
+		$orphan = $this->artifact( 'css/' . self::hex( 'orphan' ) . '-used.css', 47 * DAY_IN_SECONDS );
+
+		$stats = ( new GarbageCollector() )->collect();
+
+		self::assertFileDoesNotExist( $orphan, 'Access time must not keep a file no render links.' );
+		self::assertGreaterThanOrEqual( 1, $stats['artifacts'] );
+	}
+
+	public function test_an_artifact_a_render_refreshed_within_the_window_is_kept(): void {
+		$css    = $this->artifact( 'css/' . self::hex( 'css' ) . '-used.css', 13 * DAY_IN_SECONDS );
+		$fresh  = $this->artifact( 'css/' . self::hex( 'fresh' ) . '-used.css', DAY_IN_SECONDS );
+
+		( new GarbageCollector() )->collect();
+
+		self::assertFileExists( $css );
+		self::assertFileExists( $fresh );
+	}
+
+	public function test_the_directory_guards_are_never_reclaimed(): void {
+		$guard = $this->artifact( 'css/index.html', 400 * DAY_IN_SECONDS, '' );
+
+		( new GarbageCollector() )->collect();
+
+		self::assertFileExists( $guard );
+	}
+
+	/**
+	 * Files written before renders refreshed them have only their creation time, so
+	 * on upgrade every one, including those a cached page still links, would look
+	 * abandoned. The first pass starts the clock and reclaims nothing.
+	 */
+	public function test_files_from_before_the_upgrade_count_from_the_first_collection(): void {
+		unset( $GLOBALS['gtperf_test_options'][ GarbageCollector::KEEPALIVE_SINCE_OPTION ] );
+		$linked = $this->artifact( 'css/' . self::hex( 'linked' ) . '-used.css', 60 * DAY_IN_SECONDS );
+
+		( new GarbageCollector() )->collect();
+
+		self::assertFileExists( $linked, 'The first pass after an upgrade must not reclaim what pages still link.' );
+		$since = (int) ( $GLOBALS['gtperf_test_options'][ GarbageCollector::KEEPALIVE_SINCE_OPTION ] ?? 0 );
+		self::assertGreaterThan( time() - HOUR_IN_SECONDS, $since );
+
+		$GLOBALS['gtperf_test_options'][ GarbageCollector::KEEPALIVE_SINCE_OPTION ] = time() - 13 * DAY_IN_SECONDS;
+		( new GarbageCollector() )->collect();
+		self::assertFileExists( $linked, 'Pages get the full window to refresh their own files.' );
+
+		$GLOBALS['gtperf_test_options'][ GarbageCollector::KEEPALIVE_SINCE_OPTION ] = time() - 15 * DAY_IN_SECONDS;
+		( new GarbageCollector() )->collect();
+		self::assertFileDoesNotExist( $linked, 'A file no render refreshed in the window is reclaimed.' );
+	}
+
+	/**
+	 * A cached page can link a file for as long as the store, a browser and the
+	 * Cloudflare edge keep that page, so a site that keeps pages longer than the
+	 * default window keeps their files longer too.
+	 */
+	public function test_long_page_lifetimes_lengthen_the_window(): void {
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = array(
+			'cache'      => array( 'stale_ttl' => 20 * DAY_IN_SECONDS ),
+			'cloudflare' => array(
+				'enabled'  => true,
+				'edge_ttl' => 10 * DAY_IN_SECONDS,
+			),
+		);
+		$kept    = $this->artifact( 'css/' . self::hex( 'kept' ) . '-used.css', 25 * DAY_IN_SECONDS );
+		$expired = $this->artifact( 'css/' . self::hex( 'gone' ) . '-used.css', 40 * DAY_IN_SECONDS );
+
+		( new GarbageCollector() )->collect();
+
+		self::assertFileExists( $kept, 'A page served from the edge 30 days after its render still links this file.' );
+		self::assertFileDoesNotExist( $expired );
+
+		$GLOBALS['gtperf_test_options']['gt_performance_settings']['cloudflare']['enabled'] = false;
+		( new GarbageCollector() )->collect();
+		self::assertFileDoesNotExist( $kept, 'An edge lifetime only counts while the edge caches pages.' );
+	}
+
+	/**
+	 * Pages link a localized font stylesheet, never the font files it names, so no
+	 * render refreshes a font file. It lives as long as a stylesheet names it.
+	 */
+	public function test_font_files_live_as_long_as_a_kept_stylesheet_names_them(): void {
+		$named    = self::hex( 'named' ) . '.woff2';
+		$unnamed  = self::hex( 'unnamed' ) . '.woff2';
+		$retired  = self::hex( 'retired' ) . '.woff';
+		$base     = Paths::assetsUrl( 'fonts/' );
+		$live     = $this->artifact( 'fonts/' . self::hex( 'live' ) . '.css', DAY_IN_SECONDS, '@font-face{src:url("' . $base . $named . '")}' );
+		$dead     = $this->artifact( 'fonts/' . self::hex( 'dead' ) . '.css', 30 * DAY_IN_SECONDS, '@font-face{src:url("' . $base . $retired . '")}' );
+		$namedOne = $this->artifact( 'fonts/' . $named, 200 * DAY_IN_SECONDS );
+		$loose    = $this->artifact( 'fonts/' . $unnamed, 200 * DAY_IN_SECONDS );
+		$orphaned = $this->artifact( 'fonts/' . $retired, 200 * DAY_IN_SECONDS );
+
+		( new GarbageCollector() )->collect();
+
+		self::assertFileExists( $live );
+		self::assertFileExists( $namedOne, 'A font file a kept stylesheet names stays, however old.' );
+		self::assertFileDoesNotExist( $loose );
+		self::assertFileDoesNotExist( $dead );
+		self::assertFileDoesNotExist( $orphaned, 'A font file only a reclaimed stylesheet named goes with it.' );
+	}
+
+	public function test_a_refresh_writes_at_most_once_an_interval(): void {
+		$path = $this->artifact( 'css/' . self::hex( 'refresh' ) . '-used.css', 3 * DAY_IN_SECONDS );
+		ArtifactKeepAlive::refresh( $path );
+		clearstatcache( true, $path );
+		self::assertGreaterThan( time() - HOUR_IN_SECONDS, filemtime( $path ) );
+
+		$recent = time() - HOUR_IN_SECONDS;
+		touch( $path, $recent );
+		ArtifactKeepAlive::refresh( $path );
+		clearstatcache( true, $path );
+		self::assertSame( $recent, filemtime( $path ), 'A file refreshed within the interval is left alone.' );
+
+		ArtifactKeepAlive::refresh( Paths::assets() . '/css/missing.css' );
+		self::assertFileDoesNotExist( Paths::assets() . '/css/missing.css', 'A refresh never creates a file.' );
+	}
+
+	public function test_a_css_build_that_arrives_at_an_existing_file_refreshes_it(): void {
+		$css    = '.a{color:red}' . uniqid();
+		$stored = ( new ArtifactStore() )->write( $css );
+		touch( $stored['path'], time() - 5 * DAY_IN_SECONDS );
+
+		( new ArtifactStore() )->write( $css );
+		clearstatcache( true, $stored['path'] );
+
+		self::assertGreaterThan( time() - HOUR_IN_SECONDS, filemtime( $stored['path'] ) );
+		unlink( $stored['path'] );
+	}
+
+	public function test_serving_a_reused_css_build_refreshes_its_files(): void {
+		$path = $this->artifact( 'css/' . self::hex( 'reused' ) . '-used.css', 5 * DAY_IN_SECONDS );
+		$key      = self::hex( 'key' );
+		$previous = $_SERVER['REQUEST_URI'] ?? null;
+		$_SERVER['REQUEST_URI'] = '/keep-alive/';
+		set_transient(
+			'gtperf_css_shapes_' . hash( 'sha256', 'https://example.com/keep-alive/' ),
+			array(
+				$key => array(
+					'placements' => array(),
+					'markers'    => array(),
+					'files'      => array( $path ),
+				),
+			),
+			WEEK_IN_SECONDS
+		);
+
+		try {
+			$reuse = new \ReflectionMethod( UnusedCssOptimizer::class, 'reusableOutput' );
+			$html  = (string) $reuse->invoke( new UnusedCssOptimizer( new Logger() ), '<html><head></head><body></body></html>', $key );
+		} finally {
+			if ( null === $previous ) {
+				unset( $_SERVER['REQUEST_URI'] );
+			} else {
+				$_SERVER['REQUEST_URI'] = $previous;
+			}
+		}
+		clearstatcache( true, $path );
+
+		self::assertStringContainsString( '<body>', $html );
+		self::assertGreaterThan( time() - HOUR_IN_SECONDS, filemtime( $path ) );
+		UnusedCssOptimizer::forget( 'https://example.com/keep-alive/' );
+	}
+
+	public function test_linking_a_localized_font_stylesheet_refreshes_it(): void {
+		$GLOBALS['gtperf_test_options']['gt_performance_settings'] = array( 'fonts' => array( 'self_host_google' => true ) );
+		$href = 'https://fonts.googleapis.com/css2?family=Keep' . uniqid();
+		$path = $this->artifact( 'fonts/' . hash( 'sha256', $href ) . '.css', 5 * DAY_IN_SECONDS, '@font-face{}' );
+
+		$html = ( new FontOptimizer( new Logger() ) )->optimize( '<link rel="stylesheet" href="' . $href . '">' );
+		clearstatcache( true, $path );
+
+		self::assertStringContainsString( Paths::assetsUrl( 'fonts/' . basename( $path ) ), $html );
+		self::assertGreaterThan( time() - HOUR_IN_SECONDS, filemtime( $path ) );
+		unlink( $path );
 	}
 }

@@ -14,6 +14,8 @@ Before tagging, update every version surface:
 - `GTPERF_VERSION` in `tests/phpstan-bootstrap.php`
 - a dated top section in `CHANGELOG.md`
 
+Bump `UnusedCssOptimizer::ENGINE` only when the release can build different CSS for the same page: the pruner, the collector, or the markup a build places changed. The plugin version is no longer part of the CSS reuse key, so a release that leaves the engine alone keeps every page's build, and one that changes it without a bump keeps serving the old builds for up to a week or until Regenerate all.
+
 Bumping `version` in `composer.json` changes its content hash, so refresh the lock file's hash (no package changes) or CI's strict validation fails every PHP job, as it did for 1.2.0's first push:
 
 ```bash

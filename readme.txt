@@ -282,6 +282,8 @@ Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run 
 = 1.3.2 =
 * Adds the `gt_performance_minified_script_url` filter, so the URL that delivers a minified script can be changed. The signed endpoint remains the default and the fallback.
 * Uninstall always removes generated script files, whether or not data removal is enabled.
+* Garbage collection reclaims unused generated CSS and font files again. It now uses modification time, which pages refresh when they link a file, instead of access time, which backups refresh. Files from before the update get 14 days from the first collection after it.
+* Unused CSS is rebuilt far less often. Renaming a stylesheet the engine leaves in place, such as a versioned CDN or excluded stylesheet, no longer rebuilds every page, and neither does a plugin update that leaves the CSS engine unchanged. Builds stay reusable for a week instead of a day. Each page is rebuilt once after the update.
 
 = 1.3.1 =
 * Avoids redundant warming requests and defers cold preloads safely near the worker deadline.

@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 namespace GTPerformance\SelfHosted;
 
+use GTPerformance\Cache\ArtifactKeepAlive;
 use GTPerformance\Core\AtomicFile;
 use GTPerformance\Core\Paths;
 use GTPerformance\Core\SafeMode;
@@ -35,13 +36,6 @@ use GTPerformance\Optimization\JavaScriptMinifier;
 final class StaticScripts {
 	/** Below Paths::assets(). */
 	public const DIRECTORY = 'js';
-
-	/**
-	 * How often a linked file's modification time is refreshed. Garbage collection
-	 * reclaims artifacts untouched for 14 days, so a daily refresh keeps every file
-	 * a current page names well inside that window without a write per render.
-	 */
-	private const KEEPALIVE = DAY_IN_SECONDS;
 
 	public function register(): void {
 		add_filter( 'gt_performance_minified_script_url', array( $this, 'publish' ), 10, 3 );
@@ -66,7 +60,7 @@ final class StaticScripts {
 		// The id hashes the plugin version and the source, so a file under this name
 		// can only hold this body. AtomicFile never leaves a partial one.
 		if ( is_file( $path ) && ! is_link( $path ) && filesize( $path ) === strlen( $body ) ) {
-			$this->keepAlive( $path );
+			ArtifactKeepAlive::refresh( $path );
 
 			return $this->url( $id );
 		}
@@ -180,12 +174,5 @@ final class StaticScripts {
 		}
 
 		return AtomicFile::write( $this->path( $id ), $body );
-	}
-
-	private function keepAlive( string $path ): void {
-		$modified = filemtime( $path );
-		if ( false !== $modified && time() - $modified > self::KEEPALIVE ) {
-			@touch( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Best effort; collection falls back to access time.
-		}
 	}
 }

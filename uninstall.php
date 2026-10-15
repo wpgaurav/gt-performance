@@ -62,6 +62,7 @@ $gt_performance_remove_site = static function (): bool {
 	delete_option( 'gt_performance_site_revision' );
 	delete_option( 'gt_performance_server_rules' );
 	delete_option( 'gt_performance_server_rules_error' );
+	delete_option( 'gt_performance_artifact_keepalive_since' );
 	// Written by builds distributed before the WordPress.org release.
 	delete_option( 'gt_performance_license' );
 	delete_option( 'gt_performance_remove_data_on_uninstall' );
@@ -71,6 +72,10 @@ $gt_performance_remove_site = static function (): bool {
 	global $wpdb;
 	// SQLite advisory lock rows (NamedLock); MySQL locks leave no rows.
 	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'gtperf_lock_' ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// Reusable CSS builds live for a week; nothing else would remove them.
+	foreach ( array( '_transient_gtperf_css_', '_transient_timeout_gtperf_css_' ) as $gt_performance_prefix ) {
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $gt_performance_prefix ) . '%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
 
 	$gt_performance_tables = array(
 		$wpdb->prefix . 'gtperf_jobs',

@@ -22,6 +22,9 @@ final class StylesheetCollector {
 	 */
 	public const MARKER = 'data-gtp-css';
 
+	/** @var list<string>|null Allowed stylesheet hosts, resolved once per request. */
+	private ?array $hosts = null;
+
 	/**
 	 * @param list<string> $exclusions Excluded URL or inline style ID fragments.
 	 * @return array{stylesheets:list<Stylesheet>,nodes:list<\DOMNode>,markers:list<string>,runs:list<list<string>>}
@@ -30,8 +33,6 @@ final class StylesheetCollector {
 		$xpath       = new \DOMXPath( $document );
 		$stylesheets = array();
 		$nodes       = array();
-		$siteHost     = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
-		$allowedHosts = $this->allowedHosts( $siteHost );
 
 		// A stylesheet's position is part of the cascade. Query links and inline
 		// styles together so consolidating them never moves every inline block
@@ -64,17 +65,11 @@ final class StylesheetCollector {
 					continue;
 				}
 
-				$href = html_entity_decode( $node->getAttribute( 'href' ), ENT_QUOTES | ENT_HTML5 );
-				$url  = $this->absoluteUrl( $href );
-				if ( '' === $url || $this->excluded( $url, $exclusions ) ) {
+				if ( ! $this->reads( $node->getAttribute( 'href' ), $exclusions ) ) {
 					continue;
 				}
 
-				$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-				if ( '' !== $host && ! in_array( $host, $allowedHosts, true ) ) {
-					continue;
-				}
-
+				$url = $this->absoluteUrl( html_entity_decode( $node->getAttribute( 'href' ), ENT_QUOTES | ENT_HTML5 ) );
 				$css = $this->fetch( $url );
 				if ( is_wp_error( $css ) ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal exception; never rendered.
@@ -158,6 +153,25 @@ final class StylesheetCollector {
 		return 'style' === strtolower( $node->tagName )
 			? '' !== trim( $node->textContent )
 			: 'stylesheet' === strtolower( (string) preg_replace( '/\s+/', ' ', trim( $node->getAttribute( 'rel' ) ) ) );
+	}
+
+	/**
+	 * Whether a stylesheet link with this href is read into a build, rather than
+	 * left in place. The reuse key asks the same question, so the two cannot drift.
+	 *
+	 * @param string       $href       The link's href attribute value.
+	 * @param list<string> $exclusions Excluded URL or inline style ID fragments.
+	 */
+	public function reads( string $href, array $exclusions = array() ): bool {
+		$url = $this->absoluteUrl( html_entity_decode( $href, ENT_QUOTES | ENT_HTML5 ) );
+		if ( '' === $url || $this->excluded( $url, $exclusions ) ) {
+			return false;
+		}
+
+		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$this->hosts ??= $this->allowedHosts( strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) );
+
+		return '' === $host || in_array( $host, $this->hosts, true );
 	}
 
 	/**
