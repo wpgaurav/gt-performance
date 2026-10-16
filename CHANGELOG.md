@@ -1,8 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.3.3 - 2026-10-16
+
+Unused CSS reaches pages whose plugins generate IDs on every render, and two setups that silently did nothing now say so. Thanks to @rochakshrestha for the detailed report in #14, which traced the reuse-key mismatch to its source.
 
 - Unused CSS is served on pages whose plugins generate element IDs on every render (#14). TranslatePress's language switcher (`uniqid()`) and Fluent Forms' fields (`md5()`) changed the reuse key on each render, so a ready build was never linked and every eligible visit queued another one. The key now masks runs of ten or more hex digits in `id`, `for`, `headers`, `list`, `form`, the ID-reference `aria-*` attributes, and `href="#…"` fragments, and keeps the rest of the ID. Inline styles still count in full, so a page whose CSS names a generated ID keeps waiting for its own build. A new filter, `gt_performance_css_reuse_markup`, lets a site mask other per-render noise.
+- Store mode without the page-cache drop-in no longer looks like it is optimizing (#14). Store mode passes pages through the optimizer chain only once the owned drop-in and `WP_CACHE` are in place; until then unused CSS, script, image, font and embed optimizations did nothing while their settings read as enabled, and every queued unused-CSS build failed with "The page returned without a completed CSS report". `PageCacheModule::optimizesPages()` is now the one test for it: unused-CSS generation requires it, so no build is queued or fetched in that state and one already queued is skipped with a reason that names the drop-in. Site health adds a "Page optimizations: Not running" warning, and the dashboard shows unused CSS as "Not running".
+- A setup check the site's own firewall refuses is reported as refused (#14). The probe recorded a 401 from a LiteSpeed site behind Cloudflare as a success with no host cache, which pointed toward store mode on a host whose cache served every page. A 401, 403 or 429 now explains that HTTP authentication, a firewall or bot protection is refusing the server's own requests, which stops unused-CSS builds and cache warming the same way; Setup shows "Check failed" and verification fails with that reason.
 
 ## 1.3.2 - 2026-10-15
 

@@ -11,7 +11,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${GTPERF_PACKAGE_VERSION:-1.3.2}"
+VERSION="${GTPERF_PACKAGE_VERSION:-1.3.3}"
 
 case "${1:-wporg}" in
 	wporg) ;;
