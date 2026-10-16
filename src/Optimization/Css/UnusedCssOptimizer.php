@@ -526,6 +526,11 @@ final class UnusedCssOptimizer {
 	 * its build saw: pages with a comment form were never served their CSS, and every
 	 * uncached visit queued another build.
 	 *
+	 * The same goes for element IDs a plugin generates on every render, such as
+	 * TranslatePress's language switcher (uniqid()) and Fluent Forms' field IDs
+	 * (md5()). No stylesheet can name an ID that changes on every render, so only
+	 * the random part is masked; the rest of the ID still counts.
+	 *
 	 * @param list<string> $exclusions Stylesheets the engine leaves in place.
 	 */
 	private function stableMarkup( string $html, array $exclusions = array() ): string {
@@ -539,19 +544,53 @@ final class UnusedCssOptimizer {
 				: $input[0],
 			$html
 		);
+		$html = (string) preg_replace_callback(
+			'#(\s(?:id|for|headers|list|form|aria-(?:activedescendant|controls|describedby|details|errormessage|flowto|labelledby|owns))\s*=\s*)("[^"]*"|\'[^\']*\'|[^\s>]+)#i',
+			static fn( array $attribute ): string => $attribute[1] . self::maskGeneratedIds( $attribute[2] ),
+			$html
+		);
+		$html = (string) preg_replace_callback(
+			'#(\shref\s*=\s*["\']?\#)([^"\'\s>]*)#i',
+			static fn( array $fragment ): string => $fragment[1] . self::maskGeneratedIds( $fragment[2] ),
+			$html
+		);
 
 		// A stylesheet the engine never reads counts for where it stands, not for the
 		// file it names. gatilab.com's theme stylesheets come from a CDN host the
 		// engine does not read, and their versioned and content-hashed URLs changed
 		// with every deploy: each change rebuilt every page, and 1,923 of 2,001 builds
 		// produced a file that already existed.
-		return (string) preg_replace_callback(
+		$html = (string) preg_replace_callback(
 			'#<link\b[^>]*>#i',
 			fn( array $link ): string => $this->readsLink( $link[0], $exclusions )
 				? $link[0]
 				: (string) preg_replace( '#\shref\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $link[0] ),
 			$html
 		);
+
+		/**
+		 * Filter the markup a page's unused-CSS build is reused for.
+		 *
+		 * Mask anything else that changes on every render without changing which
+		 * selectors match. Masking anything that does change them serves a page a
+		 * build made for different markup.
+		 *
+		 * @param string $html Page markup with per-render tokens already masked.
+		 * @param string $url  Page URL.
+		 */
+		return (string) apply_filters( 'gt_performance_css_reuse_markup', $html, $this->requestUrl() );
+	}
+
+	/**
+	 * Mask the hex runs that uniqid(), md5() and similar generators produce.
+	 *
+	 * Ten or more hex digits, at least one a decimal digit, standing alone or
+	 * between separators: `trp-shortcode-dropdown-6ad1cbaf66546` and
+	 * `who_are_you_3e92da8e83341d64fd1d03ee49d7770c`. WordPress's own counters
+	 * (wp_unique_id()) are stable across renders and stay as they are.
+	 */
+	private static function maskGeneratedIds( string $value ): string {
+		return (string) preg_replace( '/(?<![0-9a-z])(?=[a-f]*[0-9])[0-9a-f]{10,}(?:\.[0-9]+)?(?![0-9a-z])/i', '~', $value );
 	}
 
 	/**

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Unused CSS is served on pages whose plugins generate element IDs on every render (#14). TranslatePress's language switcher (`uniqid()`) and Fluent Forms' fields (`md5()`) changed the reuse key on each render, so a ready build was never linked and every eligible visit queued another one. The key now masks runs of ten or more hex digits in `id`, `for`, `headers`, `list`, `form`, the ID-reference `aria-*` attributes, and `href="#…"` fragments, and keeps the rest of the ID. Inline styles still count in full, so a page whose CSS names a generated ID keeps waiting for its own build. A new filter, `gt_performance_css_reuse_markup`, lets a site mask other per-render noise.
+
 ## 1.3.2 - 2026-10-15
 
 Unused-CSS builds survive deploys, garbage collection works again, and WordPress.org becomes the only package.
