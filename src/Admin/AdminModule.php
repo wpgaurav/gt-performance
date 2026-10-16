@@ -1052,7 +1052,7 @@ final class AdminModule implements Module {
 		<section class="gtp-stat-grid" aria-label="<?php esc_attr_e( 'Performance status', 'gt-performance' ); ?>">
 			<?php $this->stat( __( 'Page cache', 'gt-performance' ), $optimizeOnly ? __( 'Host cache, optimize only', 'gt-performance' ) : ( $cacheReady ? __( 'Active', 'gt-performance' ) : __( 'Needs setup', 'gt-performance' ) ), $cacheReady ? 'success' : 'warning' ); ?>
 			<?php $this->stat( __( 'Cloudflare', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? __( 'Connected', 'gt-performance' ) : __( 'Not connected', 'gt-performance' ), ! empty( $settings['cloudflare']['enabled'] ) ? 'success' : 'neutral' ); ?>
-			<?php $this->stat( __( 'Unused CSS', 'gt-performance' ), UnusedCssOptimizer::available() ? __( 'Enabled', 'gt-performance' ) : __( 'Off', 'gt-performance' ), UnusedCssOptimizer::available() ? 'warning' : 'neutral' ); ?>
+			<?php $this->stat( __( 'Unused CSS', 'gt-performance' ), UnusedCssOptimizer::available() ? ( $cacheReady ? __( 'Enabled', 'gt-performance' ) : __( 'Not running', 'gt-performance' ) ) : __( 'Off', 'gt-performance' ), UnusedCssOptimizer::available() ? 'warning' : 'neutral' ); ?>
 			<?php $this->stat( __( 'CSS results ready', 'gt-performance' ), number_format_i18n( $cssReady ), $cssReady > 0 ? 'success' : 'neutral' ); ?>
 		</section>
 		<div class="gtp-dashboard-grid">
@@ -1083,7 +1083,7 @@ final class AdminModule implements Module {
 					<p><?php esc_html_e( 'Run setup: it checks this server, detects your host\'s cache, picks the right cache mode, and confirms a real cached response.', 'gt-performance' ); ?></p>
 					<a class="button button-primary" href="<?php echo esc_url( $this->tabUrl( 'setup' ) ); ?>"><?php esc_html_e( 'Open setup', 'gt-performance' ); ?></a>
 				<?php elseif ( ! $cacheReady ) : ?>
-					<p><?php esc_html_e( 'Install the page-cache drop-in below, enable origin caching, then verify a public page before adding more optimizations.', 'gt-performance' ); ?></p>
+					<p><?php esc_html_e( 'Install the page-cache drop-in below, enable origin caching, then verify a public page before adding more optimizations. Until then no page is optimized, whatever the optimization settings say.', 'gt-performance' ); ?></p>
 					<a class="button button-secondary" href="<?php echo esc_url( $this->tabUrl( 'cache' ) ); ?>"><?php esc_html_e( 'Open cache settings', 'gt-performance' ); ?></a>
 				<?php elseif ( $optimizeOnly && empty( $settings['cloudflare']['enabled'] ) ) : ?>
 					<p><?php esc_html_e( 'Pages your host caches are optimized on their way into its cache. After changing optimizations, purge your host\'s cache so it stores the new version.', 'gt-performance' ); ?></p>
@@ -1110,6 +1110,7 @@ final class AdminModule implements Module {
 		$probe     = get_option( SetupReport::PROBE_OPTION, null );
 		$verified  = get_option( SetupReport::VERIFY_OPTION, null );
 		$hosts     = is_array( $probe ) ? array_map( 'strval', (array) $probe['host_caches'] ) : $report->hostCachesFromEnvironment();
+		$probeError = is_array( $probe ) ? (string) ( $probe['error'] ?? '' ) : '';
 		$plugins   = $report->cachePlugins();
 		$suggested = SetupReport::recommendedMode( $hosts );
 		$optimize  = Settings::optimizeOnly();
@@ -1137,12 +1138,13 @@ final class AdminModule implements Module {
 		);
 		$this->setupRow(
 			__( 'Host page cache', 'gt-performance' ),
-			array() === $hosts
-				? ( is_array( $probe ) ? __( 'No host page cache answered for your home page.', 'gt-performance' ) : __( 'Not checked yet. Detect fetches your home page once as a visitor.', 'gt-performance' ) )
+			( array() === $hosts
+				? ( is_array( $probe ) ? ( '' === $probeError ? __( 'No host page cache answered for your home page.', 'gt-performance' ) : __( 'No host page cache was found in the server environment.', 'gt-performance' ) ) : __( 'Not checked yet. Detect fetches your home page once as a visitor.', 'gt-performance' ) )
 				/* translators: %s: comma-separated host cache names. */
-				: sprintf( __( 'Your host caches pages: %s. Optimize only is the right mode here.', 'gt-performance' ), implode( ', ', $hosts ) ),
-			array() === $hosts ? ( is_array( $probe ) ? __( 'None found', 'gt-performance' ) : __( 'Not checked', 'gt-performance' ) ) : __( 'Found', 'gt-performance' ),
-			array() === $hosts ? 'neutral' : 'success',
+				: sprintf( __( 'Your host caches pages: %s. Optimize only is the right mode here.', 'gt-performance' ), implode( ', ', $hosts ) ) )
+			. ( '' === $probeError ? '' : ' ' . $probeError ),
+			'' !== $probeError ? __( 'Check failed', 'gt-performance' ) : ( array() === $hosts ? ( is_array( $probe ) ? __( 'None found', 'gt-performance' ) : __( 'Not checked', 'gt-performance' ) ) : __( 'Found', 'gt-performance' ) ),
+			'' !== $probeError ? 'warning' : ( array() === $hosts ? 'neutral' : 'success' ),
 			'gtperf_setup_probe',
 			__( 'Detect host cache', 'gt-performance' )
 		);

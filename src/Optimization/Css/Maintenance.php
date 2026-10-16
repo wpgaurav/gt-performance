@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace GTPerformance\Optimization\Css;
 
 use GTPerformance\Cache\Eligibility;
+use GTPerformance\Cache\PageCacheModule;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Cache\RequestContext;
 use GTPerformance\Core\SafeMode;
@@ -22,6 +23,7 @@ final class Maintenance {
 	public static function enabled(): bool {
 		return UnusedCssOptimizer::available() && ! SafeMode::active()
 			&& (bool) Settings::get( 'cache.enabled', true )
+			&& PageCacheModule::optimizesPages()
 			&& (int) Settings::get( 'css.rollout_percent', 100 ) > 0
 			&& (bool) apply_filters( 'gt_performance_optimize_stage', true, 'css' );
 	}

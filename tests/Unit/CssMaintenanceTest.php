@@ -25,6 +25,8 @@ final class CssMaintenanceTest extends TestCase {
 		$GLOBALS['gtperf_test_options'][ Settings::OPTION ]['css']['enabled'] = true;
 		$GLOBALS['gtperf_test_options'][ Settings::OPTION ]['css']['mode'] = 'inline';
 		$GLOBALS['gtperf_test_options'][ Settings::OPTION ]['cache']['bypass_paths'][] = '/cart/';
+		// Store mode has no drop-in here, so pages would never reach the engine.
+		$GLOBALS['gtperf_test_options'][ Settings::OPTION ]['cache']['mode'] = 'optimize';
 		$store = &gtperf_test_transients();
 		$store = array();
 		$_SERVER['REQUEST_URI'] = '/css-test/';
@@ -42,6 +44,22 @@ final class CssMaintenanceTest extends TestCase {
 		}
 		$GLOBALS['gtperf_test_options'][ Settings::OPTION ]['css']['rollout_percent'] = 0;
 		self::assertFalse( Maintenance::enabled() );
+	}
+
+	/**
+	 * Issue #14: in store mode without the drop-in no page reaches the optimizer, so
+	 * every build failed with "The page returned without a completed CSS report"
+	 * while the settings said unused CSS was on.
+	 */
+	public function test_store_mode_without_the_drop_in_queues_no_builds(): void {
+		self::assertTrue( Maintenance::enabled() );
+		$GLOBALS['gtperf_test_options'][ Settings::OPTION ]['cache']['mode'] = 'store';
+		self::assertFalse( Maintenance::enabled() );
+
+		// A build already queued is skipped without a loopback request or a retry.
+		$GLOBALS['gtperf_test_http_requests'] = array();
+		( new UnusedCssOptimizer( new Logger() ) )->generateQueued( array( 'url' => 'https://example.com/css-test/' ) );
+		self::assertSame( array(), $GLOBALS['gtperf_test_http_requests'] );
 	}
 
 	public function test_signed_builds_preserve_commerce_and_query_protections(): void {

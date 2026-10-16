@@ -121,4 +121,33 @@ final class SetupReportTest extends TestCase {
 		self::assertSame( 'optimize', $result['mode'] );
 		self::assertSame( array( 'LiteSpeed Cache' ), $result['host_caches'] );
 	}
+
+	/**
+	 * Issue #14: a LiteSpeed site behind Cloudflare answered its own probe with 401.
+	 * The probe reported success and no host cache, which pointed at store mode on
+	 * a host whose cache was serving every page.
+	 */
+	public function test_a_refused_loopback_is_reported_as_blocked(): void {
+		$this->responses = array( array( 'status' => 401, 'headers' => array( 'server' => 'cloudflare' ) ) );
+		$probe           = ( new SetupReport() )->probe();
+
+		self::assertSame( 401, $probe['status'] );
+		self::assertStringContainsString( 'HTTP 401', $probe['error'] );
+		self::assertStringContainsString( 'bot protection', $probe['error'] );
+
+		$this->set( 'cache.mode', 'optimize' );
+		$this->responses = array( array( 'status' => 403, 'headers' => array() ) );
+		$result          = ( new SetupReport( 0 ) )->verify();
+		self::assertFalse( $result['passed'] );
+		self::assertStringContainsString( 'HTTP 403', $result['detail'] );
+	}
+
+	public function test_only_refusals_count_as_blocked(): void {
+		foreach ( array( 401, 403, 429 ) as $status ) {
+			self::assertNotNull( SetupReport::blockedLoopback( $status ), (string) $status );
+		}
+		foreach ( array( 0, 200, 301, 404, 500, 503 ) as $status ) {
+			self::assertNull( SetupReport::blockedLoopback( $status ), (string) $status );
+		}
+	}
 }

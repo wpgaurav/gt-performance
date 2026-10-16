@@ -61,7 +61,7 @@ final class PageCacheModule implements Module {
 		// work whose only product is disk usage. Optimize-only mode stores nothing, so
 		// it needs neither.
 		$optimizeOnly = Settings::optimizeOnly();
-		if ( ! $optimizeOnly && ! self::storageActive() ) {
+		if ( ! self::optimizesPages() ) {
 			return;
 		}
 
@@ -137,6 +137,18 @@ final class PageCacheModule implements Module {
 		}
 		( new DependencyRecorder() )->start();
 		OutputBuffer::start( array( $this, 'capture' ) );
+	}
+
+	/**
+	 * Whether rendered pages pass through the optimizer chain at all.
+	 *
+	 * Store mode captures a page only once the owned drop-in and WP_CACHE are in
+	 * place. Until then every frontend optimization is off however it is set, and
+	 * anything that waits on a rendered page, such as an unused-CSS build, never
+	 * finishes.
+	 */
+	public static function optimizesPages(): bool {
+		return Settings::optimizeOnly() || self::storageActive();
 	}
 
 	/**

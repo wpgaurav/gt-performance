@@ -11,6 +11,7 @@ namespace GTPerformance\Optimization\Css;
 
 use GTPerformance\Core\Logger;
 use GTPerformance\Cache\ArtifactKeepAlive;
+use GTPerformance\Cache\PageCacheModule;
 use GTPerformance\Cache\RequestContext;
 use GTPerformance\Core\Settings;
 use GTPerformance\Optimization\BufferedAssets;
@@ -440,7 +441,9 @@ final class UnusedCssOptimizer {
 				'',
 				array(
 					'url' => $url,
-					'reason' => 'Generation is paused or this URL is excluded by the current settings.',
+					'reason' => PageCacheModule::optimizesPages()
+						? 'Generation is paused or this URL is excluded by the current settings.'
+						: 'Pages are not optimized: store mode needs the page-cache drop-in and WP_CACHE. Finish Setup, or switch to Optimize only.',
 				)
 			);
 			delete_transient( 'gtperf_css_build_' . hash( 'sha256', $url ) );
