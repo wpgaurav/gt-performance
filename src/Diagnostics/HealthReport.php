@@ -171,6 +171,19 @@ final class HealthReport {
 			$now
 		);
 
+		// Store mode captures pages only through the drop-in, so without it every
+		// frontend optimization is off while its settings still read as enabled.
+		if ( $cache && ! $optimize && ! $ready ) {
+			$checks[] = self::check(
+				'page_optimizations',
+				__( 'Page optimizations', 'gt-performance' ),
+				'warning',
+				__( 'Not running. Store mode optimizes pages only once the drop-in and WP_CACHE are in place, so unused CSS, script, image, font and embed optimizations are off and unused-CSS builds cannot finish. Finish Setup, or switch to Optimize only if your host caches pages.', 'gt-performance' ),
+				'live',
+				$now
+			);
+		}
+
 		if ( $evidence['redis_enabled'] ) {
 			$redis    = (string) $evidence['redis_dropin'];
 			/* translators: %s: drop-in state such as owned or missing. */

@@ -125,6 +125,20 @@ final class HealthReportTest extends TestCase {
 		$byId = $this->byId( HealthReport::evaluate( $this->evidence( array( 'cache_enabled' => false, 'page_dropin' => 'missing', 'wp_cache' => 'disabled' ) ), self::NOW ) );
 
 		self::assertSame( 'info', $byId['page_dropin']['status'] );
+		self::assertArrayNotHasKey( 'page_optimizations', $byId );
+	}
+
+	/**
+	 * Issue #14: store mode without the drop-in captured no page, so every
+	 * optimization was off while its settings still read as enabled.
+	 */
+	public function test_store_mode_without_the_drop_in_says_pages_are_not_optimized(): void {
+		$byId = $this->byId( HealthReport::evaluate( $this->evidence( array( 'page_dropin' => 'missing' ) ), self::NOW ) );
+		self::assertSame( 'warning', $byId['page_optimizations']['status'] );
+		self::assertStringContainsString( 'Not running', $byId['page_optimizations']['value'] );
+
+		$optimize = $this->byId( HealthReport::evaluate( $this->evidence( array( 'page_dropin' => 'missing', 'optimize_only' => true ) ), self::NOW ) );
+		self::assertArrayNotHasKey( 'page_optimizations', $optimize, 'Optimize only needs no drop-in.' );
 	}
 
 	public function test_saved_evidence_reports_its_own_time(): void {

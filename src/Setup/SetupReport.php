@@ -194,10 +194,33 @@ final class SetupReport {
 		} else {
 			$result['status']      = (int) wp_remote_retrieve_response_code( $response );
 			$result['host_caches'] = array_values( array_unique( array_merge( $result['host_caches'], self::hostCachesFromHeaders( self::headers( $response ) ) ) ) );
+			$result['error']       = (string) self::blockedLoopback( $result['status'] );
 		}
 		update_option( self::PROBE_OPTION, $result, false );
 
 		return $result;
+	}
+
+	/**
+	 * Explain a refused loopback request, or null when the status is not a refusal.
+	 *
+	 * A 401, 403 or 429 for a visitor's request to the public home page comes from
+	 * something between this server and the page: HTTP authentication, a firewall,
+	 * or bot protection such as Cloudflare's. Seen on a LiteSpeed site behind
+	 * Cloudflare, where the probe recorded 401 and reported no host cache while
+	 * LiteSpeed Cache was serving every page. The same refusal stops unused-CSS
+	 * builds and cache warming, which fetch pages the same way.
+	 */
+	public static function blockedLoopback( int $status ): ?string {
+		if ( ! in_array( $status, array( 401, 403, 429 ), true ) ) {
+			return null;
+		}
+
+		return sprintf(
+			/* translators: %d: HTTP status code such as 401. */
+			__( 'Your home page answered HTTP %d when this server requested it. HTTP authentication, a firewall, or bot protection (such as a Cloudflare WAF rule or Bot Fight Mode) is refusing requests from the server itself, so only the host caches found in the server environment are listed, and unused-CSS builds and cache warming fail the same way. Allow requests from this server\'s IP address, then check again.', 'gt-performance' ),
+			$status
+		);
 	}
 
 	/**
@@ -273,7 +296,11 @@ final class SetupReport {
 		$status = (int) ( $last['status'] ?? 0 );
 		$origin = (string) ( $last['gt_cache_status'] ?? '' );
 		$edge   = (string) ( $last['cf_cache_status'] ?? '' );
-		if ( $optimize ) {
+		$blocked = self::blockedLoopback( $status );
+		if ( null !== $blocked ) {
+			$passed = false;
+			$detail = $blocked;
+		} elseif ( $optimize ) {
 			$passed = 200 === $status && ! (bool) ( $last['private'] ?? true );
 			$detail = $passed
 				? __( 'The home page is public and eligible. Your host\'s cache stores the optimized version.', 'gt-performance' )
