@@ -303,6 +303,33 @@ final class UnusedCssEngineTest extends TestCase {
 	}
 
 	/**
+	 * Issue #14: TranslatePress's language switcher takes a uniqid() and Fluent
+	 * Forms' fields an md5() on every render. The build was ready and on disk, but a
+	 * visitor's page never matched its key, so it was never linked and every
+	 * eligible visit queued another build.
+	 */
+	public function test_a_visitor_gets_the_build_despite_ids_generated_on_every_render(): void {
+		$page = fn( string $uniqid, string $md5, string $extra = '' ): string => $this->page(
+			'<style>.card{color:red}[id^="trp-shortcode-dropdown-"]{display:none}.unused-xyz{color:#000}</style>',
+			'<div class="card' . $extra . '">y</div>'
+			. '<button aria-controls="trp-shortcode-dropdown-' . $uniqid . '">EN</button><div id="trp-shortcode-dropdown-' . $uniqid . '">FR</div>'
+			. '<a href="#trp-shortcode-dropdown-' . $uniqid . '">skip</a>'
+			. "<label for='who_are_you_" . $md5 . "'>Brand</label><input type=\"radio\" id='who_are_you_" . $md5 . "' value=\"brand\">"
+		);
+		$this->optimize( $page( '6ad1cbaf66546', '3e92da8e83341d64fd1d03ee49d7770c' ) );
+
+		$out = $this->optimizeAsVisitor( $page( '6ad1cbb2060ef', '42dd40614487096671bc8243d4972026' ) );
+		self::assertStringNotContainsString( 'unused-xyz', $out, 'The visitor is served the build.' );
+		self::assertStringContainsString( 'id="trp-shortcode-dropdown-6ad1cbb2060ef"', $out, "The visitor's own IDs go out unchanged." );
+
+		$changed = $this->optimizeAsVisitor( $page( '6ad1cbb2060ef', '42dd40614487096671bc8243d4972026', ' featured' ) );
+		self::assertStringContainsString( 'unused-xyz', $changed, 'A page whose elements changed waits for its own build.' );
+
+		$renamed = $this->optimizeAsVisitor( str_replace( 'trp-shortcode-dropdown-6ad1cbb2060ef', 'trp-menu-6ad1cbb2060ef', $page( '6ad1cbb2060ef', '42dd40614487096671bc8243d4972026' ) ) );
+		self::assertStringContainsString( 'unused-xyz', $renamed, 'Only the generated part of an ID is masked.' );
+	}
+
+	/**
 	 * gatilab.com: the theme's stylesheets are excluded and stay in place, while
 	 * WordPress's global styles before them and Additional CSS after them are
 	 * consolidated. With every generated block at the end of <head>, global styles
