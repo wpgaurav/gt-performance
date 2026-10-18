@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.4 - 2026-10-18
+
+Fixes a fatal error on sites running Query Monitor.
+
+- The core-version rewrite on `script_loader_src` and `style_loader_src` no longer throws on a source that is not a string. Query Monitor applies both filters to dependency-only handles, whose `src` is `false` or `null`, and the string-typed `DatabaseModule::assetVersion()` threw a `TypeError` on `null` during `shutdown`, so every page that showed the Query Monitor panel ended in a fatal error. Any source that is not a string now comes back unchanged.
+
 ## 1.3.3 - 2026-10-16
 
 Unused CSS reaches pages whose plugins generate IDs on every render, and two setups that silently did nothing now say so. Thanks to @rochakshrestha for the detailed report in #14, which traced the reuse-key mismatch to its source.

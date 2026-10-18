@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.3
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,6 +247,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.3.4 =
+Fixes a fatal error on pages that show the Query Monitor panel. Recommended for every site that runs Query Monitor.
+
 = 1.3.3 =
 Unused CSS now works on pages with TranslatePress, Fluent Forms, and other plugins that create new element IDs on every page load. Recommended for every site using unused CSS.
 
@@ -281,6 +284,9 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.4 =
+* Fixes a fatal error at the end of pages that show the Query Monitor panel. Query Monitor asks for the address of scripts and stylesheets that have none, and GT Performance's version-hiding filter failed on that empty address instead of passing it through.
 
 = 1.3.3 =
 * Unused CSS is served on pages whose plugins create new element IDs on every page load, such as the TranslatePress language switcher and Fluent Forms. Before, the CSS was built but never used, and each visit queued another build. Thanks to @rochakshrestha for the report.
