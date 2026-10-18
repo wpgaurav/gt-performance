@@ -255,8 +255,13 @@ final class DatabaseModule implements Module {
 		return (bool) Settings::get( 'bloat.hide_wp_version', false ) ? '' : $generator;
 	}
 
-	public function assetVersion( string $src ): string {
-		if ( ! (bool) Settings::get( 'bloat.hide_wp_version', false ) ) {
+	/**
+	 * Core filters a real URL, but other plugins apply the same filters to
+	 * dependency-only handles whose src is false or null (Query Monitor does),
+	 * so anything that is not a string goes back untouched.
+	 */
+	public function assetVersion( mixed $src ): mixed {
+		if ( ! is_string( $src ) || ! (bool) Settings::get( 'bloat.hide_wp_version', false ) ) {
 			return $src;
 		}
 
