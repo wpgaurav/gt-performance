@@ -105,6 +105,19 @@ final class LiteSpeedCacheTest extends TestCase {
 		self::assertContains( LiteSpeedCache::prefix(), (array) get_option( LiteSpeedCache::QUEUE_OPTION ) );
 	}
 
+	public function test_a_purge_too_large_for_one_header_purges_the_site(): void {
+		$prefix = LiteSpeedCache::prefix();
+		$few    = array( LiteSpeedCache::urlTag( $prefix, 'https', 'example.com', '/post/' ), LiteSpeedCache::urlTag( $prefix, 'https', 'example.com', '/' ) );
+		self::assertSame( 'tag=' . $few[0] . ', tag=' . $few[1], LiteSpeedCache::purgeHeader( $few ) );
+
+		// A post save on a large site named 508 pages: a 17.8 KB header the server dropped with the response.
+		$many = array();
+		for ( $i = 0; $i < 508; $i++ ) {
+			$many[] = LiteSpeedCache::urlTag( $prefix, 'https', 'example.com', '/page-' . $i . '/' );
+		}
+		self::assertSame( 'tag=' . $prefix, LiteSpeedCache::purgeHeader( $many ) );
+	}
+
 	public function test_a_network_purge_purges_every_site_in_litespeed(): void {
 		$sites = array();
 		foreach ( array( 1 => '/', 4 => '/uranium/' ) as $id => $path ) {

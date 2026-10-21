@@ -43,6 +43,14 @@ final class LiteSpeedCache implements Module {
 	/** Bound on queued tags; past it the whole site is purged instead. */
 	private const QUEUE_LIMIT = 200;
 
+	/**
+	 * Bound on the purge header's value, in bytes; past it the whole site is
+	 * purged instead. OpenLiteSpeed dropped a post save's response, after
+	 * WordPress had saved, when 508 tags made a 17.8 KB header: the editor
+	 * waited, then said "Updating failed", and the server logged nothing.
+	 */
+	private const HEADER_LIMIT = 4096;
+
 	/** @var array<string, true> Tags to purge on this response. */
 	private static array $pending = array();
 
@@ -255,7 +263,7 @@ final class LiteSpeedCache implements Module {
 		}
 		self::$emitted = true;
 		if ( array() !== self::$pending ) {
-			header( 'X-LiteSpeed-Purge: ' . implode( ', ', array_map( static fn ( string $tag ): string => 'tag=' . $tag, array_keys( self::$pending ) ) ) );
+			header( 'X-LiteSpeed-Purge: ' . self::purgeHeader( array_keys( self::$pending ) ) );
 			self::$pending = array();
 		}
 		if ( ! self::enabled() ) {
@@ -270,6 +278,18 @@ final class LiteSpeedCache implements Module {
 			}
 		}
 		header( 'X-LiteSpeed-Cache-Control: no-cache' );
+	}
+
+	/**
+	 * The X-LiteSpeed-Purge value for these tags, or the site's own tag when
+	 * naming them all would make the header too large for the server.
+	 *
+	 * @param list<string> $tags Tags to purge.
+	 */
+	public static function purgeHeader( array $tags ): string {
+		$value = implode( ', ', array_map( static fn ( string $tag ): string => 'tag=' . $tag, $tags ) );
+
+		return strlen( $value ) > self::HEADER_LIMIT ? 'tag=' . self::prefix() : $value;
 	}
 
 	/**
