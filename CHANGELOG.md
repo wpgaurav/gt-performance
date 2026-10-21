@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.5 - 2026-10-21
+
+Saving posts works again on OpenLiteSpeed with LiteSpeed caching on.
+
+- A save no longer ends in "Updating failed" when it purges many cached pages. The `X-LiteSpeed-Purge` header named one tag per page, and a post save on gauravtiwari.org named 508 pages, a 17.8 KB header. OpenLiteSpeed dropped that response after WordPress had saved the post and logged nothing, so the block editor waited about a minute and reported "Updating failed" for a post that was in fact saved. Autosaves and media uploads purge nothing and kept working. When the tags would make the header longer than 4 KB, it now names only the site's own tag, which purges every LiteSpeed-cached page of the site, as an overflowing purge queue already did. The page cache and Cloudflare are still purged page by page. `LiteSpeedCache::purgeHeader()` builds the value.
+
 ## 1.3.4 - 2026-10-18
 
 Fixes a fatal error on sites running Query Monitor.

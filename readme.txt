@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.4
+Stable tag: 1.3.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,6 +247,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.3.5 =
+Fixes "Updating failed" when saving posts on OpenLiteSpeed servers with LiteSpeed caching on. Recommended for every site using LiteSpeed caching.
+
 = 1.3.4 =
 Fixes a fatal error on pages that show the Query Monitor panel. Recommended for every site that runs Query Monitor.
 
@@ -284,6 +287,9 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.5 =
+* Fixes "Updating failed" when saving or publishing a post on OpenLiteSpeed servers with LiteSpeed caching on. The post was saved, but the server dropped the reply because the list of cached pages to clear no longer fit in one header. A list that long now clears the site's whole LiteSpeed cache instead. GT Performance's own page cache and Cloudflare are still cleared page by page.
 
 = 1.3.4 =
 * Fixes a fatal error at the end of pages that show the Query Monitor panel. Query Monitor asks for the address of scripts and stylesheets that have none, and GT Performance's version-hiding filter failed on that empty address instead of passing it through.
