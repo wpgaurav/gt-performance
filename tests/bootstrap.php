@@ -470,6 +470,12 @@ if ( ! function_exists( 'get_post_type' ) ) {
 	}
 }
 
+if ( ! function_exists( 'is_search' ) ) {
+	function is_search(): bool {
+		return ! empty( $GLOBALS['gtperf_test_is_search'] );
+	}
+}
+
 if ( ! function_exists( 'content_url' ) ) {
 	function content_url( string $path = '' ): string {
 		return 'https://example.com/wp-content/' . ltrim( $path, '/' );

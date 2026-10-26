@@ -165,6 +165,7 @@ final class Plugin {
 		return array(
 			new \GTPerformance\Cloudflare\CloudflareModule( $logger ),
 			new \GTPerformance\XCloud\XCloudModule( $logger ),
+			new \GTPerformance\XCloud\EnterprisePurgeModule( $logger ),
 			new \GTPerformance\Redis\RedisModule(),
 		);
 	}

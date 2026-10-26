@@ -29,8 +29,8 @@ final class XCloudModule implements Module {
 
 	/**
 	 * Route one state-aware purge per request, even when a WordPress operation
-	 * emits several GT purge actions. Enterprise fails closed in SiteService
-	 * until xCloud publishes a token-authenticated purge endpoint.
+	 * emits several GT purge actions. This clears the host caches; the Enterprise
+	 * edge is EnterprisePurgeModule's.
 	 */
 	public function purge(): void {
 		if ( $this->purgedThisRequest || ! (bool) Settings::get( 'xcloud.enabled', false ) ) {

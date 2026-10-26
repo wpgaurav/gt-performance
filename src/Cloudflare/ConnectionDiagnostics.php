@@ -69,7 +69,19 @@ final class ConnectionDiagnostics {
 				: __( 'Enabled.', 'gt-performance' )
 		);
 
-		if ( ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
+		$owner = new EdgeOwnership();
+		if ( $owner->enterprisePurgeHookActive() ) {
+			$steps[] = $this->step(
+				'edge_owner',
+				__( 'Edge ownership', 'gt-performance' ),
+				self::WARN,
+				__( 'xCloud Cloudflare Enterprise serves this site: its automatic cache purge plugin is installed. GT Performance purges through xCloud and has paused this direct Cloudflare integration, which purges a zone visitors are not served from.', 'gt-performance' )
+			);
+
+			return $steps;
+		}
+
+		if ( $owner->xcloudOwnsEdge() ) {
 			$steps[] = $this->step(
 				'edge_owner',
 				__( 'Edge ownership', 'gt-performance' ),

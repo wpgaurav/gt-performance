@@ -98,6 +98,36 @@ final class VaryQueryTest extends TestCase {
 		);
 	}
 
+	public function test_search_permalinks_follow_the_never_cache_rule_for_s(): void {
+		$GLOBALS['gtperf_test_is_search'] = true;
+		try {
+			$this->capture( 'https://example.com/search/label/spam/' );
+			self::assertFalse( $this->stored( 'https://example.com/search/label/spam/' ) );
+
+			$settings                                = Settings::all();
+			$settings['cache']['bypass_query_params'] = array( 'preview' );
+			$GLOBALS['gtperf_test_options'][ Settings::OPTION ] = $settings;
+			$this->capture( 'https://example.com/search/label/spam/' );
+			self::assertTrue( $this->stored( 'https://example.com/search/label/spam/' ), 'A site that caches ?s= caches the permalink form too.' );
+		} finally {
+			unset( $GLOBALS['gtperf_test_is_search'] );
+		}
+	}
+
+	public function test_primary_urls_reach_the_edge_with_their_variants(): void {
+		$this->capture( 'https://example.com/shop/' );
+		$this->capture( 'https://example.com/shop/?orderby=price' );
+		$this->capture( 'https://example.com/blog/' );
+		$GLOBALS['gtperf_test_actions'] = array();
+
+		( new Purger() )->purgeUrls( array( 'https://example.com/shop/', 'https://example.com/blog/' ), array( 'https://example.com/shop/' ) );
+		( new Purger() )->purgeUrls( array( 'https://example.com/about/' ) );
+
+		$actions = array_values( array_filter( $GLOBALS['gtperf_test_actions'], static fn( array $action ): bool => 'gt_performance_purged_urls' === $action['hook'] ) );
+		self::assertEqualsCanonicalizing( array( 'https://example.com/shop/', 'https://example.com/shop/?orderby=price' ), $actions[0]['args'][2] );
+		self::assertSame( array( 'https://example.com/about/' ), $actions[1]['args'][2], 'Without a primary set, every URL is primary.' );
+	}
+
 	public function test_a_page_at_the_variant_limit_serves_new_values_uncached(): void {
 		$store = new FileStore();
 		for ( $i = 0; $i < FileStore::MAX_VARIANTS; $i++ ) {

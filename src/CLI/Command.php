@@ -26,6 +26,7 @@ use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Queue\QueueModule;
 use GTPerformance\Redis\ObjectCacheInstaller;
 use GTPerformance\XCloud\EdgeOwnership;
+use GTPerformance\XCloud\EnterprisePurgeHook;
 use GTPerformance\XCloud\SiteService;
 
 final class Command {
@@ -36,7 +37,8 @@ final class Command {
 	 * it. Warnings, such as an integration that is simply not in use, exit 0.
 	 */
 	public function doctor(): void {
-		$checks = array(
+		$edgeOwner = new EdgeOwnership();
+		$checks    = array(
 			array(
 				'check'  => 'PHP',
 				'value'  => PHP_VERSION,
@@ -69,13 +71,13 @@ final class Command {
 			),
 			array(
 				'check'  => 'Cloudflare',
-				'value'  => Settings::get( 'cloudflare.enabled', false ) ? 'enabled' : 'disabled',
-				'status' => Settings::get( 'cloudflare.enabled', false ) ? 'pass' : 'warning',
+				'value'  => $edgeOwner->directCloudflarePaused() ? 'paused (xCloud Enterprise)' : ( Settings::get( 'cloudflare.enabled', false ) ? 'enabled' : 'disabled' ),
+				'status' => Settings::get( 'cloudflare.enabled', false ) || $edgeOwner->enterprisePurgeHookActive() ? 'pass' : 'warning',
 			),
 			array(
 				'check'  => 'xCloud',
-				'value'  => Settings::get( 'xcloud.enabled', false ) ? 'enabled' : 'disabled',
-				'status' => ( new EdgeOwnership() )->hasDirectCloudflareConflict() ? 'warning' : 'pass',
+				'value'  => $edgeOwner->enterprisePurgeHookActive() ? 'enterprise purge' : ( Settings::get( 'xcloud.enabled', false ) ? 'enabled' : 'disabled' ),
+				'status' => $edgeOwner->hasDirectCloudflareConflict() ? 'warning' : 'pass',
 			),
 			( new CronHealth() )->check(),
 		);
@@ -733,6 +735,10 @@ final class Command {
 			\WP_CLI::log( 'zone=' . ( $settings['cloudflare']['zone_id'] ? 'configured' : 'missing' ) );
 			return;
 		}
+		if ( 'sync' === $action && ( new EdgeOwnership() )->enterprisePurgeHookActive() ) {
+			\WP_CLI::error( 'xCloud Cloudflare Enterprise serves this site (its automatic cache purge plugin is installed), so direct Cloudflare is paused and no cache rule is synchronized.' );
+			return;
+		}
 		if ( 'sync' === $action && ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
 			\WP_CLI::error( 'xCloud Cloudflare Enterprise is active. Disable one edge owner before synchronizing a direct Cloudflare cache rule.' );
 			return;
@@ -809,13 +815,18 @@ final class Command {
 	 * [<action>]
 	 * : status, refresh, or purge. Defaults to status.
 	 *
-	 * `purge` selects the narrowest operation for the last refreshed cache
-	 * state. Enterprise purge fails closed because xCloud's current Public API
-	 * does not expose a token-authenticated mutation for that add-on.
+	 * [--page-url=<url>]
+	 * : With purge, clear one page from xCloud Cloudflare Enterprise instead of the whole site.
 	 *
-	 * @param list<string> $args Positional arguments.
+	 * `purge` clears xCloud Cloudflare Enterprise through xCloud's automatic
+	 * cache purge plugin when it is installed, then the narrowest host cache for
+	 * the last refreshed state. Without that plugin Enterprise purge fails closed,
+	 * because xCloud's Public API does not expose an Enterprise purge.
+	 *
+	 * @param list<string>          $args      Positional arguments.
+	 * @param array<string, string> $assocArgs Named arguments.
 	 */
-	public function xcloud( array $args ): void {
+	public function xcloud( array $args, array $assocArgs = array() ): void {
 		$action = $this->action( $args, 'status', array( 'status', 'refresh', 'purge' ), 'xCloud' );
 		if ( null === $action ) {
 			return;
@@ -830,6 +841,7 @@ final class Command {
 			\WP_CLI::log( 'site=' . ( $xcloud['site_uuid'] ? 'configured' : 'missing' ) );
 			\WP_CLI::log( 'page_cache=' . ( $xcloud['page_cache_enabled'] ? 'enabled' : 'disabled' ) );
 			\WP_CLI::log( 'cloudflare_enterprise=' . ( $xcloud['enterprise_available'] ? 'active' : 'not-detected' ) );
+			\WP_CLI::log( 'enterprise_purge=' . self::enterprisePurgeState( new EnterprisePurgeHook() ) );
 			\WP_CLI::log( 'free_edge_cache=' . ( $xcloud['free_edge_cache_enabled'] ? 'enabled' : 'disabled' ) );
 			\WP_CLI::log( 'enterprise_12h=' . (int) $xcloud['enterprise_edge_requests'] . '/' . (int) $xcloud['enterprise_requests'] . ' (' . (float) $xcloud['enterprise_hit_percent'] . '%)' );
 			\WP_CLI::log( 'checked_at=' . ( $xcloud['checked_at'] ? $xcloud['checked_at'] : 'never' ) );
@@ -874,12 +886,45 @@ final class Command {
 			return;
 		}
 
+		$url = $this->pageUrl( $assocArgs );
+		if ( null === $url ) {
+			return;
+		}
+		$hook = new EnterprisePurgeHook();
+		if ( $hook->available() ) {
+			$edge = '' !== $url ? $hook->purgeUrls( array( $url ), true ) : $hook->purgeAll( true );
+			if ( is_wp_error( $edge ) ) {
+				\WP_CLI::error( $edge->get_error_message() );
+				return;
+			}
+			\WP_CLI::success( 'xCloud Cloudflare Enterprise: ' . $edge['message'] );
+			if ( '' !== $url || empty( $settings['xcloud']['enabled'] ) ) {
+				return;
+			}
+		} elseif ( '' !== $url ) {
+			\WP_CLI::error( 'A single-page purge needs xCloud\'s automatic cache purge plugin, which is not installed.' );
+			return;
+		}
+
 		$result = $service->purgeAutomatic();
 		if ( is_wp_error( $result ) ) {
 			\WP_CLI::error( $result->get_error_message() );
 		}
 		\WP_CLI::line( (string) wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 		\WP_CLI::success( 'xCloud cache purge accepted.' );
+	}
+
+	/**
+	 * `xcloud-plugin` when GT Performance purges Enterprise through xCloud's
+	 * plugin, `unusable` when the file is present without a usable token or a
+	 * site turned it off, and `not-installed` otherwise.
+	 */
+	private static function enterprisePurgeState( EnterprisePurgeHook $hook ): string {
+		if ( $hook->available() ) {
+			return 'xcloud-plugin';
+		}
+
+		return $hook->installed() ? 'unusable' : 'not-installed';
 	}
 
 	/**

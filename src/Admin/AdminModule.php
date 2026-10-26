@@ -44,6 +44,8 @@ use GTPerformance\Queue\QueueModule;
 use GTPerformance\Redis\ConnectionTester;
 use GTPerformance\Redis\ObjectCacheInstaller;
 use GTPerformance\XCloud\EdgeOwnership;
+use GTPerformance\XCloud\EnterprisePurgeHook;
+use GTPerformance\XCloud\EnterprisePurgeModule;
 use GTPerformance\XCloud\SiteService;
 
 final class AdminModule implements Module {
@@ -749,6 +751,9 @@ final class AdminModule implements Module {
 		$this->guard( 'gtperf_cloudflare_sync' );
 		$settings = Settings::all();
 		$before   = $settings;
+		if ( ( new EdgeOwnership() )->enterprisePurgeHookActive() ) {
+			$this->redirect( 'gtperf_edge_owner_xcloud_hook', 'cloudflare' );
+		}
 		if ( ( new EdgeOwnership() )->xcloudOwnsEdge() ) {
 			$this->redirect( 'gtperf_edge_owner_conflict', 'cloudflare' );
 		}
@@ -1565,6 +1570,12 @@ final class AdminModule implements Module {
 				)
 			);
 		}
+		if ( ( new EdgeOwnership() )->enterprisePurgeHookActive() ) {
+			printf(
+				'<div class="notice notice-info inline"><p>%s</p></div>',
+				esc_html__( 'xCloud Cloudflare Enterprise serves this site: its automatic cache purge plugin is installed. GT Performance purges through xCloud, so this direct Cloudflare integration is paused and makes no API calls. Its settings are kept, and it resumes if the xCloud plugin is removed.', 'gt-performance' )
+			);
+		}
 		$this->settingsFormOpen();
 		$this->panelOpen( __( 'Connection', 'gt-performance' ), __( 'A scoped token is safer. Global API Key authentication remains available for legacy accounts.', 'gt-performance' ) );
 		$this->checkbox( 'cloudflare', 'enabled', __( 'Enable Cloudflare integration', 'gt-performance' ), __( 'Allow GT Performance to purge and maintain its managed cache rule.', 'gt-performance' ), $settings );
@@ -1961,7 +1972,7 @@ final class AdminModule implements Module {
 		$this->panelClose();
 
 		$this->settingsFormClose();
-		if ( ! empty( $settings['xcloud']['enabled'] ) ) {
+		if ( ! empty( $settings['xcloud']['enabled'] ) || ( new EnterprisePurgeHook() )->installed() ) {
 			$this->renderXcloudStatus( $settings );
 		}
 		$this->renderPluginCompatibilityList( $settings );
@@ -2043,12 +2054,35 @@ final class AdminModule implements Module {
 		$purge  = get_option( 'gt_performance_xcloud_last_purge', array() );
 		$purge  = is_array( $purge ) ? $purge : array();
 		$conflict = ( new EdgeOwnership() )->hasDirectCloudflareConflict();
+		$hook     = new EnterprisePurgeHook();
+		$hookOn   = $hook->available();
+		$edge     = get_option( EnterprisePurgeModule::STATUS_OPTION, array() );
+		$edge     = is_array( $edge ) ? $edge : array();
+		$enterprise = ! empty( $xcloud['enterprise_available'] ) || $hookOn;
+		if ( $hookOn ) {
+			$hookState = __( 'Automatic, through xCloud\'s cache purge plugin', 'gt-performance' );
+		} elseif ( $hook->installed() ) {
+			$hookState = __( 'xCloud\'s plugin is installed but has no usable purge token', 'gt-performance' );
+		} else {
+			$hookState = __( 'Manual: xCloud\'s automatic cache purge is not installed', 'gt-performance' );
+		}
+		$lastEdge = __( 'Never', 'gt-performance' );
+		if ( isset( $edge['created_at'] ) ) {
+			$lastEdge = (string) $edge['created_at'] . ' (' . (string) ( $edge['status'] ?? '' ) . ')';
+			if ( ! empty( $edge['origin_only'] ) ) {
+				$lastEdge .= '; ' . sprintf(
+					/* translators: %s: number of pages. */
+					_n( '%s listing page cleared at the origin only', '%s listing pages cleared at the origin only', (int) $edge['origin_only'], 'gt-performance' ),
+					number_format_i18n( (int) $edge['origin_only'] )
+				);
+			}
+		}
 		?>
 		<section class="gtp-panel">
 			<div class="gtp-panel__header">
 				<div>
 					<h3><?php esc_html_e( 'xCloud cache status', 'gt-performance' ); ?></h3>
-					<p><?php esc_html_e( 'Status is refreshed only on request. Enterprise settings and purge remain owned by the xCloud dashboard; GT Performance detects and reports the add-on.', 'gt-performance' ); ?></p>
+					<p><?php esc_html_e( 'Status is refreshed only on request. Enterprise settings stay in the xCloud dashboard. When xCloud\'s automatic cache purge plugin is installed, GT Performance purges Cloudflare Enterprise through it.', 'gt-performance' ); ?></p>
 				</div>
 			</div>
 			<dl class="gtp-definition-list">
@@ -2057,13 +2091,15 @@ final class AdminModule implements Module {
 				<div><dt><?php esc_html_e( 'Page cache', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['page_cache_enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Redis', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['redis_enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Object Cache Pro', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['object_cache_pro'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
-				<div><dt><?php esc_html_e( 'Cloudflare Enterprise', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['enterprise_available'] ) ? __( 'Active through xCloud', 'gt-performance' ) : __( 'Not detected', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Cloudflare Enterprise', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $enterprise ? __( 'Active through xCloud', 'gt-performance' ) : __( 'Not detected', 'gt-performance' ) ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Enterprise purge', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $hookState ); ?></dd></div>
+				<div><dt><?php esc_html_e( 'Last Enterprise purge', 'gt-performance' ); ?></dt><dd><?php echo esc_html( $lastEdge ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Enterprise edge traffic (12h)', 'gt-performance' ); ?></dt><dd><?php echo esc_html( number_format_i18n( (int) ( $xcloud['enterprise_edge_requests'] ?? 0 ) ) . ' / ' . number_format_i18n( (int) ( $xcloud['enterprise_requests'] ?? 0 ) ) . ' (' . number_format_i18n( (float) ( $xcloud['enterprise_hit_percent'] ?? 0 ), 1 ) . '%)' ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Free xCloud edge cache', 'gt-performance' ); ?></dt><dd><?php echo esc_html( ! empty( $xcloud['free_edge_cache_enabled'] ) ? __( 'Enabled', 'gt-performance' ) : __( 'Disabled', 'gt-performance' ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Last checked', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $xcloud['checked_at'] ? $xcloud['checked_at'] : __( 'Never', 'gt-performance' ) ) ); ?></dd></div>
 				<div><dt><?php esc_html_e( 'Last xCloud purge', 'gt-performance' ); ?></dt><dd><?php echo esc_html( (string) ( $purge['created_at'] ?? __( 'Never', 'gt-performance' ) ) ); ?></dd></div>
 			</dl>
-			<?php if ( $conflict || ! empty( $xcloud['enterprise_available'] ) ) : ?>
+			<?php if ( $conflict || $enterprise ) : ?>
 				<div class="gtp-guidance-list">
 					<?php if ( $conflict ) : ?>
 						<div class="gtp-callout gtp-callout--warning" role="note">
@@ -2071,11 +2107,19 @@ final class AdminModule implements Module {
 							<p><?php esc_html_e( 'xCloud Cloudflare Enterprise and GT Performance direct Cloudflare are both enabled. xCloud owns purge routing; direct Cloudflare rule synchronization is blocked until only one edge owner remains.', 'gt-performance' ); ?></p>
 						</div>
 					<?php endif; ?>
-					<?php if ( ! empty( $xcloud['enterprise_available'] ) ) : ?>
+					<?php if ( $hookOn ) : ?>
+						<div class="gtp-callout gtp-callout--info" role="note">
+							<strong><?php esc_html_e( 'Enterprise purge is automatic', 'gt-performance' ); ?></strong>
+							<p><?php esc_html_e( 'Every GT Performance purge also clears Cloudflare Enterprise through xCloud: post saves and their related pages, the Purge button, scheduled purges, and WP-CLI. Direct Cloudflare is paused, because xCloud serves this site from its own Cloudflare zone.', 'gt-performance' ); ?></p>
+						</div>
+					<?php endif; ?>
+					<?php if ( $enterprise && ! $hookOn ) : ?>
 						<div class="gtp-callout gtp-callout--warning" role="note">
 							<strong><?php esc_html_e( 'Enterprise purge remains manual', 'gt-performance' ); ?></strong>
-							<p><?php esc_html_e( 'Enterprise analytics are available through the API token, but its purge action currently requires an xCloud dashboard session. Automatic Enterprise purge is intentionally disabled until xCloud publishes a token-authenticated endpoint.', 'gt-performance' ); ?></p>
+							<p><?php esc_html_e( 'xCloud\'s Public API does not expose an Enterprise purge. Install automatic cache purge from the site\'s Cloudflare Enterprise page in xCloud, and GT Performance will purge through it. Until then, purge from the xCloud dashboard.', 'gt-performance' ); ?></p>
 						</div>
+					<?php endif; ?>
+					<?php if ( $enterprise ) : ?>
 						<div class="gtp-callout gtp-callout--danger" role="note">
 							<strong><?php esc_html_e( 'Keep commerce HTML out of edge cache', 'gt-performance' ); ?></strong>
 							<p><?php esc_html_e( 'Keep xCloud Enterprise Edge Page Caching off unless xCloud provides request-level bypass rules. Live testing found its current page-cache rule overrides origin no-store directives and caches cart, checkout, account, and receipt HTML. Enterprise static caching, WAF, and the other add-on features can remain enabled.', 'gt-performance' ); ?></p>
@@ -4118,7 +4162,8 @@ PHP;
 			'gtperf_xcloud_cache_settings' => array( __( 'xCloud did not return cache-layer settings for this site.', 'gt-performance' ), 'error' ),
 			'gtperf_xcloud_json'          => array( __( 'xCloud returned an unreadable response. Try again in a moment.', 'gt-performance' ), 'error' ),
 			'gtperf_xcloud_api'           => array( __( 'xCloud rejected the request. Check the token scopes and team permissions.', 'gt-performance' ), 'error' ),
-			'gtperf_xcloud_enterprise_purge_unavailable' => array( __( 'Cloudflare Enterprise purge is not available through the xCloud Public API token. Use the Purge control in the xCloud Enterprise dashboard.', 'gt-performance' ), 'warning' ),
+			'gtperf_xcloud_enterprise_purge_unavailable' => array( __( 'Cloudflare Enterprise purge is not available through the xCloud Public API token. Install automatic cache purge from the site\'s Cloudflare Enterprise page in xCloud, or use the Purge control in the xCloud dashboard.', 'gt-performance' ), 'warning' ),
+			'gtperf_edge_owner_xcloud_hook' => array( __( 'xCloud Cloudflare Enterprise serves this site, so direct Cloudflare is paused and no cache rule was synchronized. GT Performance purges through xCloud\'s automatic cache purge plugin instead.', 'gt-performance' ), 'info' ),
 			'gtperf_edge_owner_conflict'  => array( __( 'xCloud Cloudflare Enterprise is the active owner. Disable it or the direct Cloudflare integration before synchronizing another cache rule.', 'gt-performance' ), 'warning' ),
 			'xcloud-connected'         => array( __( 'xCloud site, host cache, and Cloudflare Enterprise status refreshed.', 'gt-performance' ), 'success' ),
 			'xcloud-edge-conflict'     => array( __( 'xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules.', 'gt-performance' ), 'warning' ),

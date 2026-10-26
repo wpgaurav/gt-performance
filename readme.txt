@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.5
+Stable tag: 1.3.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,7 +87,7 @@ Stylesheet collection, selector analysis, and pruning all happen on your WordPre
 * Connects with a scoped API token or a Global API Key with account email.
 * The connection check also confirms that visitors actually pass through Cloudflare (proxied DNS) and that APO isn't caching HTML alongside the managed rule.
 * Deactivating the plugin, or `wp gt-performance cloudflare disconnect`, deletes this site's managed rule and purges this site's pages, so Cloudflare never keeps serving pages nothing will refresh.
-* Detects xCloud's Cloudflare Enterprise add-on, reports its edge traffic, and avoids two systems owning the same edge cache.
+* Detects xCloud's Cloudflare Enterprise add-on, reports its edge traffic, and avoids two systems owning the same edge cache. With xCloud's automatic cache purge installed, every purge also clears Cloudflare Enterprise.
 * Optional origin-pull CDN for static files. You pick the exact file extensions it serves, and HTML, API responses, and third-party URLs stay unchanged.
 
 ### Built for stores
@@ -247,6 +247,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.3.6 =
+Sites on xCloud's Cloudflare Enterprise add-on are now purged at the edge visitors actually reach, not only at the origin. Recommended for every site on xCloud Cloudflare Enterprise.
+
 = 1.3.5 =
 Fixes "Updating failed" when saving posts on OpenLiteSpeed servers with LiteSpeed caching on. Recommended for every site using LiteSpeed caching.
 
@@ -287,6 +290,15 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.6 =
+* Purges xCloud Cloudflare Enterprise automatically. xCloud serves an Enterprise site from its own Cloudflare zone, so GT Performance's purges cleared the origin, and the direct Cloudflare integration purged a zone no visitor was served from. Edits to anything but a post's own page stayed stale at the edge for up to an hour. When xCloud's automatic cache purge plugin is installed (Cloudflare Enterprise > Install now in xCloud), GT Performance now sends every purge through it: related and archive pages after a save, Page Blocks and theme edits, the Purge button, scheduled purges, and WP-CLI. No xCloud API token is needed.
+* Editing a post no longer empties the whole Enterprise cache. xCloud accepts at most 300 URLs per purge, and a save can name hundreds of listing pages. Over that limit, Enterprise gets the post, home, and the post's own archives, and the listing pages are cleared from GT Performance's cache only.
+* Saving a post purges only page one of the listings it appears in. Page two and later refresh when their cached copies expire, within an hour by default. A filter, `gt_performance_purge_paginated_listings`, restores the old behavior.
+* Pages with a long sidebar or docs navigation are no longer purged by every change on the site. A page that lists hundreds of posts now depends on changes to those post types only, so publishing a blog post no longer clears every docs page.
+* Search results at `/search/<terms>/` are no longer cached, matching the existing rule for `?s=`.
+* The direct Cloudflare integration pauses itself while xCloud's purge plugin is installed. Its settings are kept and it resumes if the plugin is removed. The Cloudflare tab says so, and rule sync explains why it does nothing.
+* Integrations shows the Enterprise purge state and the last Enterprise purge. `wp gt-performance xcloud status` reports `enterprise_purge`, and `wp gt-performance xcloud purge` accepts `--page-url` to clear one page.
 
 = 1.3.5 =
 * Fixes "Updating failed" when saving or publishing a post on OpenLiteSpeed servers with LiteSpeed caching on. The post was saved, but the server dropped the reply because the list of cached pages to clear no longer fit in one header. A list that long now clears the site's whole LiteSpeed cache instead. GT Performance's own page cache and Cloudflare are still cleared page by page.

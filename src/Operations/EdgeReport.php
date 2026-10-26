@@ -16,6 +16,7 @@ namespace GTPerformance\Operations;
 use GTPerformance\Core\Logger;
 use GTPerformance\Core\Settings;
 use GTPerformance\XCloud\EdgeOwnership;
+use GTPerformance\XCloud\EnterprisePurgeModule;
 
 final class EdgeReport {
 	/**
@@ -23,8 +24,19 @@ final class EdgeReport {
 	 * @return array{provider:string,status:string,message:string}
 	 */
 	public static function since( int $started, bool|\WP_Error $flushed ): array {
-		$xcloud     = ( new EdgeOwnership() )->xcloudOwnsEdge();
+		$owner      = new EdgeOwnership();
+		$xcloud     = $owner->xcloudOwnsEdge();
 		$cloudflare = (bool) Settings::get( 'cloudflare.enabled', false ) && ! $xcloud;
+
+		if ( $owner->enterprisePurgeHookActive() ) {
+			$receipt = get_option( EnterprisePurgeModule::STATUS_OPTION, array() );
+			if ( ! self::fresh( $receipt, $started ) ) {
+				return self::report( 'xcloud-enterprise', is_wp_error( $flushed ) ? 'failed' : 'unknown', is_wp_error( $flushed ) ? $flushed->get_error_message() : 'No xCloud Cloudflare Enterprise purge receipt was recorded for this operation.' );
+			}
+			$status = in_array( $receipt['status'] ?? '', array( 'accepted', 'failed' ), true ) ? (string) $receipt['status'] : 'unknown';
+
+			return self::report( 'xcloud-enterprise', $status, (string) ( $receipt['message'] ?? '' ) );
+		}
 
 		if ( $cloudflare ) {
 			$receipt = get_option( \GTPerformance\Cloudflare\CloudflareModule::STATUS_OPTION, array() );

@@ -24,13 +24,22 @@ final class Purger {
 	/**
 	 * Purge public origin variants and notify edge integrations once per batch.
 	 *
-	 * @param list<string> $urls URLs to purge.
+	 * `$primary` names the URLs the change itself touches: a post's permalink,
+	 * home, and archives. The rest are recorded dependents. The action carries the
+	 * primary URLs and their variants as a third argument, so an edge that caps a
+	 * purge's size can keep those and leave dependents to the origin. Without it,
+	 * every URL counts as primary.
+	 *
+	 * @param list<string> $urls    URLs to purge.
+	 * @param list<string> $primary The subset of `$urls` the change names directly.
 	 */
-	public function purgeUrls( array $urls ): int {
+	public function purgeUrls( array $urls, array $primary = array() ): int {
 		$config               = (array) Settings::get( 'cache', array() );
 		$config['generation'] = (int) Settings::get( 'generation', 1 );
 		$cacheKey             = new CacheKey();
 		$valid                = array();
+		$primaryValid         = array();
+		$primary              = array_flip( array_filter( $primary, 'is_string' ) );
 		$deleted              = 0;
 
 		foreach ( array_unique( array_filter( $urls, 'is_string' ) ) as $url ) {
@@ -47,6 +56,10 @@ final class Purger {
 			$variants = $this->store->purgeVariants( $request->scheme . '://' . $request->host . $request->path );
 			$deleted += count( $variants );
 			array_push( $valid, ...$variants );
+			if ( ! $primary || isset( $primary[ $url ] ) ) {
+				$primaryValid[] = $url;
+				array_push( $primaryValid, ...$variants );
+			}
 
 			if ( (bool) ( $config['separate_mobile'] ?? false ) ) {
 				$mobile = RequestContext::fromUrl( $url, array(), array(), 'GT Performance Mobile' );
@@ -58,7 +71,7 @@ final class Purger {
 		}
 
 		if ( $valid ) {
-			do_action( 'gt_performance_purged_urls', $valid, 'origin' );
+			do_action( 'gt_performance_purged_urls', $valid, 'origin', $primaryValid );
 		}
 
 		return $deleted;

@@ -186,6 +186,19 @@ final class PageCacheModule implements Module {
 		return false;
 	}
 
+	/**
+	 * A search results page reached through the permalink form, /search/<terms>/.
+	 *
+	 * `s` is on the never-cache list by default, so `?s=` is refused before
+	 * WordPress loads. The permalink form has no query string and was stored:
+	 * gauravtiwari.org held 128 of them, mostly bots replaying old
+	 * /search/label/<x> links. Removing `s` from the list allows both forms.
+	 */
+	private static function prettySearch(): bool {
+		return is_search()
+			&& in_array( 's', array_map( 'strtolower', (array) Settings::get( 'cache.bypass_query_params', array() ) ), true );
+	}
+
 	public function capture( string $html ): string {
 		if ( null === $this->request ) {
 			return $html;
@@ -197,6 +210,9 @@ final class PageCacheModule implements Module {
 		}
 		if ( $decision->cacheable && \GTPerformance\Optimization\PageOverrides::noCache() ) {
 			$decision = Decision::deny( 'page-option' );
+		}
+		if ( $decision->cacheable && self::prettySearch() ) {
+			$decision = Decision::deny( 'query:s' );
 		}
 
 		if ( ! $decision->cacheable ) {
@@ -424,8 +440,8 @@ final class PageCacheModule implements Module {
 		$urls = array_values( array_unique( $urls ) );
 		$post = get_post( $postId );
 		// A withdrawn or deleted post leaves every listing that showed it.
-		$dependents = $post instanceof \WP_Post ? array_keys( $this->dependencies->forPost( $post, true ) ) : array();
-		( new Purger( $this->store ) )->purgeUrls( array_values( array_unique( array_merge( $urls, $dependents ) ) ) );
+		$dependents = $post instanceof \WP_Post ? $this->postPublishPurgePolicy->firstPagesOnly( array_keys( $this->dependencies->forPost( $post, true ) ) ) : array();
+		( new Purger( $this->store ) )->purgeUrls( array_values( array_unique( array_merge( $urls, $dependents ) ) ), $urls );
 
 		do_action( 'gt_performance_enqueue_preload', $urls );
 	}
@@ -543,8 +559,8 @@ final class PageCacheModule implements Module {
 		// Pages that recorded this post, its terms, or its listings, beyond the
 		// heuristic set. They are purged but not preloaded: there can be hundreds,
 		// and visitors or stale revalidation refill them at a normal pace.
-		$dependents = PostPublishPurgePolicy::RELATED === $mode ? array_keys( $this->dependencies->forPost( $post ) ) : array();
-		( new Purger( $this->store ) )->purgeUrls( array_values( array_unique( array_merge( $plan['urls'], $dependents ) ) ) );
+		$dependents = PostPublishPurgePolicy::RELATED === $mode ? $this->postPublishPurgePolicy->firstPagesOnly( array_keys( $this->dependencies->forPost( $post ) ) ) : array();
+		( new Purger( $this->store ) )->purgeUrls( array_values( array_unique( array_merge( $plan['urls'], $dependents ) ) ), $plan['urls'] );
 		do_action( 'gt_performance_enqueue_preload', $plan['urls'] );
 	}
 }

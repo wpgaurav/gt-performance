@@ -14,6 +14,7 @@ use GTPerformance\Core\Settings;
 final class SiteService {
 	public function __construct(
 		private readonly ClientFactory $factory = new ClientFactory(),
+		private readonly EnterprisePurgeHook $enterpriseHook = new EnterprisePurgeHook(),
 	) {
 	}
 
@@ -88,8 +89,9 @@ final class SiteService {
 
 	/**
 	 * Route automatic invalidation to the free xCloud edge cache or host page
-	 * cache. Enterprise remains separate and fails closed until xCloud exposes a
-	 * token-authenticated purge endpoint in its Public API.
+	 * cache. The Enterprise edge is purged separately, by EnterprisePurgeModule
+	 * through xCloud's own purge plugin; without that plugin xCloud offers no
+	 * token-authenticated Enterprise purge, so this fails closed.
 	 *
 	 * @return array<string, mixed>|\WP_Error
 	 */
@@ -101,10 +103,10 @@ final class SiteService {
 			return $client;
 		}
 
-		if ( (bool) ( $xcloud['enterprise_available'] ?? false ) ) {
+		if ( (bool) ( $xcloud['enterprise_available'] ?? false ) && ! $this->enterpriseHook->available() ) {
 			return new \WP_Error(
 				'gtperf_xcloud_enterprise_purge_unavailable',
-				__( 'Cloudflare Enterprise is active, but xCloud does not expose its purge action through token-authenticated Public API. Purge it from the xCloud Enterprise dashboard.', 'gt-performance' )
+				__( 'Cloudflare Enterprise is active, but xCloud automatic cache purge is not installed. Install it from the site\'s Cloudflare Enterprise page in xCloud, or purge from the xCloud dashboard.', 'gt-performance' )
 			);
 		}
 

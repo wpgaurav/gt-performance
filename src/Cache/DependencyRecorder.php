@@ -32,6 +32,12 @@ final class DependencyRecorder {
 	/** @var array<string, true> */
 	private array $signatures = array();
 
+	/** @var array<string, string> `post:<id>` a query listed => that post's type. */
+	private array $listed = array();
+
+	/** @var array<string, true> Posts the page is about or embeds, never collapsed. */
+	private array $pinned = array();
+
 	public function __construct(
 		private readonly DependencyIndex $index = new DependencyIndex(),
 	) {
@@ -66,6 +72,7 @@ final class DependencyRecorder {
 		$ref  = (int) ( $block['attrs']['ref'] ?? 0 );
 		if ( $ref > 0 && in_array( $name, array( 'core/block', 'core/navigation' ), true ) ) {
 			$this->signatures[ 'post:' . $ref ] = true;
+			$this->pinned[ 'post:' . $ref ]     = true;
 		}
 
 		return $pre;
@@ -94,12 +101,48 @@ final class DependencyRecorder {
 				$this->signatures[ 'term:' . $object->term_id ] = true;
 			} elseif ( $object instanceof \WP_Post ) {
 				$this->signatures[ 'post:' . $object->ID ] = true;
+				$this->pinned[ 'post:' . $object->ID ]     = true;
 			}
 		}
 
 		$query = http_build_query( $request->query, '', '&', PHP_QUERY_RFC3986 );
 		$url   = $request->scheme . '://' . $request->host . $request->path . ( '' === $query ? '' : '?' . $query );
-		$this->index->replace( $url, self::variant( $request ), array_keys( $this->signatures ) );
+		$this->index->replace( $url, self::variant( $request ), self::bounded( array_keys( $this->signatures ), array_diff_key( $this->listed, $this->pinned ) ) );
+	}
+
+	/**
+	 * Keep a page with long listings under the per-page limit without making it
+	 * depend on everything.
+	 *
+	 * Past DependencyIndex::MAX_PER_PAGE signatures the index records `broad:*`,
+	 * and every change on the site then purges the page. A docs sidebar listing
+	 * 427 docs, or an archive widget listing 255 posts, did that to 757 pages on
+	 * gauravtiwari.org, so each post save purged 500 of them. Over the limit, the
+	 * listed posts are replaced by one `ptv:<type>` per post type: any change to
+	 * a post of that type still purges the page, and changes to other types no
+	 * longer do. The page's own post, embedded blocks and menus, and the set
+	 * signatures stay as they are. A page still over the limit falls back to
+	 * `broad:*` in the index.
+	 *
+	 * @param list<string>          $signatures Every signature the page recorded.
+	 * @param array<string, string> $listed     Collapsible `post:<id>` => post type.
+	 * @return list<string>
+	 */
+	public static function bounded( array $signatures, array $listed ): array {
+		if ( count( $signatures ) <= DependencyIndex::MAX_PER_PAGE ) {
+			return $signatures;
+		}
+
+		$bounded = array();
+		foreach ( $signatures as $signature ) {
+			if ( isset( $listed[ $signature ] ) ) {
+				$bounded[ 'ptv:' . ( '' !== $listed[ $signature ] ? $listed[ $signature ] : '*' ) ] = true;
+				continue;
+			}
+			$bounded[ $signature ] = true;
+		}
+
+		return array_keys( $bounded );
 	}
 
 	/**
@@ -117,7 +160,8 @@ final class DependencyRecorder {
 		foreach ( (array) $query->posts as $post ) {
 			$id = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
 			if ( $id > 0 ) {
-				$signatures[] = 'post:' . $id;
+				$signatures[]                 = 'post:' . $id;
+				$this->listed[ 'post:' . $id ] = $post instanceof \WP_Post ? (string) $post->post_type : (string) get_post_type( $id );
 			}
 		}
 

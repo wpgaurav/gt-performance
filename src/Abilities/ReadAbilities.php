@@ -26,6 +26,7 @@ use GTPerformance\Diagnostics\PurgeReceiptRepository;
 use GTPerformance\Optimization\Css\ReportRepository;
 use GTPerformance\Queue\JobRepository;
 use GTPerformance\Queue\QueueModule;
+use GTPerformance\XCloud\EdgeOwnership;
 
 final class ReadAbilities {
 	public const SCHEMA_VERSION = 1;
@@ -173,6 +174,7 @@ final class ReadAbilities {
 		$ready = Database::queueReady();
 		$beat  = (int) get_option( QueueModule::HEARTBEAT_OPTION, 0 );
 		$warm  = $ready ? ( new CacheWarmer( new Logger() ) )->summary() : null;
+		$edgeOwner = new EdgeOwnership();
 
 		return self::result(
 			array(
@@ -198,8 +200,9 @@ final class ReadAbilities {
 					'lazy_load'        => (bool) Settings::get( 'media.lazy_load', true ),
 					'local_fonts'      => (bool) Settings::get( 'fonts.self_host_google', false ),
 					'cdn'              => (bool) Settings::get( 'cdn.enabled', false ),
-					'cloudflare'       => (bool) Settings::get( 'cloudflare.enabled', false ),
+					'cloudflare'       => (bool) Settings::get( 'cloudflare.enabled', false ) && ! $edgeOwner->directCloudflarePaused(),
 					'xcloud'           => (bool) Settings::get( 'xcloud.enabled', false ),
+					'xcloud_enterprise_purge' => $edgeOwner->enterprisePurgeHookActive(),
 					'redis'            => (bool) Settings::get( 'redis.enabled', false ),
 					'database_cleanup' => (bool) Settings::get( 'database.enabled', false ),
 				),

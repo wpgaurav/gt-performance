@@ -59,6 +59,41 @@ final class PostPublishPurgePolicy {
 	}
 
 	/**
+	 * Drop page two and later of every listing from a post's recorded dependents.
+	 *
+	 * A post change reorders every page of each listing it appears in, but page
+	 * one is the page that carries it and the one visitors land on. The later
+	 * pages refresh when their cached copies expire. On gauravtiwari.org they were
+	 * 111 of the 500 pages each save purged. Return true from
+	 * `gt_performance_purge_paginated_listings` to purge them all again.
+	 *
+	 * @param list<string> $urls Recorded dependents.
+	 * @return list<string>
+	 */
+	public function firstPagesOnly( array $urls ): array {
+		if ( (bool) apply_filters( 'gt_performance_purge_paginated_listings', false ) ) {
+			return $urls;
+		}
+
+		$base    = isset( $GLOBALS['wp_rewrite'] ) && is_object( $GLOBALS['wp_rewrite'] ) && isset( $GLOBALS['wp_rewrite']->pagination_base )
+			? (string) $GLOBALS['wp_rewrite']->pagination_base
+			: 'page';
+		$pattern = '#/' . preg_quote( '' !== $base ? $base : 'page', '#' ) . '/\d+/?$#';
+
+		return array_values(
+			array_filter(
+				$urls,
+				static function ( string $url ) use ( $pattern ): bool {
+					$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+					parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+
+					return ! preg_match( $pattern, $path ) && (int) ( $query['paged'] ?? 0 ) < 2;
+				}
+			)
+		);
+	}
+
+	/**
 	 * @return list<string>
 	 */
 	private function modes(): array {

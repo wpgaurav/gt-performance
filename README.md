@@ -6,14 +6,14 @@ GT Performance is an independent WordPress performance plugin for safe page cach
 
 [Try it in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wpgaurav/gt-performance/main/distribution-assets/wordpress-org/blueprints/blueprint.json) · [GT Performance Community](https://gauravtiwari.org/portal/) · [More WordPress Plugins](https://gauravtiwari.org/wordpress-plugins/)
 
-The current release is `1.3.5`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
+The current release is `1.3.6`. It is free GPL software in the WordPress.org plugin directory as [`gt-performance`](https://wordpress.org/plugins/gt-performance/), where 1.0.14 was its first release. Origin caching uses a maximum-impact shared-cache profile while aggressive frontend transformations remain opt-in. Cache correctness and prevention of private commerce-page caching take priority over cache hit rate.
 
 ## What is implemented
 
 - Atomic origin HTML cache with an early `advanced-cache.php` drop-in, deterministic keys, stale retention, response validation, exact URL purge, configurable automatic invalidation after publishing, a preload queue, and sitemap-driven cache warming after a full purge.
 - Reversible `WP_CACHE` management and drop-in ownership checks, including exact restoration of existing single-line declarations.
 - Cloudflare Free setup through one managed Cache Rule, origin-aware TTLs, URL/full purge, encrypted API-secret storage, rule removal on deactivation or `cloudflare disconnect`, and automatic fallback when a Free zone rejects custom query-string cache keys.
-- xCloud site discovery, host-cache status, and cache invalidation through its Public API, plus separate detection and 12-hour traffic reporting for xCloud's Cloudflare Enterprise add-on.
+- xCloud site discovery, host-cache status, and cache invalidation through its Public API, plus separate detection and 12-hour traffic reporting for xCloud's Cloudflare Enterprise add-on. When xCloud's automatic cache purge plugin is installed, every purge also clears Cloudflare Enterprise through it, and direct Cloudflare pauses itself.
 - Optional origin-pull CDN URL rewriting for an HTTPS hostname or hostname plus path, restricted to selected static-file extensions and same-site source URLs.
 - A Cloudflare Free rule compiler that previews the exact expression, managed-rule drift, competing rules, operation, and remaining ten-rule budget before synchronization.
 - First-class bypass policies and product invalidation for FluentCart, Easy Digital Downloads, and WooCommerce.
@@ -151,7 +151,25 @@ When Cloudflare Enterprise is active, GT Performance treats xCloud as the edge o
 
 Private and commerce responses send browser `Cache-Control`, standard `CDN-Cache-Control`, and Cloudflare's higher-priority `Cloudflare-CDN-Cache-Control` no-store directives as defense in depth. Live xCloud testing found that the add-on's current **Edge Page Caching** rule overrides even these origin directives and caches cart, checkout, account, and receipt HTML. Commerce sites must keep **Edge Page Caching** off unless xCloud provides equivalent request-level bypass rules. Enterprise static caching, WAF, DDoS protection, HTTP/3, Brotli, and the add-on's other features can remain enabled.
 
-xCloud's current Public API does not publish a token-authenticated purge operation for the Enterprise add-on. The dashboard's Enterprise purge action requires an interactive xCloud session, so GT Performance deliberately fails closed instead of calling xCloud's unrelated broad host `purge-all` endpoint. Use the Purge control on the site's Cloudflare Enterprise page until xCloud adds that operation to the Public API.
+### Enterprise purge through xCloud's purge plugin
+
+An Enterprise domain is a DNS-only CNAME to xCloud's edge, served from xCloud's own Cloudflare zone. Purging the site owner's Cloudflare zone, which is what the direct Cloudflare integration does, returns success and clears nothing a visitor receives.
+
+After activation, the site's Cloudflare Enterprise page in xCloud offers **Install now** for automatic cache purge. That step installs `wp-content/mu-plugins/xcloud-cfe-cache-purge.php`, which defines a per-site token pair and the endpoint that accepts it. xCloud's plugin purges a post's own URLs when the post is saved.
+
+GT Performance looks for that file. When it is present with a usable token, and needing no xCloud API token:
+
+- every GT Performance purge is sent to the same endpoint in the plugin's own request shape. That covers related and archive pages after a save, Page Blocks and theme edits, the Purge button, scheduled purges, WP-CLI, and agent abilities;
+- URLs go in batches of 50. xCloud drops a purge of more than 300 URLs, and a post save can name far more: the post, home, and its own archives, plus every page recorded as listing it (about 500 on gauravtiwari.org). Over 300, only the post's own URLs go to Enterprise: its permalink, home, the post type, author, and current category and tag archives, with their query-string copies. The recorded listing pages are cleared at the origin only, and refresh at the edge when their copies expire. A purge that is still over 300, or one with no post behind it, becomes one whole-site Enterprise purge;
+- automatic purges are sent on shutdown without waiting for xCloud, as xCloud's plugin does. The Purge button, `cache purge`, purge-and-verify, and abilities wait for xCloud's reply and report a rejection;
+- the direct Cloudflare integration pauses itself. Its settings are kept and it makes no API calls. Rule sync is refused, and it resumes when the xCloud plugin is removed;
+- the endpoint must be HTTPS on an `xcloud.host` hostname, so a changed constant cannot send the tokens anywhere else.
+
+The Integrations screen shows the Enterprise purge state and the last Enterprise purge, including how many listing pages were cleared at the origin only. Both are read from the `gt_performance_xcloud_enterprise_last_purge` option.
+
+`gt_performance_purged_urls` passes a third argument: the purged URLs the change names directly, with their variants. It equals the full list unless a post change passed its related URLs to `Purger::purgeUrls( $urls, $primary )`. To keep GT Performance out of Enterprise purging with the plugin installed, return false from the `gt_performance_xcloud_enterprise_purge` filter.
+
+Without xCloud's plugin, Enterprise purge still fails closed. xCloud's Public API publishes no token-authenticated Enterprise purge, and GT Performance does not call the unrelated broad host `purge-all` endpoint in its place.
 
 The token is encrypted in the WordPress option. It may instead be supplied with `GTPERF_XCLOUD_API_TOKEN` in `wp-config.php`; the constant takes precedence over the saved value.
 
@@ -159,9 +177,10 @@ The token is encrypted in the WordPress option. It may instead be supplied with 
 wp gt-performance xcloud status
 wp gt-performance xcloud refresh
 wp gt-performance xcloud purge
+wp gt-performance xcloud purge --page-url=https://example.com/pricing/
 ```
 
-`xcloud purge` exits non-zero for an active Enterprise add-on rather than claiming a purge that xCloud's token API did not perform.
+`xcloud status` reports `enterprise_purge=xcloud-plugin`, `unusable` (the file is present without a usable token, or the filter turned it off), or `not-installed`. With xCloud's plugin, `xcloud purge` clears Enterprise first: the whole site, or one page with `--page-url`. It then clears the host cache when an xCloud API token is connected. Without the plugin it exits non-zero for an active Enterprise add-on, rather than claiming a purge that xCloud's token API did not perform.
 
 ## Recommended integration defaults
 
@@ -239,10 +258,15 @@ When the origin renders and stores a page, GT Performance records what the page 
 When content changes, the automatic purge still clears the same related pages as before (the post, home, archives, author, and terms). It then adds every cached page whose recorded dependencies the change affects:
 
 - A content edit reaches pages that showed that post.
-- Publishing, unpublishing, deleting, changing the date, or moving a post between terms reaches every listing of that post type or term, including a page two it was never shown on and the category it was moved out of.
+- Publishing, unpublishing, deleting, changing the date, or moving a post between terms reaches every listing of that post type or term, including the category it was moved out of.
+- A post change purges page one of each listing only. Page two and later (`/page/N/` under the site's pagination base, or `paged=N`) refresh when their cached copies expire, within `fresh_ttl`. A change to a post's categories or tags, including the ones it gets when first published, still purges every recorded page of the archives involved. Return true from `gt_performance_purge_paginated_listings` to purge every page on every change.
 - Editing a reusable block or navigation menu purges the pages that embed it; previously nothing was purged.
 - Commerce price and stock changes purge shop pages and product grids as well as the product page.
 - Renaming a term purges its old and new archive URLs.
+
+A page is capped at 300 signatures. Over that, its listed posts are replaced by one signature per post type, so a docs page with a 427-doc sidebar depends on docs, not on every post. The page's own post, embedded blocks and menus, and its listing signatures are kept. Only a page still over the cap, or one that ran more than 200 queries, depends on every change (`broad:*`).
+
+Search results are never cached while `s` is on the never-cache query list, which is the default. That covers both `?s=` and the permalink form `/search/<terms>/`.
 
 Pages that recorded nothing affected stay cached. Records belong to the current settings generation and are pruned in bounded batches; a page not rendered since the last cache-relevant settings change simply has none, and the related-page purge still covers it. Related URLs on another host (an author link to a personal site, for example) are now left out of both local and edge purges. Only the "post and related pages" purge policy adds recorded dependents.
 

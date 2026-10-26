@@ -28,7 +28,8 @@ final class PurgePreview {
 		if ( ! $post instanceof \WP_Post ) {
 			return new \WP_Error( 'gtperf_preview_post', __( 'No such post.', 'gt-performance' ), array( 'status' => 404 ) );
 		}
-		$mode = ( new PostPublishPurgePolicy() )->sanitize( (string) Settings::get( 'cache.post_publish_purge', PostPublishPurgePolicy::RELATED ) );
+		$policy = new PostPublishPurgePolicy();
+		$mode   = $policy->sanitize( (string) Settings::get( 'cache.post_publish_purge', PostPublishPurgePolicy::RELATED ) );
 		$urls = array();
 
 		if ( PostPublishPurgePolicy::ALL === $mode ) {
@@ -44,7 +45,9 @@ final class PurgePreview {
 			}
 		}
 		if ( PostPublishPurgePolicy::RELATED === $mode ) {
-			foreach ( ( new DependencyInvalidator( $this->index ) )->forPost( $post, $membership ) as $url => $signatures ) {
+			$dependents = ( new DependencyInvalidator( $this->index ) )->forPost( $post, $membership );
+			$dependents = array_intersect_key( $dependents, array_flip( $policy->firstPagesOnly( array_keys( $dependents ) ) ) );
+			foreach ( $dependents as $url => $signatures ) {
 				foreach ( $signatures as $signature ) {
 					$urls[ $url ][] = 'recorded dependency: ' . self::describe( $signature );
 				}
