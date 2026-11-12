@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.6
+Stable tag: 1.3.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,6 +247,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.3.7 =
+Fixes oversized screenshots and broken layouts in Core Support, Core Forms and Stackless when Remove unused CSS is on. Recommended for every site running those plugins with unused CSS removal.
+
 = 1.3.6 =
 Sites on xCloud's Cloudflare Enterprise add-on are now purged at the edge visitors actually reach, not only at the origin. Recommended for every site on xCloud Cloudflare Enterprise.
 
@@ -290,6 +293,13 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.7 =
+* Fixes Core Support help desk pages with Remove unused CSS on. The portal draws tickets, messages and image previews in the browser, so their styles looked unused and were removed. Attached screenshots then showed at full size. Core Support's styles are now left whole, and its scripts are never delayed.
+* The same protection covers Core Forms, Core Bookings, Core Approvals, Core Tables, and Stackless for EDD and WooCommerce, including their Lite versions, while they are active.
+* The Stackless theme keeps its mobile menu, search panel, scrolled header and loading styles.
+* A change to the unused CSS exclusions or safelist now reaches every page on its next visit. Before, a page kept its old CSS for up to a week. Pages rebuild their unused CSS once after updating.
+* Integrations shows detected plugins as a grid of cards, with anything that needs a decision first.
 
 = 1.3.6 =
 * Purges xCloud Cloudflare Enterprise automatically. xCloud serves an Enterprise site from its own Cloudflare zone, so GT Performance's purges cleared the origin, and the direct Cloudflare integration purged a zone no visitor was served from. Edits to anything but a post's own page stayed stale at the edge for up to an hour. When xCloud's automatic cache purge plugin is installed (Cloudflare Enterprise > Install now in xCloud), GT Performance now sends every purge through it: related and archive pages after a save, Page Blocks and theme edits, the Purge button, scheduled purges, and WP-CLI. No xCloud API token is needed.

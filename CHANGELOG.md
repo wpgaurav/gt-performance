@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.7 - 2026-11-12
 
 Unused CSS removal no longer breaks Core Support, Core Forms and the Stackless plugins.
 
