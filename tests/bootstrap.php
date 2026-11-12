@@ -865,6 +865,13 @@ if ( ! isset( $GLOBALS['wpdb'] ) ) {
 	};
 }
 
+// Persistent object cache: set $GLOBALS['gtperf_test_ext_object_cache'] to true.
+if ( ! function_exists( 'wp_using_ext_object_cache' ) ) {
+	function wp_using_ext_object_cache( ?bool $using = null ): bool {
+		return (bool) ( $GLOBALS['gtperf_test_ext_object_cache'] ?? false );
+	}
+}
+
 if ( ! function_exists( 'number_format_i18n' ) ) {
 	function number_format_i18n( float|int $number, int $decimals = 0 ): string {
 		return number_format( (float) $number, $decimals );

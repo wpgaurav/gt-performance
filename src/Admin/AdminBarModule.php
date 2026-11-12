@@ -12,9 +12,9 @@ namespace GTPerformance\Admin;
 use GTPerformance\Cache\DropinRuntime;
 use GTPerformance\Cache\Purger;
 use GTPerformance\Contracts\Module;
+use GTPerformance\Database\Cleaner;
 use GTPerformance\Diagnostics\PurgeVerifier;
 use GTPerformance\Optimization\Css\ReportRepository;
-use GTPerformance\Redis\ConnectionTester;
 
 final class AdminBarModule implements Module {
 	public function register(): void {
@@ -68,15 +68,8 @@ final class AdminBarModule implements Module {
 
 		$this->actionNode( $bar, 'gtp-purge-all', __( 'Purge page and edge caches', 'gt-performance' ), 'purge-all' );
 		$this->actionNode( $bar, 'gtp-flush-object', __( 'Flush object cache', 'gt-performance' ), 'flush-object' );
-		$this->actionNode( $bar, 'gtp-test-redis', __( 'Test Redis connection', 'gt-performance' ), 'test-redis' );
-		$bar->add_node(
-			array(
-				'parent' => 'gt-performance',
-				'id'     => 'gtp-object-cache',
-				'title'  => __( 'Object cache settings', 'gt-performance' ),
-				'href'   => admin_url( 'admin.php?page=gt-performance&tab=object-cache' ),
-			)
-		);
+		$this->actionNode( $bar, 'gtp-clear-expired-transients', __( 'Clear expired transients', 'gt-performance' ), 'clear-expired-transients' );
+		$this->actionNode( $bar, 'gtp-clear-transients', __( 'Clear all transients', 'gt-performance' ), 'clear-transients' );
 	}
 
 	public function handle(): never {
@@ -116,9 +109,11 @@ final class AdminBarModule implements Module {
 				wp_cache_flush();
 				break;
 
-			case 'test-redis':
-				$result = ( new ConnectionTester() )->test();
-				$this->redirect( is_wp_error( $result ) ? $result->get_error_code() : 'redis-connected', 'integrations' );
+			case 'clear-expired-transients':
+			case 'clear-transients':
+				$task    = 'clear-transients' === $command ? 'all_transients' : 'expired_transients';
+				$removed = ( new Cleaner() )->run( array( $task ) )[ $task ] ?? 0;
+				$this->redirect( ( 'all_transients' === $task ? 'transients-all-' : 'transients-expired-' ) . max( 0, (int) $removed ), 'database' );
 				break;
 
 			default:

@@ -322,23 +322,31 @@ final class Cleaner {
 		return $count;
 	}
 
+	/**
+	 * Transients, not rows: one with an expiry is stored as two rows, its value and
+	 * its `_timeout_` row, and counting both reported nearly twice the real number.
+	 */
 	private function allTransientCount(): int {
 		global $wpdb;
 
 		$count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->options}
-				WHERE option_name LIKE %s OR option_name LIKE %s",
+				WHERE ( option_name LIKE %s AND option_name NOT LIKE %s )
+				OR ( option_name LIKE %s AND option_name NOT LIKE %s )",
 				$wpdb->esc_like( '_transient_' ) . '%',
-				$wpdb->esc_like( '_site_transient_' ) . '%'
+				$wpdb->esc_like( '_transient_timeout_' ) . '%',
+				$wpdb->esc_like( '_site_transient_' ) . '%',
+				$wpdb->esc_like( '_site_transient_timeout_' ) . '%'
 			)
 		);
 
 		if ( is_multisite() ) {
 			$count += (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT COUNT(*) FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
-					$wpdb->esc_like( '_site_transient_' ) . '%'
+					"SELECT COUNT(*) FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s AND meta_key NOT LIKE %s",
+					$wpdb->esc_like( '_site_transient_' ) . '%',
+					$wpdb->esc_like( '_site_transient_timeout_' ) . '%'
 				)
 			);
 		}

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The admin bar's GT Performance menu has **Clear expired transients** and **Clear all transients**. Both run the Database tab's existing cleanup tasks (`expired_transients`, `all_transients`) right away and open the Database tab with the number removed. Clearing all transients also flushes the object cache, as the Database task always has. With a persistent object cache, WordPress keeps transients there rather than in the options table, so the notice says so instead of reporting a bare zero.
+- The admin bar no longer has **Test Redis connection** or **Object cache settings**. Both remain on the Object Cache tab.
+- The Database tab's transient count counts transients, not rows. A transient with an expiry is stored as a value row and a `_timeout_` row, and both were counted, so the number shown was close to double. On the M2 Lab site, 20 rows held 13 transients.
+
 ## 1.3.7 - 2026-11-12
 
 Unused CSS removal no longer breaks Core Support, Core Forms and the Stackless plugins.

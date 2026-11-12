@@ -4096,6 +4096,32 @@ PHP;
 	 * @return array{message:string,type:string}
 	 */
 	private function noticeDetails( string $notice ): array {
+		if ( 1 === preg_match( '/^transients-(expired|all)-(\d+)$/', $notice, $match ) ) {
+			$count = (int) $match[2];
+			$all   = 'all' === $match[1];
+			// With a persistent object cache, WordPress keeps transients there, not in
+			// the options table, so the database count alone would read as "nothing".
+			$where = wp_using_ext_object_cache()
+				? ( $all
+					? __( 'The object cache, where WordPress keeps transients on this site, was flushed as well.', 'gt-performance' )
+					: __( 'Transients in the object cache expire on their own.', 'gt-performance' ) )
+				: '';
+
+			return array(
+				'message' => trim(
+					sprintf(
+						$all
+							/* translators: %s: number of transients removed from the database. */
+							? _n( 'Cleared %s transient from the database.', 'Cleared %s transients from the database.', $count, 'gt-performance' )
+							/* translators: %s: number of expired transients removed from the database. */
+							: _n( 'Cleared %s expired transient from the database.', 'Cleared %s expired transients from the database.', $count, 'gt-performance' ),
+						number_format_i18n( $count )
+					) . ' ' . $where
+				),
+				'type'    => 'success',
+			);
+		}
+
 		if ( str_starts_with( $notice, 'cleaned-' ) ) {
 			$count = max( 0, (int) substr( $notice, strlen( 'cleaned-' ) ) );
 
