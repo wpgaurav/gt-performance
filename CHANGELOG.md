@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.8 - 2026-11-12
 
 - The admin bar's GT Performance menu has **Clear expired transients** and **Clear all transients**. Both run the Database tab's existing cleanup tasks (`expired_transients`, `all_transients`) right away and open the Database tab with the number removed. Clearing all transients also flushes the object cache, as the Database task always has. With a persistent object cache, WordPress keeps transients there rather than in the options table, so the notice says so instead of reporting a bare zero.
 - The admin bar no longer has **Test Redis connection** or **Object cache settings**. Both remain on the Object Cache tab.

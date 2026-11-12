@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: GT Performance 1.3.7\n"
+"Project-Id-Version: GT Performance 1.3.8\n"
 "Report-Msgid-Bugs-To: https://github.com/wpgaurav/gt-performance/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-12T01:41:29+00:00\n"
+"POT-Creation-Date: 2026-11-12T07:39:24+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: gt-performance\n"
@@ -230,15 +230,14 @@ msgid "Flush object cache"
 msgstr ""
 
 #: src/Admin/AdminBarModule.php:71
-#: src/Admin/AdminModule.php:2023
-msgid "Test Redis connection"
+msgid "Clear expired transients"
 msgstr ""
 
-#: src/Admin/AdminBarModule.php:76
-msgid "Object cache settings"
+#: src/Admin/AdminBarModule.php:72
+msgid "Clear all transients"
 msgstr ""
 
-#: src/Admin/AdminBarModule.php:84
+#: src/Admin/AdminBarModule.php:77
 #: src/Admin/AdminModule.php:4013
 msgid "You are not allowed to manage GT Performance."
 msgstr ""
@@ -2605,6 +2604,10 @@ msgstr ""
 msgid "Save first, then run a bounded connection, authentication, database selection, and ping check."
 msgstr ""
 
+#: src/Admin/AdminModule.php:2023
+msgid "Test Redis connection"
+msgstr ""
+
 #: src/Admin/AdminModule.php:2027
 msgid "Install the drop-in"
 msgstr ""
@@ -3613,7 +3616,7 @@ msgstr ""
 
 #: src/Admin/AdminModule.php:3326
 #: src/Admin/AdminModule.php:3473
-#: src/Admin/AdminModule.php:4245
+#: src/Admin/AdminModule.php:4271
 msgid "Generated file"
 msgstr ""
 
@@ -4005,445 +4008,469 @@ msgstr ""
 msgid "Owned by another plugin"
 msgstr ""
 
+#: src/Admin/AdminModule.php:4106
+msgid "The object cache, where WordPress keeps transients on this site, was flushed as well."
+msgstr ""
+
+#: src/Admin/AdminModule.php:4107
+msgid "Transients in the object cache expire on their own."
+msgstr ""
+
+#. translators: %s: number of transients removed from the database.
+#: src/Admin/AdminModule.php:4115
+#, php-format
+msgid "Cleared %s transient from the database."
+msgid_plural "Cleared %s transients from the database."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of expired transients removed from the database.
+#: src/Admin/AdminModule.php:4117
+#, php-format
+msgid "Cleared %s expired transient from the database."
+msgid_plural "Cleared %s expired transients from the database."
+msgstr[0] ""
+msgstr[1] ""
+
 #. translators: %s: number of database records removed.
-#: src/Admin/AdminModule.php:4105
+#: src/Admin/AdminModule.php:4131
 #, php-format
 msgid "Database cleanup removed %s record."
 msgid_plural "Database cleanup removed %s records."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/AdminModule.php:4113
+#: src/Admin/AdminModule.php:4139
 msgid "The page-cache drop-in was installed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4114
+#: src/Admin/AdminModule.php:4140
 msgid "The Redis object-cache drop-in was installed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4115
+#: src/Admin/AdminModule.php:4141
 msgid "Redis accepted the saved credentials and passed the connection test."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4116
+#: src/Admin/AdminModule.php:4142
 msgid "GT Performance cache was purged."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4117
+#: src/Admin/AdminModule.php:4143
 msgid "Server rules added. Stored pages are now served by the web server where the rules allow it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4118
+#: src/Admin/AdminModule.php:4144
 msgid "Server rules removed. Every hit goes through the PHP drop-in again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4119
+#: src/Admin/AdminModule.php:4145
 msgid "The local page cache was cleared, but Cloudflare could not finish its purge. Review the latest Cloudflare purge below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4120
+#: src/Admin/AdminModule.php:4146
 msgid "Cloudflare connected, the managed cache rule was synchronized, and this site's pages were purged from Cloudflare so nothing cached under an earlier rule is served."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4121
+#: src/Admin/AdminModule.php:4147
 msgid "The managed cache rule was synchronized, but purging this site's pages from Cloudflare failed. Pages Cloudflare stored earlier may be served until they expire; purge them from the Cloudflare tab."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4122
+#: src/Admin/AdminModule.php:4148
 msgid "Your home page was fetched as a visitor; the host cache results are below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4123
+#: src/Admin/AdminModule.php:4149
 msgid "This server could not fetch its own home page. Host caches found in the environment are still listed below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4124
+#: src/Admin/AdminModule.php:4150
 msgid "GT Performance now stores pages: the drop-in is installed and WP_CACHE is on. Verify below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4125
+#: src/Admin/AdminModule.php:4151
 msgid "Optimize-only mode is on. Your host's cache stores pages; purge it once so it keeps optimized copies."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4126
+#: src/Admin/AdminModule.php:4152
 msgid "Setup verified: the home page was served as expected."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4127
+#: src/Admin/AdminModule.php:4153
 msgid "Verification did not pass. The result below says which layer did not answer."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4128
+#: src/Admin/AdminModule.php:4154
 msgid "Cloudflare disconnected. The managed cache rule is gone and this site's pages were purged from Cloudflare."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4129
+#: src/Admin/AdminModule.php:4155
 msgid "Cloudflare disconnected and the managed cache rule is gone, but the Cloudflare purge failed. Purge this site's pages in the Cloudflare dashboard, or pages it stored stay until they expire."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4130
+#: src/Admin/AdminModule.php:4156
 msgid "The live Cloudflare rule plan was checked without changing it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4131
+#: src/Admin/AdminModule.php:4157
 msgid "Every Cloudflare connection stage passed, including writing cache rules."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4132
+#: src/Admin/AdminModule.php:4158
 msgid "A zone-scoped Cloudflare API token was created and saved. The Global API Key is no longer needed here and can be cleared."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4133
+#: src/Admin/AdminModule.php:4159
 msgid "The Cloudflare connection check stopped at a failing stage. The results below name the exact cause."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4134
+#: src/Admin/AdminModule.php:4160
 msgid "The origin artifact was removed and the refreshed public response passed verification."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4135
+#: src/Admin/AdminModule.php:4161
 msgid "The purge completed, but one or more verification signals need review."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4136
+#: src/Admin/AdminModule.php:4162
 msgid "CSS regeneration queued. The report will update when the build finishes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4137
+#: src/Admin/AdminModule.php:4163
 msgid "CSS results invalidated and page caches purged. Known eligible URLs will rebuild in the background; other pages rebuild when visited."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4138
+#: src/Admin/AdminModule.php:4164
 msgid "CSS could not be queued. Check that page caching and unused CSS are enabled, rollout includes the URL, and no build is already active."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4139
+#: src/Admin/AdminModule.php:4165
 msgid "Enter a valid public URL from this WordPress site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4140
+#: src/Admin/AdminModule.php:4166
 msgid "Review exactly what will be sent below, then send or discard it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4141
+#: src/Admin/AdminModule.php:4167
 msgid "The adviser answered. Findings are suggestions, not facts; each lists the report items it relies on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4142
+#: src/Admin/AdminModule.php:4168
 msgid "Nothing was sent."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4143
+#: src/Admin/AdminModule.php:4169
 msgid "A settings proposal was created. Review and apply it below within 15 minutes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4144
+#: src/Admin/AdminModule.php:4170
 msgid "The AI request failed. Details below."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4145
+#: src/Admin/AdminModule.php:4171
 msgid "Today's adviser limit is used up."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4146
+#: src/Admin/AdminModule.php:4172
 msgid "Proposal applied. The replaced values were saved to settings history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4147
+#: src/Admin/AdminModule.php:4173
 msgid "Proposal applied locally. Sync Cloudflare to apply the cache changes at the edge."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4148
+#: src/Admin/AdminModule.php:4174
 msgid "Proposal rejected."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4149
+#: src/Admin/AdminModule.php:4175
 msgid "That proposal expired or settings changed since it was made, so nothing was applied."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4150
+#: src/Admin/AdminModule.php:4176
 msgid "Settings restored. The replaced values were saved to history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4151
+#: src/Admin/AdminModule.php:4177
 msgid "Settings restored locally. Sync Cloudflare to apply the cache changes at the edge; the managed rule was not changed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4152
+#: src/Admin/AdminModule.php:4178
 msgid "Settings imported. The replaced values were saved to history."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4153
+#: src/Admin/AdminModule.php:4179
 msgid "Settings imported locally. Sync Cloudflare to apply the cache changes at the edge; the managed rule was not changed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4154
+#: src/Admin/AdminModule.php:4180
 #: src/Operations/ProposalService.php:102
 msgid "Those values already match the current settings."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4155
+#: src/Admin/AdminModule.php:4181
 msgid "Review the import below before applying it. The preview expires in 15 minutes."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4156
+#: src/Admin/AdminModule.php:4182
 msgid "The import preview expired. Upload the file again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4157
+#: src/Admin/AdminModule.php:4183
 msgid "Settings changed after that preview, so nothing was applied. Review the current values and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4158
+#: src/Admin/AdminModule.php:4184
 msgid "Database cleanup started in the background. Progress updates below; you can leave this page."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4159
+#: src/Admin/AdminModule.php:4185
 msgid "The cleanup will stop after the batch it is working on."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4160
+#: src/Admin/AdminModule.php:4186
 msgid "No database cleanup is running."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4161
+#: src/Admin/AdminModule.php:4187
 msgid "A database cleanup is already running."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4162
+#: src/Admin/AdminModule.php:4188
 #: src/Database/CleanupRun.php:55
 msgid "Select at least one cleanup task."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4163
+#: src/Admin/AdminModule.php:4189
 msgid "Warm run queued. Discovery and preloads run in bounded background jobs."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4164
+#: src/Admin/AdminModule.php:4190
 msgid "Warming stores pages, and in optimize-only mode your host's cache stores them instead. Nothing was queued."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4165
+#: src/Admin/AdminModule.php:4191
 msgid "The warm run could not be queued. Check that the queue upgrade has finished."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4166
+#: src/Admin/AdminModule.php:4192
 msgid "Optional queue work is paused. Cache invalidation continues."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4167
+#: src/Admin/AdminModule.php:4193
 msgid "The background queue is running again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4168
+#: src/Admin/AdminModule.php:4194
 msgid "The failed job was queued for another attempt."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4169
+#: src/Admin/AdminModule.php:4195
 msgid "The job was cancelled. A running job stops at its next safe boundary."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4170
+#: src/Admin/AdminModule.php:4196
 msgid "That job could not be changed. Refresh and try the current row."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4171
+#: src/Admin/AdminModule.php:4197
 msgid "Enter a Cloudflare API token, save the settings, then connect again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4172
+#: src/Admin/AdminModule.php:4198
 msgid "Enter the Cloudflare account email used with the Global API Key."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4173
+#: src/Admin/AdminModule.php:4199
 msgid "Enter a Cloudflare Global API Key, save the settings, then connect again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4174
+#: src/Admin/AdminModule.php:4200
 msgid "No active Cloudflare zone matched this domain. Check the domain or enter the Zone ID."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4175
+#: src/Admin/AdminModule.php:4201
 msgid "Cloudflare returned an unreadable response. Try again in a moment."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4176
+#: src/Admin/AdminModule.php:4202
 msgid "Cloudflare rejected the request. Editing cache rules needs an API token with Zone → Cache Rules → Edit (permission group \"Cache Settings Write\"), plus Zone Read and Cache Purge. Run the connection check for the failing stage."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4177
+#: src/Admin/AdminModule.php:4203
 msgid "WordPress could not reach the Cloudflare API at all, so this is a network or firewall problem rather than a credential problem."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4178
+#: src/Admin/AdminModule.php:4204
 msgid "Cloudflare did not return the cache ruleset needed to finish setup."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4179
+#: src/Admin/AdminModule.php:4205
 msgid "The Cloudflare Free Cache Rules budget is full. Remove an unused rule or reconnect the existing GT Performance rule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4180
+#: src/Admin/AdminModule.php:4206
 msgid "Enter an xCloud API token with read:sites and write:sites scopes, save, then connect again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4181
+#: src/Admin/AdminModule.php:4207
 msgid "No exact xCloud site matched this domain or UUID."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4182
+#: src/Admin/AdminModule.php:4208
 msgid "xCloud did not expose the numeric site identifiers required by the Cloudflare Enterprise add-on. Refresh and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4183
+#: src/Admin/AdminModule.php:4209
 msgid "xCloud did not return cache-layer settings for this site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4184
+#: src/Admin/AdminModule.php:4210
 msgid "xCloud returned an unreadable response. Try again in a moment."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4185
+#: src/Admin/AdminModule.php:4211
 msgid "xCloud rejected the request. Check the token scopes and team permissions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4186
+#: src/Admin/AdminModule.php:4212
 msgid "Cloudflare Enterprise purge is not available through the xCloud Public API token. Install automatic cache purge from the site's Cloudflare Enterprise page in xCloud, or use the Purge control in the xCloud dashboard."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4187
+#: src/Admin/AdminModule.php:4213
 msgid "xCloud Cloudflare Enterprise serves this site, so direct Cloudflare is paused and no cache rule was synchronized. GT Performance purges through xCloud's automatic cache purge plugin instead."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4188
+#: src/Admin/AdminModule.php:4214
 msgid "xCloud Cloudflare Enterprise is the active owner. Disable it or the direct Cloudflare integration before synchronizing another cache rule."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4189
+#: src/Admin/AdminModule.php:4215
 msgid "xCloud site, host cache, and Cloudflare Enterprise status refreshed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4190
+#: src/Admin/AdminModule.php:4216
 msgid "xCloud connected, but Cloudflare Enterprise and direct Cloudflare are both enabled. Choose one edge-cache owner before synchronizing rules."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4191
+#: src/Admin/AdminModule.php:4217
 msgid "Enter a valid URL from this WordPress site."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4192
+#: src/Admin/AdminModule.php:4218
 msgid "The purge ran, but GT Performance could not fetch the public page for verification."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4193
+#: src/Admin/AdminModule.php:4219
 msgid ".htaccess could not be updated, so the server rules were not changed. Check its file permissions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4194
+#: src/Admin/AdminModule.php:4220
 msgid "Server rules were not added: LiteSpeed does not apply them reliably. Hits keep going through the PHP drop-in, with stored compressed copies."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4195
+#: src/Admin/AdminModule.php:4221
 msgid ".htaccess could not be read."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4196
+#: src/Admin/AdminModule.php:4222
 #: src/Cache/ServerRules.php:520
 msgid ".htaccess is a symbolic link, so GT Performance leaves it alone."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4197
+#: src/Admin/AdminModule.php:4223
 msgid "This file is shared by every site on the network. A network administrator has to install it."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4198
+#: src/Admin/AdminModule.php:4224
 msgid "Cloudflare and xCloud edge rules are not available on a multisite network yet. Each site's own page cache still works."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4199
+#: src/Admin/AdminModule.php:4225
 msgid "The network site map could not be written. Check the cache directory permissions."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4200
+#: src/Admin/AdminModule.php:4226
 msgid "Another plugin owns advanced-cache.php. Disable or migrate that cache before installing this drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4201
+#: src/Admin/AdminModule.php:4227
 msgid "The WordPress content directory is not writable, so the page-cache drop-in could not be installed."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4202
+#: src/Admin/AdminModule.php:4228
 msgid "GT Performance could not write the page-cache drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4203
+#: src/Admin/AdminModule.php:4229
 msgid "GT Performance could not publish the page-cache drop-in safely."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4205
+#: src/Admin/AdminModule.php:4231
 #: src/Cache/WpCacheConstant.php:42
 msgid "GT Performance could not read wp-config.php."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4206
+#: src/Admin/AdminModule.php:4232
 msgid "wp-config.php contains a custom WP_CACHE declaration. Enable WP_CACHE manually, then try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4207
+#: src/Admin/AdminModule.php:4233
 #: src/Cache/WpCacheConstant.php:74
 msgid "GT Performance could not add WP_CACHE to wp-config.php."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4208
+#: src/Admin/AdminModule.php:4234
 msgid "wp-config.php is not writable. Add the WP_CACHE constant manually, then try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4209
+#: src/Admin/AdminModule.php:4235
 msgid "GT Performance could not write the temporary wp-config.php update."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4210
+#: src/Admin/AdminModule.php:4236
 msgid "GT Performance could not publish the wp-config.php update safely."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4211
+#: src/Admin/AdminModule.php:4237
 msgid "The PHP Redis extension is not installed on this server."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4212
+#: src/Admin/AdminModule.php:4238
 msgid "Enable Redis object caching and save the settings before testing the connection."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4213
+#: src/Admin/AdminModule.php:4239
 msgid "Redis could not be reached with the saved host, TLS, or credentials."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4214
+#: src/Admin/AdminModule.php:4240
 #: src/Redis/ConnectionTester.php:30
 msgid "Redis accepted the connection but did not answer the health check."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4215
+#: src/Admin/AdminModule.php:4241
 msgid "Another plugin owns object-cache.php. Remove that conflict before installing the Redis drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4216
+#: src/Admin/AdminModule.php:4242
 msgid "GT Performance could not install the Redis object-cache drop-in."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4217
+#: src/Admin/AdminModule.php:4243
 msgid "That quick action is not available."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4238
+#: src/Admin/AdminModule.php:4264
 msgid "The requested GT Performance action could not be completed. Check the settings and try again."
 msgstr ""
 
-#: src/Admin/AdminModule.php:4246
+#: src/Admin/AdminModule.php:4272
 msgid "Fully inline"
 msgstr ""
 
-#: src/Admin/AdminModule.php:4247
+#: src/Admin/AdminModule.php:4273
 msgid "Critical inline + file"
 msgstr ""
 

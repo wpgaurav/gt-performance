@@ -4,7 +4,7 @@ Tags: cache, performance, cloudflare, unused css, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.7
+Stable tag: 1.3.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,6 +247,9 @@ Cache warming, CSS generation, and purge verification request your own site's UR
 
 == Upgrade Notice ==
 
+= 1.3.8 =
+Adds Clear expired transients and Clear all transients to the admin bar, and fixes the Database tab's transient count.
+
 = 1.3.7 =
 Fixes oversized screenshots and broken layouts in Core Support, Core Forms and Stackless when Remove unused CSS is on. Recommended for every site running those plugins with unused CSS removal.
 
@@ -293,6 +296,11 @@ Removes the automatic revision limit and multisite activation. Cloudflare edge c
 Upgrading from 1.0.0 or earlier requires replacing the cache drop-in first. Run the standalone repair script linked in the 1.0.4 changelog entry before updating.
 
 == Changelog ==
+
+= 1.3.8 =
+* The admin bar's GT Performance menu has Clear expired transients and Clear all transients. Each runs the Database tab's cleanup at once and opens the Database tab with the number removed. Clearing all transients also flushes the object cache. On sites with a persistent object cache, where WordPress keeps transients outside the database, the notice says so.
+* The Database tab's transient count now counts transients. A transient with an expiry is stored in two rows, and both were counted, so the number shown was close to double.
+* Test Redis connection and Object cache settings are no longer in the admin bar. Both remain on the Object Cache tab.
 
 = 1.3.7 =
 * Fixes Core Support help desk pages with Remove unused CSS on. The portal draws tickets, messages and image previews in the browser, so their styles looked unused and were removed. Attached screenshots then showed at full size. Core Support's styles are now left whole, and its scripts are never delayed.
