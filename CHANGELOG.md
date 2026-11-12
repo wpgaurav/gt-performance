@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Unused CSS removal no longer breaks Core Support, Core Forms and the Stackless plugins.
+
+- Core Support's portal builds ticket rows, messages and image previews in the browser from `app.js`, so the server HTML the engine prunes against held none of them. Every `.csp-*` rule for that markup was dropped, including `.csp-previews img { max-width: min(320px, 100%); max-height: 240px }`, so attached screenshots rendered at full resolution. Turning unused CSS off fixed it.
+- `PluginDetector::apps()` lists plugins that render their interface in the browser: Core Support, Core Forms, Core Bookings, Core Approvals, Core Tables, Stackless for EDD and WooCommerce, and their Lite builds. While one is active, its stylesheets (`/plugins/<slug>/`) and its inline styles are left out of unused CSS removal, and its scripts are left out of JavaScript delay. Core Forms keeps its poll-cookie handling.
+- The Stackless theme keeps the states `theme.js` toggles: `.js`, `.nav-open`, `.search-open`, `.is-scrolled` and `.is-loading`.
+- These entries appear under Detected plugin compatibility only while active.
+- A stored build is no longer reused after the stylesheet exclusions or the selector safelist change. Both are now part of the reuse key, so a new compatibility rule or a saved safelist entry reaches pages on their next visit. Before, a build made without it was served until the page markup changed or the build expired after a week.
+
 ## 1.3.6 - 2026-10-26
 
 Sites on xCloud's Cloudflare Enterprise add-on are purged where visitors are served.

@@ -2174,15 +2174,25 @@ PHP;
 					<p><?php esc_html_e( 'Foreign cache drop-ins are never overwritten. Active optimization owners that need a manual choice are flagged here.', 'gt-performance' ); ?></p>
 				</div>
 			</div>
-			<?php foreach ( $detector->catalog() as $id => $plugin ) : ?>
-				<?php
+			<?php
+			$groups = array(
+				'builder'      => __( 'Page builder', 'gt-performance' ),
+				'app'          => __( 'Interactive plugin', 'gt-performance' ),
+				'cache'        => __( 'Page cache', 'gt-performance' ),
+				'optimization' => __( 'Optimization', 'gt-performance' ),
+				'service'      => __( 'Service', 'gt-performance' ),
+				'analytics'    => __( 'Analytics', 'gt-performance' ),
+				'variation'    => __( 'Language and currency', 'gt-performance' ),
+			);
+			$cards  = array();
+			foreach ( $detector->catalog() as $id => $plugin ) {
 				$active = $detector->active( $id );
-				// Fourteen builders would crowd the list; show only the ones in use.
-				if ( in_array( $plugin['group'], array( 'builder', 'variation' ), true ) && ! $active ) {
+				// Fourteen builders would crowd the grid; show only the ones in use.
+				if ( in_array( $plugin['group'], array( 'builder', 'app', 'variation' ), true ) && ! $active ) {
 					continue;
 				}
-				$tone   = 'neutral';
-				$label  = __( 'Not active', 'gt-performance' );
+				$tone  = 'neutral';
+				$label = __( 'Not active', 'gt-performance' );
 				if ( $active ) {
 					$tone  = 'success';
 					$label = __( 'Protected', 'gt-performance' );
@@ -2196,15 +2206,26 @@ PHP;
 						$label = __( 'Perfmatters owns optimization', 'gt-performance' );
 					}
 				}
-				?>
-				<div class="gtp-integration-row">
-					<div>
-						<h3><?php echo esc_html( $plugin['name'] ); ?></h3>
+				$cards[] = array( $plugin, $active, $tone, $label );
+			}
+			// What needs a decision first, then what is protected, then what is not installed.
+			$rank = static fn( array $card ): int => $card[1] ? ( 'warning' === $card[2] ? 0 : 1 ) : 2;
+			usort( $cards, static fn( array $a, array $b ): int => $rank( $a ) <=> $rank( $b ) );
+			?>
+			<div class="gtp-integration-grid">
+				<?php foreach ( $cards as [ $plugin, $active, $tone, $label ] ) : ?>
+					<div class="gtp-integration-card<?php echo $active ? '' : ' is-inactive'; ?>">
+						<div class="gtp-integration-card__head">
+							<div>
+								<span class="gtp-integration-card__group"><?php echo esc_html( $groups[ $plugin['group'] ] ?? $plugin['group'] ); ?></span>
+								<h3><?php echo esc_html( $plugin['name'] ); ?></h3>
+							</div>
+							<span class="gtp-status gtp-status--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $label ); ?></span>
+						</div>
 						<p><?php echo esc_html( $plugin['protection'] ); ?></p>
 					</div>
-					<span class="gtp-status gtp-status--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $label ); ?></span>
-				</div>
-			<?php endforeach; ?>
+				<?php endforeach; ?>
+			</div>
 		</section>
 		<?php
 	}

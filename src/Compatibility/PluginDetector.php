@@ -89,12 +89,6 @@ final class PluginDetector {
 				'group'      => 'service',
 				'protection' => __( 'Protects forms, comments, subscriptions, search, media, and visitor-state cookies.', 'gt-performance' ),
 			),
-			'core-forms'      => array(
-				'name'       => 'Core Forms',
-				'files'      => array( 'core-forms/core-forms.php' ),
-				'group'      => 'service',
-				'protection' => __( 'Keeps poll voter identity only on pages that contain polls.', 'gt-performance' ),
-			),
 			'independent-analytics' => array(
 				'name'                  => 'Independent Analytics',
 				'files'                 => array( 'independent-analytics/iawp.php', 'independent-analytics-pro/iawp.php' ),
@@ -158,7 +152,91 @@ final class PluginDetector {
 				'protection'            => __( 'Keeps analytics and advertising pixels out of JavaScript optimization and delay.', 'gt-performance' ),
 				'javascript_exclusions' => array( '/plugins/pixelyoursite/', '/plugins/pixelyoursite-pro/', 'connect.facebook.net', 'googletagmanager.com' ),
 			),
-		) + self::visitorVariation();
+		) + self::apps() + self::visitorVariation();
+	}
+
+	/**
+	 * Plugins and themes that draw their interface in the browser.
+	 *
+	 * Their scripts render the markup their stylesheets style: Core Support's portal
+	 * builds ticket rows, messages and image previews from JSON after load, so the
+	 * server HTML the engine prunes against holds none of it. Pruning dropped every
+	 * one of those rules, including the size limits on attached screenshots, which
+	 * then rendered at full resolution. Their stylesheets are left whole and their
+	 * scripts run when they ask to, never delayed until an interaction.
+	 *
+	 * @return array<string, array{name:string,files:list<string>,group:string,protection:string,themes?:list<string>,javascript_exclusions?:list<string>,css_safelist?:list<string>,css_stylesheet_exclusions?:list<string>}>
+	 */
+	public static function apps(): array {
+		$whole = __( 'Leaves its stylesheets out of unused CSS removal and its scripts out of delay: it renders its interface in the browser.', 'gt-performance' );
+
+		return array(
+			'core-support'      => array(
+				'name'                      => 'Core Support',
+				'files'                     => array( 'core-support/core-support.php' ),
+				'group'                     => 'app',
+				'protection'                => __( 'Leaves the help desk portal, docs, roadmap and changelog styles out of unused CSS removal and their scripts out of delay: they render tickets, messages and previews in the browser.', 'gt-performance' ),
+				'css_stylesheet_exclusions' => array( '/plugins/core-support/', 'core-support-custom-inline-css' ),
+				'javascript_exclusions'     => array( '/plugins/core-support/' ),
+			),
+			'core-forms'        => array(
+				'name'                      => 'Core Forms',
+				'files'                     => array( 'core-forms/core-forms.php' ),
+				'group'                     => 'app',
+				'protection'                => __( 'Leaves form, multi-step, validation and poll styles out of unused CSS removal and form scripts out of delay, and keeps poll voter identity only on pages that contain polls.', 'gt-performance' ),
+				'css_stylesheet_exclusions' => array( '/plugins/core-forms/', 'core-forms-theme-inline-css', 'core-forms-license-frontend-inline-css' ),
+				'javascript_exclusions'     => array( '/plugins/core-forms/' ),
+			),
+			'core-bookings'     => array(
+				'name'                      => 'Core Bookings',
+				'files'                     => array( 'core-bookings/core-bookings.php' ),
+				'group'                     => 'app',
+				'protection'                => $whole,
+				'css_stylesheet_exclusions' => array( '/plugins/core-bookings/', 'core-bookings-bricks-inline-css', 'cbd-seat-guide-inline-css' ),
+				'javascript_exclusions'     => array( '/plugins/core-bookings/' ),
+			),
+			'core-approvals'    => array(
+				'name'                      => 'Core Approvals',
+				'files'                     => array( 'core-approvals/core-approvals.php' ),
+				'group'                     => 'app',
+				'protection'                => $whole,
+				'css_stylesheet_exclusions' => array( '/plugins/core-approvals/' ),
+				'javascript_exclusions'     => array( '/plugins/core-approvals/' ),
+			),
+			'core-tables'       => array(
+				'name'                      => 'Core Tables',
+				'files'                     => array( 'core-tables/core-tables.php' ),
+				'group'                     => 'app',
+				'protection'                => $whole,
+				'css_stylesheet_exclusions' => array( '/plugins/core-tables/', 'ctb-page-styles' ),
+				'javascript_exclusions'     => array( '/plugins/core-tables/' ),
+			),
+			'stackless-edd'     => array(
+				'name'                      => 'Stackless for EDD',
+				'files'                     => array( 'stackless-edd/stackless-edd.php', 'stackless-lite-edd/stackless-lite-edd.php' ),
+				'group'                     => 'app',
+				'protection'                => __( 'Leaves checkout, modal, wishlist and toast styles out of unused CSS removal and store scripts out of delay.', 'gt-performance' ),
+				'css_stylesheet_exclusions' => array( '/plugins/stackless-edd/', '/plugins/stackless-lite-edd/' ),
+				'javascript_exclusions'     => array( '/plugins/stackless-edd/', '/plugins/stackless-lite-edd/' ),
+			),
+			'stackless-woocommerce' => array(
+				'name'                      => 'Stackless for WooCommerce',
+				'files'                     => array( 'stackless/stackless.php', 'stackless-lite/stackless-lite.php' ),
+				'group'                     => 'app',
+				'protection'                => __( 'Leaves checkout, modal, wishlist and toast styles out of unused CSS removal and store scripts out of delay.', 'gt-performance' ),
+				'css_stylesheet_exclusions' => array( '/plugins/stackless/', '/plugins/stackless-lite/' ),
+				'javascript_exclusions'     => array( '/plugins/stackless/', '/plugins/stackless-lite/' ),
+			),
+			// From source (theme.js): the menu, search and header states it toggles.
+			'stackless-theme'   => array(
+				'name'         => 'Stackless theme',
+				'files'        => array(),
+				'themes'       => array( 'stackless-theme' ),
+				'group'        => 'app',
+				'protection'   => __( 'Keeps the mobile menu, search panel, scrolled header and loading states out of unused CSS removal.', 'gt-performance' ),
+				'css_safelist' => array( '/\.(js|nav-open|search-open|is-scrolled|is-loading)(?![\w-])/' ),
+			),
+		);
 	}
 
 	/**
@@ -398,17 +476,53 @@ final class PluginDetector {
 	}
 
 	/**
+	 * Selector safelist entries for the active builders and browser-rendered apps.
+	 *
+	 * @param list<string> $active  Active plugin basenames.
+	 * @param list<string> $network Network-active plugin basenames.
 	 * @return list<string>
 	 */
-	public function activeBuilderCssSafelist(): array {
-		return $this->builderCssSafelist( ...$this->installation() );
+	public function cssSafelist( array $active, array $network, string $template ): array {
+		$safelist = $this->builderCssSafelist( $active, $network, $template );
+		foreach ( self::apps() as $app ) {
+			if ( $this->builderActive( $app, array_merge( $active, $network ), $template ) ) {
+				$safelist = array_merge( $safelist, $app['css_safelist'] ?? array() );
+			}
+		}
+
+		return array_values( array_unique( $safelist ) );
+	}
+
+	/**
+	 * Stylesheets to leave unpruned for the active builders and browser-rendered apps.
+	 *
+	 * @param list<string> $active  Active plugin basenames.
+	 * @param list<string> $network Network-active plugin basenames.
+	 * @return list<string>
+	 */
+	public function stylesheetExclusions( array $active, array $network, string $template ): array {
+		$exclusions = $this->builderStylesheetExclusions( $active, $network, $template );
+		foreach ( self::apps() as $app ) {
+			if ( $this->builderActive( $app, array_merge( $active, $network ), $template ) ) {
+				$exclusions = array_merge( $exclusions, $app['css_stylesheet_exclusions'] ?? array() );
+			}
+		}
+
+		return array_values( array_unique( $exclusions ) );
 	}
 
 	/**
 	 * @return list<string>
 	 */
-	public function activeBuilderStylesheetExclusions(): array {
-		return $this->builderStylesheetExclusions( ...$this->installation() );
+	public function activeCssSafelist(): array {
+		return $this->cssSafelist( ...$this->installation() );
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	public function activeStylesheetExclusions(): array {
+		return $this->stylesheetExclusions( ...$this->installation() );
 	}
 
 	/**

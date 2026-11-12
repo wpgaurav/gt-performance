@@ -117,8 +117,8 @@ final class CompatibilityModule implements Module {
 			);
 		}
 
-		// Page builders change classes after load; keep their state selectors.
-		$safelist = array_merge( $safelist, $this->plugins->activeBuilderCssSafelist() );
+		// Page builders and themes change classes after load; keep their state selectors.
+		$safelist = array_merge( $safelist, $this->plugins->activeCssSafelist() );
 
 		return array_values( array_unique( $safelist ) );
 	}
@@ -141,7 +141,7 @@ final class CompatibilityModule implements Module {
 			$this->commerce->active()
 		);
 
-		return $this->stylesheetExclusionsForCommerce( array_merge( $exclusions, $this->plugins->activeBuilderStylesheetExclusions() ), $active );
+		return $this->stylesheetExclusionsForCommerce( array_merge( $exclusions, $this->plugins->activeStylesheetExclusions() ), $active );
 	}
 
 	/**

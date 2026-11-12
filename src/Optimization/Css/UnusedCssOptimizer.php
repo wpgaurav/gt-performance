@@ -112,7 +112,8 @@ final class UnusedCssOptimizer {
 		// unchanged. The generator's own loopback request is the only caller that
 		// actually builds one.
 		$stylesheetExclusions = $this->stylesheetExclusions( $url );
-		$reuseKey             = $this->reuseKey( $html, $mode, $stylesheetExclusions );
+		[ $safelist, $keep ]  = $this->selectorsToKeep( $url );
+		$reuseKey             = $this->reuseKey( $html, $mode, $stylesheetExclusions, $safelist, $keep );
 		$reused   = self::isGeneratorRequest() ? null : $this->reusableOutput( $html, $reuseKey );
 		if ( null !== $reused ) {
 			return $reused;
@@ -169,14 +170,6 @@ final class UnusedCssOptimizer {
 			}
 			$css = implode( '', $stylesheets );
 
-			$safelist             = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
-			$scripted             = new ScriptClasses();
-			$keep                 = $scripted->selectorsForRequest();
-			$pattern              = $scripted->patternForRequest();
-			if ( '' !== $pattern ) {
-				$safelist[] = $pattern;
-			}
-			$safelist             = apply_filters( 'gt_performance_css_safelist', $safelist, $url );
 			$preserveDynamicStates = (bool) Settings::get( 'css.keep_dynamic_states', true );
 			// Each run of consolidated stylesheets is pruned and replaced where it stood,
 			// so stylesheets left in place keep their position in the cascade.
@@ -505,18 +498,46 @@ final class UnusedCssOptimizer {
 	}
 
 	/**
+	 * Selector patterns and exact selectors a build keeps whatever the page holds.
+	 *
+	 * @return array{0:list<string>,1:array<string, true>}
+	 */
+	private function selectorsToKeep( string $url ): array {
+		$safelist = array_map( 'strval', (array) Settings::get( 'css.safelist', array() ) );
+		$scripted = new ScriptClasses();
+		$pattern  = $scripted->patternForRequest();
+		if ( '' !== $pattern ) {
+			$safelist[] = $pattern;
+		}
+
+		return array(
+			array_values( array_map( 'strval', (array) apply_filters( 'gt_performance_css_safelist', $safelist, $url ) ) ),
+			$scripted->selectorsForRequest(),
+		);
+	}
+
+	/**
 	 * Reuse only the same URL, selector inputs and current CSS revisions.
 	 *
-	 * @param list<string> $exclusions Stylesheets the engine leaves in place.
+	 * What a build keeps and leaves whole is part of the key. A compatibility rule
+	 * added for a plugin, or a safelist entry saved in settings, otherwise reached
+	 * no page until its markup changed: a stored build made without the rule kept
+	 * being served for up to a week.
+	 *
+	 * @param list<string>        $exclusions Stylesheets the engine leaves in place.
+	 * @param list<string>        $safelist   Selector patterns kept on every page.
+	 * @param array<string, true> $keep       Exact selectors kept on this page.
 	 */
-	private function reuseKey( string $html, string $mode, array $exclusions = array() ): string {
+	private function reuseKey( string $html, string $mode, array $exclusions = array(), array $safelist = array(), array $keep = array() ): string {
 		// Attribute values, IDs and DOM relationships affect selector matching too.
 		// Keep reuse scoped to the URL and exact markup to avoid cross-page pruning.
 		return hash(
 			'sha256',
 			self::ENGINE . '|' . $this->requestUrl() . '|' . $mode . '|'
 			. (int) Settings::get( 'generation', 1 ) . '|'
-			. (string) get_option( 'gtperf_css_revision', 1 ) . '|' . $this->stableMarkup( $html, $exclusions )
+			. (string) get_option( 'gtperf_css_revision', 1 ) . '|'
+			. hash( 'sha256', (string) wp_json_encode( array( $exclusions, $safelist, array_keys( $keep ) ) ) ) . '|'
+			. $this->stableMarkup( $html, $exclusions )
 		);
 	}
 

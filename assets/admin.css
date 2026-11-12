@@ -974,6 +974,80 @@ summary.gtp-notice-pill:focus-visible {
 	border-top: 1px solid #f0f0f1;
 }
 
+.gtp-integration-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 12px;
+	padding: 20px var(--gtp-inset) var(--gtp-inset);
+}
+
+.gtp-integration-card {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 0;
+	padding: 16px;
+	background: var(--gtp-surface);
+	border: 1px solid var(--gtp-border);
+	border-radius: var(--gtp-radius);
+}
+
+.gtp-integration-card.is-inactive {
+	background: var(--gtp-bg);
+}
+
+.gtp-integration-card.is-inactive h3 {
+	color: var(--gtp-muted);
+}
+
+.gtp-integration-card__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.gtp-integration-card__head > div {
+	min-width: 0;
+}
+
+.gtp-integration-card__group {
+	display: block;
+	margin-bottom: 2px;
+	color: var(--gtp-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.gtp-integration-card h3 {
+	margin: 0;
+	font-size: 14px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.gtp-integration-card p {
+	margin: 0;
+	color: var(--gtp-muted);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.gtp-integration-card .gtp-status {
+	flex: none;
+	white-space: normal;
+	text-align: right;
+}
+
+@media screen and (max-width: 782px) {
+	.gtp-integration-grid {
+		grid-template-columns: 1fr;
+		padding: 16px;
+	}
+}
+
 .gtp-status {
 	display: inline-flex;
 	align-items: center;
